@@ -14,6 +14,7 @@ Update the doc in the same turn as any of these happen:
 | A question appears that we cannot answer  | *Open questions*                                           |
 | A concrete task follows                   | *Next steps*, as `- [ ]`; tick it `- [x]` when done        |
 | A step, owner or tool changes             | The workflow tables **and** the figure that shows them     |
+| A top-level file or folder is added       | The *Layout* tree in the root `README.md`, one line each   |
 
 Edit in place; do not append a changelog. If new thinking contradicts the doc, fix the old text so the doc never says two things.
 
