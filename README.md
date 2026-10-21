@@ -22,25 +22,23 @@ Reading the figure: panel 1, three relaxed inputs; panel 3, the unit cell and it
 | Settings | DFT settings locked in `PROJECT.md` by the dft-settings-protocol skill before anything is computed | Human |
 | Output | The nearest non-recombining final states in order, the first few survivors, each on a card with its issues and the calibrated doubt from mlip_doubt; the human interprets them and the chosen final states go to DFT single points, P5; E(FS near) and E(FS ∞); every rejected pair with its reason; the recombination rate | Tool |
 
-## The pipeline in five steps
+## The pipeline, as on the board
 
-The team's five panels, numbered here in flow order, map onto the full pipeline; step 3, the least distance before pull-back, is the stated problem.
+The plan is a single pass from the input prompt to the solution; step 3, placing the dissociated fragment, is the stated problem, and the purple boxes are where an agent or an LLM enters.
 
-![The plan in five steps, each with its owners and the board steps it covers](figures/simplified-pipeline.png)
+![The board's pipeline: input prompt, steps 1 to 8 with the six points of step 3, solution; agent inputs at 3, 5, 7 and 8](figures/pipeline.png)
 
-*Figure: simplified pipeline · 5 steps, owners, board steps, schematic*
+*Figure: the board as a flowchart · 10 steps, 6 points, 5 agent inputs, schematic*
 
-Reading the figure: boxes run left to right in flow order, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the board steps it covers. The table below carries the same owners and mapping.
+Reading the figure: grey boxes are computation, the coral box is step 3 with its six points in the board's order, 1 to 4 then 5 or 6, and the purple boxes on the left are the agent or LLM inputs the board names, the vision model dashed because it is optional. The panels of the team's visualisation above map onto these steps as follows.
 
-| Step | What it does | Owner | Board steps |
-|---|---|---|---|
-| 1 Inputs | Relaxed AB\* on the surface, clean surface, adsorbate in vacuum, retrieved and locked with the settings in `PROJECT.md`; the human approves; the MLIP chosen before any placement | Human, Tool | 1, 1\* |
-| 2 Unit cell and unique sites | Cell wide enough that the pair never sees its periodic image, locked in row 1; symmetry-inequivalent sites on the slab, counted; the fragment keeping the binding atom placed near its old site | Tool | 2, 3.5 |
-| 3 Least distance before pull-back | B sites around A within [1.5 d, 5] Å; one force call per pair, then relaxation; the validity gate: no A–B bond, nothing desorbed | Tool | 3.1, 3.2, 3.3, 4, 5 |
-| 4 Best configuration for both | For adsorbent #1, A, and adsorbent #2, B: survivors clustered by SOAP; nearest first, then energy; the nearest and the lowest kept per cluster, more is open: team decision; the geometry-critic may order, never remove; doubt from the committee; the human picks up to five | Tool, LLM | 3.4, 3.6, 6, 7, 8 |
-| 5 Output | A\* + B\* as close as they can be without bonding back; both energies; rejected pairs with reasons; recombination rate; the calibrated doubt from mlip_doubt; the LLM drafts the report and the human interprets | Tool, Human | Solution |
-
-Owners: Tool is deterministic code; LLM plans, chooses and drafts from descriptor cards and never touches coordinates; Human locks settings, picks and interprets; Skill is a written procedure the LLM follows; Literature enters before the run and after it only, and a human verifies every value.
+| Panel of the visualisation | Board steps |
+|---|---|
+| 1 Inputs: relaxed initial state, surface, adsorbate | 1, 1\* |
+| 3 Unit cell and unique adsorption sites | 2, 3.5 |
+| 4 Least distance before the molecule pulls the atom back | 3.1, 3.2, 3.3, 4, 5 |
+| 5 Most favourable configuration for both components | 3.4, 3.6, 6, 7, 8 |
+| 2 Output: dissociated final state | Solution |
 
 ## How the plan evolved, step by step
 
@@ -100,15 +98,19 @@ $$
 
 Pass criterion, open: team decision: a validated minimum with no A–B bond, at least as near as the OC20NEB product frame, within an energy tolerance still to be set. The subset size and whether any DFT single point runs are also open: team decision.
 
+## Who does what
+
+Tools do every deterministic step; the LLM reads cards, chooses with a stated reason and drafts; the human locks, picks and interprets; skills are the written procedures the LLM follows.
+
+![Four lanes, human, LLM agents, skills, tools; one row per board step; the box with the thick edge does the work](figures/who-does-what.png)
+
+*Figure: who does what · 4 lanes, 15 rows, 3 checkpoints, schematic*
+
+Reading the figure: each row is a board step and each lane an actor; the box with the thick edge does the work, the thin ones feed it, the dashed ones are extensions, the pause sign marks a checkpoint where the agent waits for the human, and the arrows are the hand-offs within a step. The planner runs the whole LLM column: it calls each tool by name, reads cards, never writes coordinates and stops at every checkpoint, the last two enforced by hooks. Names are the files of the repository layout below.
+
 ## Build order
 
 The shortest route to one validated nearest final state runs through eight numbered tasks; the answers in column 0 unblock everything to their right.
-
-![Five columns in order; the numbered blue path is the shortest route to one validated nearest final state](figures/final-state-build-plan.png)
-
-*Figure: build plan · 5 columns, 23 tasks, critical path of 8, schematic*
-
-Reading the figure: five columns in build order, from the team's decisions through code foundations, ML trust and the final state to measurements and release; the numbered blue path is the critical path, grey boxes are off-path tasks, dashed boxes the extension layer, and each box names what it reuses and needs.
 
 1. D1 System and product: AB\*, surface, A\* + B\*; first case \*OH → \*O + \*H on Pt(111). Human decision.
 2. T1 Settings lock. Needs D1, D3. Reuses AiiDA common workflows and SSSP.
@@ -137,7 +139,7 @@ open-science-hackathon/
 ├── agent.md                      what a coding agent needs: the exact pipeline, tools, repositories, rules
 ├── CLAUDE.md                     agent instructions: read agent.md first
 ├── archive/                      theory, design history, reviews, figure scripts; not needed to code
-├── figures/                      the four figures of this page
+├── figures/                      the four figures of this page: the team's plan, the board, its evolution, who does what
 ├── PROJECT.md                    the locked settings and decisions of the current campaign
 ├── pyproject.toml                one package: the library, the server and the tests
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
