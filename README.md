@@ -26,9 +26,9 @@ Reading the figure: panel 1, three relaxed inputs; panel 3, the unit cell and it
 
 The team's five panels, numbered here in flow order, map onto the full pipeline; step 3, the least distance before pull-back, is the stated problem.
 
-![The plan in five steps, each with its owners and the rows of the full pipeline it corresponds to](figures/simplified-pipeline.png)
+![The plan in five steps, each with its owners and the board steps it covers](figures/simplified-pipeline.png)
 
-*Figure: simplified pipeline · 5 steps, owners, row mapping, schematic*
+*Figure: simplified pipeline · 5 steps, owners, board steps, schematic*
 
 Reading the figure: boxes run left to right in flow order, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the board steps it covers. The table below carries the same owners and mapping.
 

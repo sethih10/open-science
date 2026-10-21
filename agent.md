@@ -384,7 +384,7 @@ open-science-hackathon/
 ├── PROJECT.md                    the locked settings and decisions of the current campaign
 ├── pyproject.toml                one package: the library, the server and the tests
 ├── archive/docs/                 design document, agent context, build context, survey, review, figures
-├── figures/                      the README figures: problem, simplified and full pipeline, build plan, layout
+├── figures/                      the README figures: the team's plan, the five steps, the board's evolution, the build plan
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
 ├── skills/<name>/SKILL.md        the five skills of section 6, one folder each
 ├── agents/<role>.md              the four agents of section 6, one page each
