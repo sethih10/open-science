@@ -7,7 +7,7 @@ name = "finalstate"
 version = "0.1.0"
 description = "The nearest non-recombining final state of a dissociated adsorbate: deterministic tools that LLM agents call by name"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = ["pydantic>=2", "numpy"]
 
 [project.optional-dependencies]
@@ -15,12 +15,13 @@ structures = ["ase", "pymatgen", "spglib", "acat"]
 mlip = ["fairchem-core", "mace-torch", "chgnet", "dscribe", "scikit-learn", "uncertainty-toolbox"]
 literature = ["paper-qa", "mp-api"]
 dft = ["custodian", "atomate2"]
-agents = ["mcp[cli]"]
+agents = ["mcp[cli]>=1.2,<2"]
 figures = ["matplotlib"]
 dev = ["pytest", "ruff"]
 
 [project.scripts]
 finalstate = "finalstate.cli:main"
+finalstate-server = "finalstate.server:main"
 
 [tool.setuptools.packages.find]
 include = ["finalstate*"]

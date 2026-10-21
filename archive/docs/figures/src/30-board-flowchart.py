@@ -43,14 +43,22 @@ def main_box(y, s, h=H, fc=GREY_F, ec=GREY_E, x=CX, w=W):
         ax.add_patch(FancyBboxPatch((TX, ty - th / 2), TW, th, boxstyle="round,pad=0.002,rounding_size=0.008", fc=AMB_F, ec=AMB_E, lw=1.0, zorder=3))
         ax.text(TX + TW / 2, ty, wrap("open: " + s.open, 38), ha="center", va="center", fontsize=6.0, color=AMB_T, zorder=4, linespacing=1.15)
 
+SIDE = []   # (step_centre_y, name, note, dashed, board)
 def side_box(y_center, name, note, dashed=False, board=None):
-    h = 0.046; y = y_center - h / 2
-    ax.add_patch(FancyBboxPatch((SX, y), SW, h, boxstyle="round,pad=0.003,rounding_size=0.012", fc=PUR_F, ec=PUR_E, lw=1.1, ls="--" if dashed else "-", zorder=3))
-    ax.text(SX + SW / 2, y + h - 0.006, name, ha="center", va="top", fontsize=7.6, fontweight="bold", color=PUR_T, zorder=4)
-    sub = wrap(note, 40) if note else ""
-    if board: sub = (sub + "\n" if sub else "") + f"board: {board}"
-    ax.text(SX + SW / 2, y + 0.005, sub, ha="center", va="bottom", fontsize=5.9, color="#555555", zorder=4, linespacing=1.15)
-    arrow(ax, (SX + SW + 0.003, y_center), (CX - 0.004, y_center), color=PUR_E, lw=1.1, ms=9, ls="--" if dashed else "-")
+    SIDE.append((y_center, name, note, dashed, board))
+
+def draw_side_boxes():
+    h, gap = 0.050, 0.006
+    prev_bottom = 1.0
+    for y_target, name, note, dashed, board in sorted(SIDE, key=lambda s: -s[0]):
+        y_c = min(y_target, prev_bottom - gap - h / 2)
+        y = y_c - h / 2; prev_bottom = y
+        ax.add_patch(FancyBboxPatch((SX, y), SW, h, boxstyle="round,pad=0.003,rounding_size=0.012", fc=PUR_F, ec=PUR_E, lw=1.1, ls="--" if dashed else "-", zorder=3))
+        ax.text(SX + SW / 2, y + h - 0.005, wrap(name, 30), ha="center", va="top", fontsize=7.0, fontweight="bold", color=PUR_T, zorder=4, linespacing=1.05)
+        sub = wrap(note, 44) if note else ""
+        if board: sub = (sub + "\n" if sub else "") + f"board: {board}"
+        ax.text(SX + SW / 2, y + 0.004, sub, ha="center", va="bottom", fontsize=5.6, color="#555555", zorder=4, linespacing=1.12)
+        arrow(ax, (SX + SW + 0.003, y_c), (CX - 0.004, y_target), color=PUR_E, lw=1.1, ms=9, ls="--" if dashed else "-", con="arc3,rad=0.0")
 
 def down(y0, y1, x=CX + W / 2):
     arrow(ax, (x, y0), (x, y1), color=GREY_E, lw=1.2, ms=10)
@@ -99,14 +107,19 @@ for key in ("4", "5", "6", "7", "8", "solution"):
     if key != "solution": down(y - H - 0.002, y - H - G + 0.002)
     y -= H + G
 
-# ---- side boxes: our agents at the steps where the board drew an input, dashed where they are extensions
-side_box(centre["prompt"], " · ".join(n for n, _ in BY_KEY["prompt"].agents), "; ".join(r for _, r in BY_KEY["prompt"].agents), board=BY_KEY["prompt"].board_input)
-side_box(centre["1*"], "active-learning loop", BY_KEY["1*"].ext, dashed=True)
-side_box(centre["3.1"], BY_KEY["3.4"].agents[0][0], "point 3.4: " + BY_KEY["3.4"].agents[0][1], board="Critic, knowledge")
+# ---- side boxes: the agents that act at each step, other than the planner, and the extensions
+def names(step): return " · ".join(n for n, _ in BY_KEY[step].agents if n != PLANNER)
+def roles(step): return "; ".join(r for n, r in BY_KEY[step].agents if n != PLANNER)
+side_box(centre["prompt"], names("prompt"), roles("prompt"), board=BY_KEY["prompt"].board_input)
+side_box(centre["1"], names("1"), roles("1"))
+side_box(centre["1*"], names("1*"), roles("1*") + "; extension: " + BY_KEY["1*"].ext)
+side_box(centre["3.2"], names("3.2"), roles("3.2"))
+side_box(centre["3.4"], names("3.4"), roles("3.4"), board="Critic, knowledge")
 side_box(centre["3.3"], "vision model", BY_KEY["3.4"].ext, dashed=True, board="Vision model (?)")
 side_box(centre["5"], BY_KEY["3.4"].agents[0][0], BY_KEY["5"].ext, dashed=True, board=BY_KEY["5"].board_input)
-side_box(centre["7"], "agentic uncertainty, DFT", BY_KEY["7"].ext, dashed=True, board=BY_KEY["7"].board_input)
-side_box(centre["8"], BY_KEY["8"].agents[0][0], BY_KEY["8"].agents[0][1], board=BY_KEY["8"].board_input)
+side_box(centre["7"], names("7"), roles("7") + "; extension: " + BY_KEY["7"].ext, board=BY_KEY["7"].board_input)
+side_box(centre["solution"], names("solution"), roles("solution"))
+draw_side_boxes()
 ax.text(0.5, 0.012, "Side boxes: where the board drew an agent input, the agent that takes it; amber tags: the one open decision per step, agent.md section 11 has the full list.",
         ha="center", va="bottom", fontsize=6.8, style="italic", color="#444444")
 finish(fig, os.path.join(os.path.dirname(__file__), "..", "30-board-flowchart.png"), copy_to="pipeline")

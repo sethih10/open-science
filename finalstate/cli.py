@@ -18,7 +18,8 @@ def cmd_registry(_):
 def cmd_check(_):
     py = sys.executable
     src = ROOT / "archive" / "docs" / "figures" / "src"
-    rc = subprocess.call([py, str(src / "board_check.py")])
+    rc = subprocess.call([py, str(src / "board_tables.py"), "--check"])
+    rc |= subprocess.call([py, str(src / "board_check.py")])
     rc |= subprocess.call([py, "-m", "pytest", "-q", str(ROOT / "tests")])
     sys.exit(rc)
 

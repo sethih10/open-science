@@ -6,7 +6,10 @@ H
 supplies the surface, the adsorbates and a description; answers the five
 interview questions
 L
-dft-settings-interviewer: asks the fixed questions, writes PROJECT.md
+computational-chemist: runs the Formulate interview, writes PROJECT.md
+L
+literature-reader: fetches E_ads and d with their sources for the human
+to verify
 S
 dft-settings-protocol
 T
@@ -18,7 +21,8 @@ H
 approves the settings lock
 ❚❚
 L
-final-state-planner: picks the protocol and states why
+computational-chemist: proposes the settings lock and states the
+protocol's reason
 S
 dft-settings-protocol
 T
@@ -31,7 +35,10 @@ H
 approves the plan
 ❚❚
 L
-final-state-planner: records the choice and the reason
+mlip-specialist: chooses the potential from the benchmark and records
+why
+L
+scientific-critic: reviews the plan before the human approves it
 S
 ml-mlip-benchmark, reused
 T
@@ -50,6 +57,9 @@ T
 anomaly_filter, check 10: the A–B bond re-formed after relaxation; runs
 inside step 5
 (3.2) Window [1.5 d, 5] Å
+L
+literature-reader: supplies d, the length of the bond to break, with its
+source
 S
 dissociation-final-state
 T
@@ -63,12 +73,12 @@ pull_force_screen: one MLIP force call per pair; a pull towards the
 other fragment queues the pair last
 (3.4) Agentic critique of the cleavage
 L
-geometry-critic: proposes a site type per fragment, orders the list;
-never overrides a check
+surface-chemist: proposes a site type per fragment from the chemistry of
+the cleavage, orders the list; never overrides a check
 S
 dissociation-final-state
 T
-geometry-critic reads descriptor_card text, proposes a site type and
+surface-chemist reads descriptor_card text, proposes a site type and
 orientation per fragment, reorders; never edits coordinates
 (3.5) Site and orientation, pymatgen
 S
@@ -91,7 +101,7 @@ relaxation: relax every pair with the chosen MLIP and the locked
 settings, random displacement first; Burnside-counted
 (5) Physics-based and anomaly filtering
 L
-extension: geometry-critic: comments on cards, never overrides
+extension: surface-chemist: comments on cards, never overrides
 S
 dissociation-final-state
 T
@@ -109,7 +119,8 @@ H
 reviews the flagged cases
 ❚❚
 L
-final-state-planner: stops on doubt and asks
+mlip-specialist: decides trust, repair or escalate from the calibrated
+doubt
 L
 extension: agentic uncertainty: N planner runs; dft_single_points if D2
 allows
@@ -126,7 +137,7 @@ H
 picks up to five on the cards; choice and reason to the case bank
 ❚❚
 L
-final-state-planner: shows the cards with rank, doubt and verdicts
+solution-planner: shows the cards with rank, doubt and verdicts
 T
 ranking: nearest first, then energy; one descriptor_card per final state
 with doubt and verdicts; the human picks; choice and reason to
@@ -137,7 +148,10 @@ H
 interprets the report
 ❚❚
 L
-final-state-planner: drafts the report
+solution-planner: drafts the report
+L
+scientific-critic: reviews the report in its own context before the
+human reads it
 S
 final-state-report; general-peer-review, reused
 T
@@ -146,6 +160,6 @@ rejections with reasons, recombination rate, decision trace
 T
 extension: dft_single_points
 Legend: H human · L LLM agent · S skill, a written procedure the LLM follows · T tool, deterministic code · thick edge does the work · dashed, an extension · ❚❚ a checkpoint where the agent waits for the human.
-final-state-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.
+solution-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.
 Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work
-board of 21 October 2026 · three phases left to right, cards top to bottom · ❚❚ a checkpoint where the agent waits · dashed: an extension · tool names are the files under mcp/tools/, skills the folders under skills/, agents the files under agents/
+board of 21 October 2026 · three phases left to right, cards top to bottom · ❚❚ a checkpoint where the agent waits · dashed: an extension · tool names are the files under finalstate/tools/, skills the folders under skills/, agents the files under agents/

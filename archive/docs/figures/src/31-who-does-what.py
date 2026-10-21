@@ -12,7 +12,7 @@ fig = plt.figure(figsize=(FW, FH))
 ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, FW); ax.set_ylim(0, FH); ax.axis("off")
 fig.text(0.5, 0.985, "Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work",
          ha="center", va="top", fontsize=12.5, fontweight="bold")
-fig.text(0.5, 0.967, f"board of {BOARD_DATE} · three phases left to right, cards top to bottom · {PAUSE} a checkpoint where the agent waits · dashed: an extension · tool names are the files under mcp/tools/, skills the folders under skills/, agents the files under agents/",
+fig.text(0.5, 0.967, f"board of {BOARD_DATE} · three phases left to right, cards top to bottom · {PAUSE} a checkpoint where the agent waits · dashed: an extension · tool names are the files under finalstate/tools/, skills the folders under skills/, agents the files under agents/",
          ha="center", va="top", fontsize=8.4, color="#555555")
 
 COLS = {"setup": 0.4, "step3": 5.6, "select": 10.8}; CW = 4.8; CARD_W = 4.6

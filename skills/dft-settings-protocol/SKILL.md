@@ -5,6 +5,8 @@ description: How the numerical settings of a campaign are chosen, locked and nev
 
 # DFT settings protocol
 
+The computational-chemist follows this with the human; the literature-reader supplies the published values.
+
 Procedure. Facts and ranges live in `agent.md` section 3 and in `PROJECT.md`, not here.
 
 1. Read the settings the three supplied structures were relaxed with; they are the starting point. If they differ, stop: check 8 fails before anything runs.

@@ -31,7 +31,7 @@ pull_force_screen: one MLIP force call per pair; a pull towards the
 other fragment queues the pair last
 open: the force threshold
 (3.4) Agentic critique of the cleavage
-geometry-critic reads descriptor_card text, proposes a site type
+surface-chemist reads descriptor_card text, proposes a site type
 and orientation per fragment, reorders; never edits coordinates
 (3.5) Site and
 orientation, pymatgen
@@ -74,37 +74,50 @@ rejections with reasons, recombination rate, decision trace
 ❚❚ interpret results
 open: the pass criterion against the
 OC20NEB product frame
-dft-settings-interviewer
-asks the fixed questions, writes
-PROJECT.md
+computational-chemist ·
+literature-reader
+runs the Formulate interview, writes
+PROJECT.md; fetches E_ads and d with their
+sources for the human to verify
 board: Critic, knowledge prompts
-active-learning loop
-active_learning: doubt → a few DFT
-labels → fine-tune → re-run
-geometry-critic
-point 3.4: proposes a site type per
-fragment, orders the list; never
-overrides a check
-board: Critic, knowledge
+computational-chemist
+proposes the settings lock and states the
+protocol's reason
+mlip-specialist ·
+scientific-critic
+chooses the potential from the benchmark and
+records why; reviews the plan before the
+human approves it; extension:
+active_learning: doubt → a few DFT labels →
+fine-tune → re-run
+literature-reader
+supplies d, the length of the bond to break,
+with its source
 vision model
-a vision model to predict the sites,
-only after the geometry benchmark shows
-an image helps
+a vision model to predict the sites, only
+after the geometry benchmark shows an image
+helps
 board: Vision model (?)
-geometry-critic
-an LLM critic reads the card and
-comments; it never overrides a check
+surface-chemist
+proposes a site type per fragment from the
+chemistry of the cleavage, orders the list;
+never overrides a check
+board: Critic, knowledge
+surface-chemist
+an LLM critic reads the card and comments;
+it never overrides a check
 board: Reasoning questions
-agentic uncertainty, DFT
-agentic uncertainty: N planner runs;
+mlip-specialist
+decides trust, repair or escalate from the
+calibrated doubt; extension: agentic
+uncertainty: N planner runs;
 dft_single_points if D2 allows DFT
 board: Agentic uncertainty (?), DFT (?)
-final-state-planner
-shows the cards with rank, doubt and
-verdicts
-board: Critic, knowledge
+scientific-critic
+reviews the report in its own context before
+the human reads it
 Side boxes: where the board drew an agent input, the agent that takes it; amber tags: the one open decision per step, agent.md section 11 has the full list.
 The pipeline we will implement: the board's steps, each with its tool call and its open decision
 board of 21 October 2026 · grey: computation · coral: step 3, the stated problem · purple: our agents, dashed is an extension
 amber: open decision · pink ❚❚: a checkpoint where the agent waits
-final-state-planner calls every tool by name, reads cards, never writes coordinates, stops at every ❚❚
+solution-planner calls every tool by name, reads cards, never writes coordinates, stops at every ❚❚

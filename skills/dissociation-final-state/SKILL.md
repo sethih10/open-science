@@ -11,7 +11,7 @@ Order in code: 3.5, 3.2, 3.3, 3.4, then 4, 5, 6; 3.6 is the alternative generato
 2. 3.5: `adsorbate_placement` of A, the fragment that keeps the binding atom, at every symmetry-distinct site near its old site; A fixed at its old site is the cheap baseline, a team decision.
 3. 3.2: `literature_lookup` for d, the length of the bond to break; `pair_enumeration` inside [1.5 d, 5] Å, nearest first by site-graph distance, counted.
 4. 3.3: `pull_force_screen`, one force call per pair; a pull towards the other fragment queues the pair last, never drops it.
-5. 3.4: hand the descriptor cards to the critic; take its ordering; never its coordinates. It never removes a pair.
+5. 3.4: hand the descriptor cards to the surface-chemist; take its ordering; never its coordinates. It never removes a pair.
 6. 3.6, alternative and baseline: `minima_hopping` with the chosen potential.
 7. 4: `relaxation` with the locked settings, random displacement first.
 8. 5: `anomaly_filter` on every relaxed pair, per fragment; check 10 is point 3.1; a failing pair is never kept; every rejection is logged with its reason.

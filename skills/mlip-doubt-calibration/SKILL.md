@@ -5,6 +5,8 @@ description: When to doubt a machine-learned potential and what to do about it: 
 
 # MLIP doubt and calibration
 
+The mlip-specialist follows this; the solution-planner only receives the decision.
+
 1. Call `mlip_selection` with two or three candidates and the system class; record the choice and the reason. Every candidate becomes the committee.
 2. Magnetic metals, Co and Ni, are always doubted: spin on, moments initialised, a cross-family check on E_ads.
 3. Unseen chemistry is always doubted: oxides, high coverage, electrochemical interfaces, organometallics outside the training set.

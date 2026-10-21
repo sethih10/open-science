@@ -29,17 +29,18 @@ ax.text(1.65, 6.35, wrap("supplies the relaxed surface, the relaxed adsorbate an
 rbox(13.05, 5.0, 2.6, 2.9, H_F, H_E)
 ax.text(14.35, 7.65, "Human, during and after", ha="center", va="center", fontsize=9.4, fontweight="bold", color=H_E, zorder=4)
 cps = "\n".join(f"{PAUSE} {c}" for c in CHECKPOINTS)
-ax.text(14.35, 6.35, "the five checkpoints where the agent waits:\n" + cps + "\n\nchoice and reason go to the case bank;\nonly a human promotes a case to a skill", ha="center", va="center", fontsize=7.2, zorder=4, linespacing=1.3)
+ax.text(14.35, 6.35, "the five checkpoints where the agent waits:\n" + cps + "\n\nchoice and reason go to the case bank;\nonly a human promotes a case to a skill;\nwith HPC, " + HPC_ONLY[0] + " retries a failed\nDFT step, capped at three", ha="center", va="center", fontsize=7.0, zorder=4, linespacing=1.3)
 
 # ---- LLM agents box
 rbox(3.35, 5.0, 9.3, 2.9, L_F, L_E, lw=1.6)
 ax.text(8.0, 7.65, "LLM agents: plan, propose, draft; never compute, never place atoms", ha="center", va="center", fontsize=9.6, fontweight="bold", color=L_E, zorder=4)
 names = [n for n in AGENTS if n not in HPC_ONLY]
 for i, n in enumerate(names):
-    x = 3.55 + i * 3.05
-    rbox(x, 5.2, 2.85, 2.15, "white", L_E, lw=1.0, z=3)
-    ax.text(x + 1.425, 7.15, n, ha="center", va="center", fontsize=8.6, fontweight="bold", color=L_E, zorder=4)
-    ax.text(x + 1.425, 6.2, wrap(AGENTS[n], 40), ha="center", va="center", fontsize=7.0, zorder=4, linespacing=1.25)
+    row, col = divmod(i, 3)
+    x = 3.55 + col * 3.05; y0 = 6.35 - row * 1.15
+    rbox(x, y0, 2.85, 1.05, "white", L_E, lw=1.0, z=3)
+    ax.text(x + 1.425, y0 + 0.86, n, ha="center", va="center", fontsize=8.2, fontweight="bold", color=L_E, zorder=4)
+    ax.text(x + 1.425, y0 + 0.40, wrap(AGENTS[n], 48), ha="center", va="center", fontsize=6.3, zorder=4, linespacing=1.2)
 ax.text(8.0, 5.08, "hooks: no coordinate edits; a pause at every checkpoint", ha="center", va="bottom", fontsize=6.8, color=L_E, style="italic", zorder=4)
 
 # ---- skills strip
@@ -49,7 +50,7 @@ ax.text(3.55, 4.05, "ours: " + " · ".join(SKILLS_OURS) + "\nreused from Atomist
 
 # ---- tool chain
 rbox(0.35, 0.75, 15.3, 2.65, T_F, T_E)
-ax.text(0.55, 3.18, "Tools, deterministic code under mcp/tools/, each wrapping one module of finalstate/; the planner calls them by name, in this order:", ha="left", va="center", fontsize=8.2, fontweight="bold", color=T_E, zorder=4)
+ax.text(0.55, 3.18, "Tools, deterministic code under finalstate/tools/, each wrapping one module of finalstate/; the planner calls them by name, in this order:", ha="left", va="center", fontsize=8.2, fontweight="bold", color=T_E, zorder=4)
 order = [t for t in TOOLS if t not in ("dft_single_points", "active_learning")]
 serves = {t: sorted({s.key for s in STEPS if t in s.tools}, key=lambda k: [x.key for x in STEPS].index(k)) for t in order}
 per_row = 9; bg, bx0 = 0.12, 0.55; bw = (15.3 - 0.4 - (per_row - 1) * bg) / per_row

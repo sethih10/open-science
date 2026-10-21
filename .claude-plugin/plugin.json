@@ -7,6 +7,6 @@
   "agents": "./agents",
   "hooks": "./hooks/hooks.json",
   "mcpServers": {
-    "finalstate": {"command": "python", "args": ["-m", "mcp.server"], "cwd": "${CLAUDE_PLUGIN_ROOT}"}
+    "finalstate": {"command": "finalstate-server", "args": [], "cwd": "${CLAUDE_PLUGIN_ROOT}"}
   }
 }

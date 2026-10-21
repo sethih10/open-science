@@ -15,26 +15,37 @@ the five checkpoints where the agent waits:
 ❚❚ interpret results
 
 choice and reason go to the case bank;
-only a human promotes a case to a skill
+only a human promotes a case to a skill;
+with HPC, dft-recovery-agent retries a failed
+DFT step, capped at three
 LLM agents: plan, propose, draft; never compute, never place atoms
-final-state-planner
-the next tool call and when to stop;
-holds the checkpoint list; calls every
-tool by name, reads cards, never writes
-coordinates
-dft-settings-interviewer
-what the Formulate interview locks into
-PROJECT.md; runs once, before the run
-geometry-critic
-the site type and orientation to try per
-fragment; whether a card and its
-verdicts disagree; never overrides a
-check
+solution-planner
+the next tool call and when to stop; holds the
+checkpoint list; calls every tool by name, reads
+cards, never writes coordinates
+literature-reader
+which published values and sources to put before
+the human: E_ads with functional and site, and
+d, the length of the bond to break
+computational-chemist
+which protocol and settings to propose for the
+lock, from the Formulate interview and the
+inputs' own settings
+surface-chemist
+which site types and orderings to try per
+fragment, from the chemistry of the broken bond;
+never a coordinate, never an override
+mlip-specialist
+which potential to use, and whether to trust,
+repair or escalate on the calibrated doubt
+scientific-critic
+whether the plan and the report hold up, judged
+in its own context before the human sees them
 hooks: no coordinate edits; a pause at every checkpoint
 Skills the agents follow, written by humans:
 ours: dft-settings-protocol · mlip-doubt-calibration · dissociation-final-state · final-state-report · hpc-dft-jobs
 reused from AtomisticSkills: ml-committee-uncertainty · ml-mlip-benchmark · ml-mace-finetune · chem-thermochemistry · general-peer-review
-Tools, deterministic code under mcp/tools/, each wrapping one module of finalstate/; the planner calls them by name, in this order:
+Tools, deterministic code under finalstate/tools/, each wrapping one module of finalstate/; the planner calls them by name, in this order:
 literature_lookup
 steps the prompt, 3.2
 structure_retrieval
@@ -75,5 +86,5 @@ call by name; cards come back
 PROJECT.md, the locked settings,
 read by every tool
 Reading: the human supplies and decides; the agents route the work through skills to tools; tools compute and come back as descriptor cards; the planner stops at every checkpoint and the human picks. Nothing the agents say is a number they computed.
-The architecture: the human at both ends, 3 LLM agents that only plan, propose and draft, the skills they follow, 17 tools that do every calculation
+The architecture: the human at both ends, 6 LLM agents that only plan, propose and draft, the skills they follow, 17 tools that do every calculation
 board of 21 October 2026 · arrows are calls and hand-offs · every number the agents report is a tool output · hooks block coordinate edits and pause at the checkpoints

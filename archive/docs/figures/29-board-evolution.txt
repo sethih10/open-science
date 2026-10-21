@@ -28,13 +28,14 @@ a Formulate interview that locks scope, conventions
 and verification targets; compact written settings
 rules, such as spin for Ni and Co
 Ours
-the interviewer asks five fixed questions and
-writes PROJECT.md; the three relaxed inputs and A,
-B as structures are supplied
+the computational-chemist asks five fixed
+questions and writes PROJECT.md; the three relaxed
+inputs and A, B as structures are supplied
 none
 (1) Structure retriever
 TOOL
 HUMAN
+LLM
 SKILL
 fed by the input prompt: surf + adsorbates
 (2) and a general system description;
@@ -94,6 +95,7 @@ Open
 the A–B distance threshold
 (3.2) Window [1.5 d, 5] Å
 TOOL
+LLM
 d the max vdW length of the bond to break,
 from the literature
 NEBscape · CatTSunami
@@ -130,7 +132,7 @@ AdsMind: the LLM returns a site type, code places,
 98.8 %; AtomWorld: LLM coordinate edits fail; an LLM
 judge rates fluent wrong answers well
 Ours
-geometry-critic reads descriptor cards, proposes a
+surface-chemist reads descriptor cards, proposes a
 site type per fragment, orders the list; never
 edits coordinates, never overrides a check
 EXTENSION

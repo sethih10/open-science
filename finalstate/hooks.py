@@ -1,7 +1,9 @@
-"""Hooks that enforce the two rules prose cannot: the LLM never edits coordinates, and never passes a checkpoint.
+"""Hooks that enforce the two rules prose cannot: the LLM never edits coordinates, and never runs a tool past a
+checkpoint the human has not passed.
 
 Claude Code calls these with the tool input as JSON on stdin; exit code 2 blocks the call and the message is shown.
-Wired in hooks/hooks.json.
+Wired in hooks/hooks.json. The checkpoint each tool needs is the registry's checkpoint_gate, so the hook and the
+docs cannot disagree.
 """
 from __future__ import annotations
 
@@ -10,11 +12,9 @@ import re
 import sys
 from pathlib import Path
 
-from .checkpoints import AFTER_STEP, CHECKPOINTS, passed
+from .checkpoints import passed
 
 STRUCTURE_FILE = re.compile(r"(^|/)(runs/.*/structures/|structures/).*\.(xyz|extxyz|cif|vasp|json|traj)$")
-# which checkpoint must be passed before a tool of a later step may run
-ORDER = ["prompt", "1", "1*", "2", "3.5", "3.2", "3.3", "3.4", "3.6", "4", "5", "6", "7", "8", "solution"]
 
 
 def block_coordinate_edits() -> int:
@@ -27,27 +27,21 @@ def block_coordinate_edits() -> int:
 
 
 def require_checkpoint() -> int:
-    """Block a pipeline tool call when the checkpoint before its step has not been passed."""
+    """Block a pipeline tool call when the checkpoint it is gated on has not been passed."""
     data = json.load(sys.stdin)
     tool = str(data.get("tool_name", ""))
     if not tool.startswith("mcp__finalstate__"):
         return 0
     name = tool.split("__")[-1]
-    try:
-        from .registry import BY_NAME
-        steps = BY_NAME[name].board_steps
-    except KeyError:
+    from .registry import BY_NAME
+    spec = BY_NAME.get(name)
+    if spec is None or spec.checkpoint_gate is None:
         return 0
     run_dir = Path(data.get("cwd", ".")) / "runs" / data.get("campaign", "current")
-    done = {c.checkpoint for c in passed(run_dir)}
-    for cp in CHECKPOINTS:
-        gate_step = AFTER_STEP[cp]
-        if cp in done:
-            continue
-        if any(ORDER.index(s) > ORDER.index(gate_step) for s in steps if s in ORDER):
-            print(f"blocked: {name} runs after the '{cp}' checkpoint, which the human has not passed", file=sys.stderr)
-            return 2
-    return 0
+    if spec.checkpoint_gate in {c.checkpoint for c in passed(run_dir)}:
+        return 0
+    print(f"blocked: {name} needs the '{spec.checkpoint_gate}' checkpoint, which the human has not passed", file=sys.stderr)
+    return 2
 
 
 def main() -> None:
