@@ -601,6 +601,7 @@ The product state of a dissociation step is the co-adsorbed pair that sits as cl
 
 | CatTSunami quantity                                                                   | Value                                  |
 |---------------------------------------------------------------------------------------|----------------------------------------|
+| DFT single points per reaction in its ML + DFT approach (initial, transition, final state) | 3                                      |
 | Force convergence criterion for a band                                                | fmax < 0.05 eV/Å within the step limit |
 | ML bands that converged, dissociations and transfers (Equiformer V2)                  | 81 to 82 % and 68 to 72 %              |
 | DFT bands in the CO-hydrogenation case study that converged at the standard settings  | 102; 8 failed and needed a rerun       |
@@ -614,7 +615,7 @@ The two wrong-band modes it names are too few frames to sample the saddle, and a
 
 Reading the figure: the top row shows the initial state AB\* and three product candidates on a close-packed surface, A in blue and B in orange. Candidate 1 puts B at the adjacent hollow; it relaxes back onto A and is rejected, red outline. Candidate 2 puts B one lattice spacing away; the bond does not re-form, so it is chosen, blue highlight. Candidate 3 is far away and valid, but the band from AB\* to it includes diffusion. The profile at bottom left shows the single saddle to the near product in blue and the extra diffusion saddles a far product adds in dashed grey. The recipe at bottom right lists CatTSunami's four steps and, in each box, what we add.
 
-**Formal statement.** Over all symmetry-distinct pairs of sites (s_A, s_B), choose the pair that minimises the site-graph distance between A\* and B\*, with the in-plane distance as a tiebreaker, subject to: after relaxation the connectivity graph is the product graph, so no A–B bond; neither fragment desorbed, moved to another site or went subsurface; the surface is unchanged; and exactly zero imaginary modes. Keep the first few survivors in that order, not one.
+**Formal statement.** Over all symmetry-distinct pairs of sites (s_A, s_B), choose the pair that minimises the site-graph distance between A\* and B\*, with the in-plane distance as a tiebreaker, subject to: after relaxation the connectivity graph is the product graph, so no A–B bond; neither fragment desorbed, moved to another site or went subsurface; the surface is unchanged; exactly zero imaginary modes; and the cell wide enough that the pair does not interact with its periodic images. Keep the first few survivors in that order, not one.
 
 **Who has done it.**
 
@@ -629,7 +630,23 @@ Reading the figure: the top row shows the initial state AB\* and three product c
 
 So the answer to "has someone done this" is yes in heuristic form: CatTSunami's AutoFrameDissociation is this problem solved by sampling, and it is open source in fairchem. What is not done is the explicit objective, the complete enumeration, the code gate on both endpoints and the report of how many nearest pairs recombined. That last number is a measurable result on its own, and it feeds the propagation experiment of section 12.
 
-**Where it sits in the pipeline.** It is step 9 of the solution planner, final-state enumeration, with the gate of step 4.1 applied to the product and a connectivity criterion added, and it feeds step 10, pairing. The pair enumeration of section 12, A\* + B\* in one cell with Burnside counting, is the enumeration this step needs.
+**Where it sits in the pipeline.** It is step 9 of the solution planner, final-state enumeration, with the gate of step 4.1 applied to the product and a connectivity criterion added, and it feeds step 10, pairing. The pair enumeration of section 12, A\* + B\* in one cell with Burnside counting, is the enumeration this step needs. For the pairing, CatTSunami unwraps adsorbates across the periodic boundary by a depth-first search from the binding atom and moves the unbroken part as one moiety, which we reuse. Two extensions attach here: a coverage scan, the same pair in several cell sizes, to measure the lateral interaction directly; and the alternative target, the lowest-energy pair within one site hop.
+
+**The whole pipeline for this problem.** Figure 23 redraws the augmented pipeline of section 15 around the stated problem: the final-state search becomes five steps of its own, 9a to 9e, and every other step is read as serving it.
+
+![Surface + AB* in; the nearest non-recombining A* + B* and the barrier to it out](figures/23-problem-pipeline.png)
+
+*Figure: pipeline for the stated problem · 15 rows, 5 columns, one colour per kind of idea, schematic*
+
+Reading the figure: the two boxes at the top state the input, a slab with AB\* and the product named as A\* + B\*, and the output, the nearest non-recombining final state, the barrier to it, both uncertainties, the recombination rate and the cost of the DFT band. The strip under them says why nearest: a far product adds diffusion saddles and a longer band that may not converge. The rows then follow the colour key of figure 20: white is the step, with an owner line under its title that says whether a tool, the LLM, a human or a written skill does it, green the refinement to borrow with its paper, amber what is missing, red what already exists elsewhere, blue what is ours, dashed purple the extension layer at its step. The blue bracket on the left marks rows 9a to 9e, the stated problem: place A, enumerate B sites by distance, relax each pair, gate it for recombination and the other anomalies, then choose the nearest survivor and report the rest. Rows 9a and 9c carry no claim because CatTSunami already does them, and whether A stays at its initial-state site is a team decision; the claim sits in 9b, 9d and 9e, where the explicit objective, the logged gate and the recombination rate are new. The verdict band at the bottom restates what is taken, what is missing and what is ours for this problem.
+
+| Sub-step | Owner | Does                                                                                     | Output                                               |
+|----------|-------|------------------------------------------------------------------------------------------|------------------------------------------------------|
+| 9a       | Tool  | Place A, the fragment that keeps the binding atom, at symmetry-distinct sites near the IS site, or fixed at it | Placements of A\*, counted                 |
+| 9b       | Tool  | Enumerate B sites around each A, ordered by site-graph distance                           | Symmetry-distinct pairs, nearest first, counted     |
+| 9c       | Tool  | Relax every pair with the same potential and settings as the initial state               | Relaxed pairs                                        |
+| 9d       | Tool  | Gate: no A–B bond, nothing desorbed, moved or subsurface, surface intact, no imaginary mode | Survivors; every rejection with its reason         |
+| 9e       | Tool  | Choose the nearest survivor first, then by energy; keep several                           | Final states, E(FS near), E(FS ∞), recombination rate |
 
 **Questions for the team.**
 

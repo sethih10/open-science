@@ -81,7 +81,7 @@ rows = [
   ("missing", "Missing", "co-adsorbed pairs A* + B* when the product forms\nfrom two adsorbates: lateral interactions and\ncoverage; conformers generated in vacuum first"),
   "pair enumeration by symmetry with the\ncount; few conformers kept", None),
  ("(4.1) Physics-based filtering", "drop unphysical configurations before relaxing",
-  ("AdsorbML anomaly checks", "desorbed, dissociated, intercalated, surface\nreconstructed; CatTSunami reuses them to reject\nreactant and product states"),
+  ("AdsorbML anomaly checks", "desorbed, dissociated, intercalated, surface\nreconstructed; CatTSunami applies connectivity\nand anomaly checks to its frames"),
   ("exists", "Not unique, one check short", "the four AdsorbML checks exist since 2022;\nthey lack the imaginary-mode check that\ncatches the symmetry trap"),
   "one gate, in code, applied to both endpoints\nbefore any path is run: barrier-ready",
   ("EXTENSION · attaches to 4.1 and 6", "an LLM critic reads the descriptor card\nand comments; it never overrides a\ncode check")),
