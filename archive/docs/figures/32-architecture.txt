@@ -1,0 +1,63 @@
+Human, before the run
+supplies the relaxed surface, the
+relaxed adsorbate and the relaxed
+initial state with their energies,
+and names the product A* + B*;
+answers the five interview
+questions; approves the settings
+lock and the plan
+Human, during and after
+the five checkpoints where the agent waits:
+❚❚ approve settings
+❚❚ approve the plan
+❚❚ review flagged cases
+❚❚ pick up to five final states
+❚❚ interpret results
+
+choice and reason go to the case bank;
+only a human promotes a case to a skill
+LLM agents: plan, propose, draft; never compute, never place atoms
+final-state-planner
+the next tool call and when to stop;
+holds the checkpoint list; calls every
+tool by name, reads cards, never writes
+coordinates
+geometry-critic
+the site type and orientation to try per
+fragment; whether a card and its
+verdicts disagree; never overrides a
+check
+dft-settings-interviewer
+what the Formulate interview locks into
+PROJECT.md; runs once, before the run
+hooks: no coordinate edits; a pause at every checkpoint
+Skills the agents follow, written by humans:
+ours: dft-settings-protocol · mlip-doubt-calibration · dissociation-final-state · final-state-report · hpc-dft-jobs
+reused from AtomisticSkills: ml-committee-uncertainty · ml-mlip-benchmark · ml-mace-finetune · chem-thermochemistry · general-peer-review
+Tools, deterministic code under mcp/tools/, each wrapping one module of finalstate/; the planner calls them by name, in this order:
+dft_settings_lock
+step 1
+mlip_choice
+steps 1*, 3.3
+site_enumeration
+steps 2, 3.2, 4
+adsorbate_placement
+steps 3.5, 4
+dissociation_final_state
+steps 3.2, 3.3, 3.5, 3.6, 4, 6
+validity_gate
+steps 3.1, 5
+mlip_doubt
+step 7
+descriptor_card
+steps 3.4, 5, 8
+final_state_report
+the Solution
+extension, only if D2 allows DFT: dft_single_points · every tool returns its structure as a descriptor card and logs every parameter beside its output
+follow
+call by name; cards come back
+PROJECT.md, the locked settings,
+read by every tool
+Reading: the human supplies and decides; the agents route the work through skills to tools; tools compute and come back as descriptor cards; the planner stops at every checkpoint and the human picks. Nothing the agents say is a number they computed.
+The architecture: the human at both ends, three LLM agents that only plan, propose and draft, five skills they follow, nine tools that do every calculation
+board of 21 October 2026 · arrows are calls and hand-offs · every number the agents report is a tool output · hooks block coordinate edits and pause at the checkpoints

@@ -1,0 +1,140 @@
+Set up
+Step 3: adsorbate placement, the stated problem
+Select and report
+Input prompt
+H
+supplies the surface, the adsorbates and a description; answers the five
+interview questions
+L
+dft-settings-interviewer: asks the fixed questions, writes PROJECT.md
+S
+dft-settings-protocol
+(1) Structure retriever
+❚❚ approve settings
+H
+approves the settings lock
+❚❚
+L
+final-state-planner: picks the protocol and states why
+S
+dft-settings-protocol
+T
+dft_settings_lock: the three relaxed inputs, A and B as structures, the
+cell; settings locked in PROJECT.md
+(1*) MLIP selection, AL prospect
+❚❚ approve the plan
+H
+approves the plan
+❚❚
+L
+final-state-planner: records the choice and the reason
+S
+ml-mlip-benchmark, reused
+T
+mlip_choice: two or three candidates benchmarked on the system class;
+the chosen one relaxes, all form the committee of step 7
+(2) Adsorption sites with pymatgen
+T
+site_enumeration: symmetry-inequivalent sites, fcc and hcp apart,
+counted; pymatgen as the baseline
+(3.1) Least distance before pull-back
+S
+dissociation-final-state
+T
+validity_gate, check 10: the A–B bond re-formed after relaxation; runs
+inside step 5
+(3.2) Window [1.5 d, 5] Å
+S
+dissociation-final-state
+T
+dissociation_final_state: every symmetry-distinct A–B pair in [1.5 d, 5]
+Å, nearest first by site-graph distance, counted
+(3.3) Pull force with the MLIP
+S
+dissociation-final-state
+T
+dissociation_final_state: one MLIP force call per pair; a pull towards
+the other fragment queues the pair last
+(3.4) Agentic critique of the cleavage
+L
+geometry-critic: proposes a site type per fragment, orders the list;
+never overrides a check
+S
+dissociation-final-state
+T
+geometry-critic reads descriptor_card text, proposes a site type and
+orientation per fragment, reorders; never edits coordinates
+(3.5) Site and orientation, pymatgen
+S
+dissociation-final-state
+T
+adsorbate_placement: A at every symmetry-distinct site near its old
+site, counted; A fixed is the cheap baseline
+or
+(3.6) Or minima hopping with the MLIP
+S
+dissociation-final-state
+T
+dissociation_final_state: NEBscape's endpoint generator with the chosen
+MLIP, the alternative and the baseline policy
+(4) Initial configurations
+S
+dissociation-final-state
+T
+dissociation_final_state: relax every pair with the chosen MLIP and the
+locked settings, random displacement first; Burnside-counted
+(5) Physics-based and anomaly filtering
+L
+extension: geometry-critic: comments on cards, never overrides
+S
+dissociation-final-state
+T
+validity_gate: nine checks per fragment plus two final-state checks,
+before and after relaxation; verdict into the card; rejections logged
+(6) SOAP clustering
+S
+dissociation-final-state
+T
+dissociation_final_state: SOAP clusters of the survivors; the nearest
+and the lowest per cluster; E(FS near), E(FS ∞)
+(7) Uncertainty estimation
+❚❚ review flagged cases
+H
+reviews the flagged cases
+❚❚
+L
+final-state-planner: stops on doubt and asks
+L
+extension: agentic uncertainty: N planner runs; DFT single points if D2
+allows
+S
+mlip-doubt-calibration
+T
+mlip_doubt: committee disagreement across the 1* candidates, calibrated
+on DFT or OC20NEB labels; doubt escalates
+(8) Rank; user chooses up to 5
+❚❚ pick up to five final states
+H
+picks up to five on the cards; choice and reason to the case bank
+❚❚
+L
+final-state-planner: shows the cards with rank, doubt and verdicts
+T
+descriptor_card: one card per final state with rank, doubt and verdicts;
+the human picks; choice and reason to lessons.md
+Solution
+❚❚ interpret results
+H
+interprets the report
+❚❚
+L
+final-state-planner: drafts the report
+S
+final-state-report; general-peer-review, reused
+T
+final_state_report: E(FS near), E(FS ∞), rejections with reasons,
+recombination rate, decision trace
+Legend: H human · L LLM agent · S skill, a written procedure the LLM follows · T tool, deterministic code · thick edge does the work · dashed, an extension · ❚❚ a checkpoint where the agent waits for the human.
+final-state-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.
+Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work
+board of 21 October 2026 · three phases left to right, cards top to bottom · ❚❚ a checkpoint where the agent waits · dashed: an extension · tool names are the files under mcp/tools/, skills the folders under skills/, agents the files under agents/

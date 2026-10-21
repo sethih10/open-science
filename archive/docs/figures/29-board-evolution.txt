@@ -1,0 +1,266 @@
+as written on the board
+refined by the literature, with the source
+what we added or decided
+open: team decision
+extension layer, later
+Owner line:
+TOOL
+deterministic code
+LLM
+reads cards, proposes, drafts
+HUMAN
+decides, picks, interprets
+SKILL
+a written procedure the LLM follows
+On the board
+Refined by the literature
+What we added or decided
+Open, or an extension
+Input prompt
+HUMAN
+LLM
+SKILL
+surf + adsorbates (2) + a general system
+description; surface and adsorbate with
+their energies, E_ads from the literature
+Get Physics Done · AutoDFT
+a Formulate interview that locks scope, conventions
+and verification targets; compact written settings
+rules, such as spin for Ni and Co
+Ours
+the interviewer asks five fixed questions and
+writes PROJECT.md; the three relaxed inputs and A,
+B as structures are supplied
+none
+(1) Structure retriever
+TOOL
+HUMAN
+SKILL
+fed by the input prompt: surf + adsorbates
+(2) and a general system description;
+surface and adsorbate with their energies
+AiiDA common workflows · SSSP · OC20
+numerical settings come from a verified protocol,
+never from the model; OC20's RPBE and PAW if the
+benchmark is OC20NEB
+Ours
+the three relaxed inputs plus A and B as
+structures; settings locked in PROJECT.md; a cell
+wide enough for the pair
+Open
+one set of gas references for AB, A and B
+(1*) MLIP selection, AL prospect
+TOOL
+LLM
+SKILL
+HUMAN
+chosen before placement so step 3 can use
+it; active learning as a prospect
+80-MLIP survey · CatBench · AtomisticSkills
+no potential is best everywhere; CatBench classes
+each failure; ml-mlip-benchmark scores candidates on
+the system class
+Ours
+benchmark two or three, record why; spin for Ni
+and Co; the candidates become the committee of
+step 7
+EXTENSION
+active learning: doubt → a few DFT labels →
+fine-tune → re-run
+(2) Adsorption sites with pymatgen
+TOOL
+Python, with pymatgen
+pymatgen · ACAT · spglib
+pymatgen's site finder labels no fcc or hcp hollow;
+ACAT gives labelled sites and the site graph; spglib
+the symmetry operations
+Ours
+symmetry-complete and counted; fcc and hcp apart;
+pymatgen kept as the baseline
+none
+(3.1) Least distance before pull-back
+TOOL
+estimate the minimum distance at which the
+dissociated atom is not pulled back
+CatTSunami · NEBscape
+CatTSunami treats a bond as breaking at 1.25 to
+1.63× its length; NEBscape keeps fragments intact by
+Hookean constraint during sampling
+Ours
+the bond-re-formed check as code, after
+relaxation, with a logged reason; a pair that
+fails is never kept
+Open
+the A–B distance threshold
+(3.2) Window [1.5 d, 5] Å
+TOOL
+d the max vdW length of the bond to break,
+from the literature
+NEBscape · CatTSunami
+NEBscape excludes separations above 4.5 Å;
+CatTSunami samples a 1 to 3 Å shell, 25 pairs, one
+survivor at random
+Ours
+every symmetry-distinct pair inside the window,
+ordered by site-graph distance, nearest first,
+counted: the objective is explicit
+Open
+d from vacuum or from the adsorbed molecule; 5
+Å or NEBscape's 4.5 Å
+(3.3) Pull force with the MLIP
+TOOL
+use the selected MLIP to estimate the pull
+force on the binding fragment
+NEBscape · CatTSunami
+neither screens by force; both relax every candidate
+they generate
+Ours
+one force call per pair before relaxing; a pull
+towards the other fragment queues the pair last,
+never drops it
+Open
+the force threshold
+(3.4) Agentic critique of the cleavage
+LLM
+TOOL
+criticise and adjust the placement from
+knowledge of what the cleavage does
+AdsMind · AtomWorld · ChemCrow
+AdsMind: the LLM returns a site type, code places,
+98.8 %; AtomWorld: LLM coordinate edits fail; an LLM
+judge rates fluent wrong answers well
+Ours
+geometry-critic reads descriptor cards, proposes a
+site type per fragment, orders the list; never
+edits coordinates, never overrides a check
+EXTENSION
+a vision model to predict the sites, only
+after the geometry benchmark shows an image
+helps
+(3.5) Site and orientation, pymatgen
+TOOL
+agentic knowledge or a package such as
+pymatgen, so the binding fragment adsorbs
+El Agente Potente · CatTSunami
+symmetry-distinct sites and orientations enumerated
+by code; CatTSunami: 5 placements within 2 Å of the
+old binding site
+Ours
+code places, the LLM never does: the fragment
+keeping the binding atom at symmetry-distinct
+sites near its old site, counted
+Open
+the binding fragment fixed at its old site, or
+enumerated
+(3.6) Or minima hopping with the MLIP
+TOOL
+alternatively, minima hopping with the
+selected MLIP for the binding fragment
+NEBscape
+minima hopping from symmetry-inequivalent sites with
+Hookean constraints; 94 % of 304 OC20NEB reactions
+converge; MIT code
+Ours
+kept as the alternative generator, wrapped, and as
+the baseline policy our nearest-first choice is
+scored against
+none
+(4) Initial configurations
+TOOL
+output of step 3: all degrees of freedom of
+the adsorbate × all sites
+Burnside · symmetry trap
+the count checked by Burnside's lemma; a small
+random displacement before relaxing, or a symmetric
+start relaxes to a saddle
+Ours
+every candidate pair relaxed with the chosen
+potential and the locked settings, displacement
+first
+Open
+the displacement amplitude
+(5) Physics-based and anomaly filtering
+TOOL
+physics by script; anomaly by ML and/or
+script; reasoning questions injected
+AdsorbML in fairchem
+four anomaly checks exist; the desorbed check treats
+A* + B* as one adsorbate and misses B leaving while
+A stays
+Ours
+nine checks as code, per fragment, before and
+after relaxation; the ML variant not taken; every
+rejection logged with its reason
+EXTENSION
+an LLM critic reads the card and comments; it
+never overrides a check
+(6) SOAP clustering
+TOOL
+pick the 3 lowest-energy configurations from
+each cluster, could be more
+NEBscape
+deduplicates by SOAP and keeps the first two
+energy–distance Pareto fronts within 1.2 eV
+Ours
+cluster the survivors; keep the nearest and the
+lowest per cluster; nearest first overall
+Open
+how many per cluster
+(7) Uncertainty estimation
+TOOL
+SKILL
+LLM
+HUMAN
+with all relevant models from 1*; agentic
+uncertainty and DFT as question marks
+MACE committees · uncertainty-toolbox
+committee variance is cheap; calibration metrics
+exist; El Agente Potente saw two MLIPs disagree in
+sign on a reaction energy
+Ours
+disagreement calibrated on a few DFT or OC20NEB
+labels; doubt escalates to the human instead of
+guessing
+EXTENSION
+agentic uncertainty: N planner runs; DFT
+single points if D2 allows DFT
+(8) Rank; user chooses up to 5
+HUMAN
+LLM
+TOOL
+optional: uncertainty estimates and
+potential issues; critic and knowledge
+prompts
+AdsorbML · CatDT
+top-k then DFT is AdsorbML's recipe; CatDT: a raw
+case bank scores 68 % against 52 to 54 % for
+distilled lessons
+Ours
+descriptor cards with rank, doubt and verdicts;
+the choice and reason go to the case bank; only a
+human promotes a case to a skill
+Open
+up to five, or fewer
+Solution
+LLM
+TOOL
+HUMAN
+SKILL
+final output, with uncertainty and issues
+alongside
+OC20NEB · AtomisticSkills
+OC20NEB product frames as the comparison; every
+parameter logged beside its output;
+general-peer-review reads the report
+Ours
+the nearest non-recombining final state with E(FS
+near), E(FS ∞), rejections, recombination rate,
+trace; two numbers and two comparisons
+Open
+the pass criterion against the OC20NEB product
+frame
+step 3: adsorbate placement, the stated problem
+The board's own open questions: step 3 applies to dissociative adsorption only, by the fixed scope; the models of step 7 are the candidates benchmarked at 1*; "phys. int." at step 8 is read as the physical issues shown on each card; the vision model feeds step 3 and is an extension.
+The six points of step 3 keep the board's order 1 → 2 → 3 → 4 → 5 or 6; in code: 3.5, 3.2, 3.3, 3.4; 3.6 is the alternative; 3.1 runs inside step 5.
+How the plan evolved: one row per step of the board, in the board's order; what the board says, what the literature refined, what we added
+board of 21 October 2026, numbering kept, including the six points of step 3 · owner line under each step · amber is open, dashed purple is an extension · schematic
