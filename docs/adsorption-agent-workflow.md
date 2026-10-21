@@ -453,7 +453,13 @@ where k_B is Boltzmann's constant, h Planck's constant and ΔG‡ the free-energ
 
 Reading the figure: the curve traces energy along the reaction coordinate from the co-adsorbed initial state (IS, A\* + B\*) over the transition state (TS) to the final state (FS, AB\*). The barrier E_a is the rise from IS to TS; the reaction energy ΔE is the drop from IS to FS. The TS is a saddle point: a minimum in every direction but one, hence exactly one imaginary vibrational mode, and an IRC from it must lead back to IS and FS. The energies shown are schematic.
 
-**Why accuracy matters more here.** At 500 K, k_B T ≈ 0.043 eV, so a 0.1 eV error changes k by exp(2.3) ≈ 10. An error harmless for ranking sites is a tenfold error in rate. Hence the loop that sends rate-controlling steps back to DFT.
+**Why accuracy matters more here.** At 500 K, k_B T ≈ 0.043 eV, so a 0.1 eV error changes k by exp(2.3) ≈ 10. An error harmless for ranking sites is a tenfold error in rate. Hence the loop that sends rate-controlling steps back to DFT. The same arithmetic is the reason the adsorption stage must be trusted before any barrier is computed: because E_a = E(TS) − E(IS), an error in the initial state enters the barrier in full, and an initial state that is the wrong configuration (a different site, an unrelaxed geometry, a saddle left by the symmetry trap) connects the transition state to the wrong reactant altogether.
+
+![An endpoint error moves the barrier one-to-one and the rate exponentially](figures/18-endpoint-error-propagation.png)
+
+*Figure: endpoint error propagation · schematic, not to scale*
+
+Reading the figure: on the left, the grey curve is a reaction profile from initial state (IS) over the transition state (TS) to the final state (FS); the blue level is the correct IS and the red dashed level an IS that is wrong by δ, so the barrier measured from it is wrong by the same δ. On the right, that δ is turned into a factor in the rate through exp(δ / k_B T) at two temperatures; the blue band is the tolerable range. At 500 K, 0.05 eV is a factor of three, 0.1 eV a factor of ten, 0.2 eV a factor of a hundred.
 
 **What changes for the adsorption stage.**
 
@@ -467,7 +473,19 @@ Reading the figure: the curve traces energy along the reaction coordinate from t
 
 - Mirror-equivalent paths need computing once; a symmetric starting band in NEB can hide a lower, symmetry-broken path.
 
-**Prior work.** [CatTSunami](https://arxiv.org/abs/2405.02078) found transition states within 0.1 eV of DFT 91% of the time with a 28-fold speed-up, and reproduced a 61-intermediate, 174-reaction network in 12 GPU days instead of an estimated 52 GPU years. A [2026 study](https://arxiv.org/pdf/2603.24482) reports transition states with fewer than 10 DFT single points on average, but notes the method suits surface elementary reactions, not reconstructions or collective lattice distortions. As far as we found, no LLM agent yet runs the whole loop with network pruning, validation, human checkpoints and kinetics-driven refinement.
+**Prior work.** The transition-state side is no longer empty ground; what is still open is the quality of the endpoints and the validation of the saddle.
+
+| Work                                                                                                  | Type              | What it does                                                                                                            | Documented limitation or gap                                                            |
+|-------------------------------------------------------------------------------------------------------|-------------------|-------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [CatTSunami](https://arxiv.org/abs/2405.02078) (2024)                                                 | ML, no LLM        | ML NEB on surfaces; TS within 0.1 eV of DFT 91% of the time, 28× faster; 174-reaction network in 12 GPU days            | Needs good endpoints as input                                                           |
+| [Fine-tuned MLIP TS search](https://arxiv.org/pdf/2603.24482) (2026)                                  | ML, no LLM        | TS with fewer than 10 DFT single points on average                                                                      | Surface elementary steps only; not reconstructions                                      |
+| [NEBscape](https://www.nature.com/articles/s41524-026-02298-1) (npj Comput. Mater. 2026)              | Automated, no LLM | Endpoints from global optimisation, paired by atom mapping and symmetry alignment, then NEB; no human intervention       | Heuristic endpoint selection; no agent reasoning or checkpoints                         |
+| [TSAgent](https://arxiv.org/abs/2605.14154) (2026)                                                    | LLM agent         | Plan–execute–analyse–replan loop at DFT level; 83% on a 100-example OC20NEB subset; 70% on held-out versus 73 ± 12% for human experts; reproduces BEP for NH₃ dissociation | Abstract does not mention imaginary-mode or IRC validation or how endpoints are chosen |
+| [CatDT](https://urop.hkust.edu.hk/node/40500) (HKUST, in development)                                 | LLM multi-agent   | Eight agents on UMA or CHGNet; a propose–validate hard gate iterates up to ten rounds to produce valid NEB endpoints before any barrier run; microkinetic rates | No published results or code yet; electrochemical reactions only                        |
+| [CopyCAT](https://iciq.org/es/?p=72665) (ICIQ, 2026)                                                  | LLM multi-agent   | Turns chemical reasoning into 3D structures for adsorbates and transition states on surfaces                           | Thesis-stage; accuracy against DFT not reported where we looked                         |
+| [TSBench](https://arxiv.org/abs/2609.08503) (2026)                                                    | Benchmark         | Seven frontier LLMs build TS guesses with structure-editing tools for 78 elementary reactions; 50% success, 67% with diagnosis-driven revision | Most failures are plausible saddles that connect the wrong reactant–product pair         |
+
+Two readings. First, CatDT's propose–validate gate on endpoints is the closest thing to our trust layer and confirms the need; it is unpublished, so the field is open on measured results. Second, TSBench's main failure mode, a saddle that connects the wrong pair, is an endpoint problem, not a saddle-finding problem: it is exactly what symmetry-complete enumeration, co-adsorption pair enumeration and connectivity checks prevent. The gap we fill is therefore *barrier-ready endpoints*, validated before any barrier is run, and a measurement of how much endpoint quality moves the barrier, which nobody above reports.
 
 **Is automation worth it?** Yes for the middle (endpoint mapping, TS search, validation, free-energy corrections, microkinetics): repetitive, numerous and error-prone. No for the ends: a human approves the network and interprets the mechanism, because a missing step cannot be recovered downstream.
 
@@ -573,6 +591,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Does a rendered image beside the descriptor card help the agent catch geometry errors, or add noise? Decide from the geometry test in the benchmark.
 
+- Should the headline claim move from "knows when not to trust itself" to "barrier-ready endpoints": every adsorption energy validated as an initial or final state for a transition-state search, with the endpoint-to-barrier error propagation measured? TSAgent and CatDT make a plain transition-state agent a crowded claim; the endpoint claim is not yet taken.
+
 **Next steps.**
 
 - [ ] Draft SKILL.md for adsorption and transition-state calculations
@@ -612,6 +632,10 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - [ ] Write model-facing documentation for the geometry tools (place, enumerate, check), following the MatTools finding
 
 - [ ] Add twenty geometry editing tasks to the benchmark and record the agent's success with and without tools
+
+- [ ] Propagation experiment: run the same ML NEB (CatTSunami style) for one step on Pt(111) from endpoints found by single placement and from endpoints found by enumeration plus checks; report the barrier difference in eV and as a rate factor; check one case with DFT
+
+- [ ] Read the TSAgent and TSBench papers in full and fill the gaps in the table (endpoint choice, saddle validation)
 
 ## Sources
 
@@ -686,6 +710,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - Tacit knowledge and agents: [LLMs for tacit knowledge discovery](https://arxiv.org/pdf/2507.03811), [KUPAS MASTER](https://arxiv.org/abs/2609.37673), [Tacit Fragments](https://www.alphaxiv.org/abs/2609.operationalising-tacit-knowledge-agentic-ai)
 
 - [OpenAI FrontierScience](https://openai.com/index/frontierscience)
+
+- Transition-state agents and benchmarks: [TSAgent](https://arxiv.org/abs/2605.14154), [TSBench](https://arxiv.org/abs/2609.08503), [NEBscape](https://www.nature.com/articles/s41524-026-02298-1), [CatDT](https://urop.hkust.edu.hk/node/40500), [CopyCAT (ICIQ thesis)](https://iciq.org/es/?p=72665)
 
 - Geometry: [AtomWorld](https://arxiv.org/html/2510.04704), [LLMConfBench: molecular geometry understanding has unintendedly emerged in frontier LLMs](https://arxiv.org/html/2609.20666), [MiSI-Bench](https://arxiv.org/html/2512.10867v1), [Robocrystallographer](https://www.cambridge.org/core/journals/mrs-communications/article/robocrystallographer-automated-crystal-structure-text-descriptions-and-analysis/3C201F132450877464B2D0B1B8C4ED01), [LLM-Prop](https://www.nature.com/articles/s41524-025-01536-2), [LLM4Mat-Bench](https://arxiv.org/pdf/2411.00177), [MatTools](https://arxiv.org/html/2505.10852v2), [LLaMP](https://arxiv.org/pdf/2401.17244)
 

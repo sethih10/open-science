@@ -122,7 +122,7 @@ Open design question: ensemble disagreement, geometric sanity, or both.
 - Ni(111): set initial magnetic moments, or the SCF fails.
 - Prior agents reach errors of order 1.5 eV (AdsMind MAE 1.55 eV on six systems); activity trends need about 50 meV.
 - AdsMind's closed loop was found converging above the minimum found by exhaustive enumeration; Adsorb-Agent produced sign errors found later.
-- Accuracy matters more for barriers than for site ranking: 0.1 eV ≈ 10× in rate at 500 K.
+- Accuracy matters more for barriers than for site ranking: 0.1 eV ≈ 10× in rate at 500 K (0.05 eV ≈ 3×, 0.2 eV ≈ 100×). Because E_a = E(TS) − E(IS), an initial-state error enters the barrier in full; a wrong initial-state configuration connects the TS to the wrong reactant.
 - A symmetric starting band in NEB can hide a lower, symmetry-broken path; mirror-equivalent paths need computing once.
 - The global-minimum configuration of an intermediate may not lie on the lowest-barrier path: pass the top few configurations on, not one.
 
@@ -171,7 +171,9 @@ Adsorption agents and toolkits:
 - Catalyst-Agent: MCP agent around FAIRchem AdsorbML; success 23–34%.
 - AutoDFT: closed-loop DFT with monitoring and recovery; measures task completion, not chemistry accuracy.
 - AtomisticSkills (MIT, 2026): outer harness for coding agents; four layers (workflows, 100+ skills, 50+ MCP tools on 10+ servers incl. FairChem/UMA, MACE, MatGL, Atomate2, rules); hyperparameters logged; co-pilot mode. Its Fe-oxide OER case study chains cleavage, O*/OH*/OOH* placement, MLIP relaxation, DFT, free-energy and volcano analysis. Not offered: symmetry-complete enumeration, validity checks, ML-doubt escalation, failure rate. Check which catalysis skills are public (they run on an in-house htvs pipeline).
-- Transition states: CatTSunami finds TS within 0.1 eV of DFT 91% of the time at 28× speed-up; a 2026 fine-tuned-MLIP method needs fewer than 10 DFT single points per TS but does not suit reconstructions.
+- Transition states, no LLM: CatTSunami (TS within 0.1 eV of DFT 91% of the time, 28× faster); fine-tuned-MLIP TS search (fewer than 10 DFT single points per TS; not for reconstructions); NEBscape (npj 2026: endpoints by global optimisation, paired by atom mapping and symmetry alignment, fully automated).
+- Transition states, LLM agents: TSAgent (2026: plan–execute–analyse–replan at DFT level; 83% on a 100-example OC20NEB subset; 70% held-out vs 73 ± 12% human experts; reproduces BEP); CatDT (HKUST, unpublished: eight agents on UMA/CHGNet, propose–validate hard gate on NEB endpoints, microkinetic rates); CopyCAT (ICIQ: 3D adsorbate and TS structures from chemical reasoning). TSBench (2026): seven frontier LLMs build TS guesses with editing tools for 78 reactions, 50% success, 67% with revision; main failure is a plausible saddle connecting the wrong reactant–product pair.
+- Gap we fill: barrier-ready endpoints validated before any barrier run, plus a measurement of how much endpoint error moves the barrier. Nobody above reports that measurement.
 
 Giving agents scientific intuition (by where knowledge ends up):
 - Weights: ether0 (FutureHouse 2025), 24B model trained by RL on 640,730 verifiable chemistry tasks. Lesson: intuition can be trained where a verifier exists; out of hackathon scope.
@@ -252,6 +254,7 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - How many lessons-log entries before Ni(111) is caught without a human; can that curve be shown?
 - Can an interview agent run the Formulate interview without losing what a human interviewer catches?
 - Does a rendered image beside the descriptor card help catch geometry errors, or add noise?
+- Move the headline claim to "barrier-ready endpoints" with measured endpoint-to-barrier error propagation? TSAgent and CatDT crowd the plain TS-agent claim.
 
 ## 18. Next steps
 
@@ -272,6 +275,8 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - [ ] Build the descriptor-card tool; route every structure-producing tool through it
 - [ ] Write model-facing documentation for the geometry tools
 - [ ] Add twenty geometry editing tasks to the benchmark
+- [ ] Propagation experiment: same ML NEB on Pt(111) from naive endpoints vs enumerated-and-checked endpoints; barrier difference in eV and rate factor; one DFT check
+- [ ] Read TSAgent and TSBench in full; fill the endpoint-choice and saddle-validation gaps in the prior-work table
 
 ## 20. Geometry rules: the LLM never touches coordinates
 
