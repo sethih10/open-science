@@ -1,22 +1,17 @@
-# Build context: the nearest non-recombining final state and the barrier to it
+# Build context: the nearest non-recombining final state
 
-Audience: a coding agent or a developer who builds the software the design documents describe. This file gathers what the code needs: steps and owners, tools with inputs, outputs and thresholds, data formats, rules for the LLM, the benchmark and the build order. It adds no knowledge of its own. It is drawn from `agent-context.md`, `adsorption-agent-workflow.md` and the scripts for figures 22 and 23. When it differs from `adsorption-agent-workflow.md`, the design document is right and this file is wrong. Write code comments and docs as `agent-writing-style.md` says.
+Audience: a coding agent or developer building the software. This file gathers what the code needs, from `agent-context.md`, `adsorption-agent-workflow.md` and the scripts of figures 22 and 23, and adds no knowledge of its own; where it differs from the design document, this file is wrong. Write comments and docs as `agent-writing-style.md` says.
 
 Conventions:
 
-- "open: team decision" marks a value or a choice the docs do not fix. Do not fill it in from memory. Expose it as a named parameter without a default, and ask.
-- Step numbers are the planner's: 1 to 14, with 4.1 and 9a to 9e, as in `agent-context.md` sections 21 to 23.
-- Task IDs are the build plan's: D, T, P, M and R, as in `docs/figures/src/22-build-plan.py`.
+- "open: team decision" marks a value or choice the docs do not fix. Never fill it from memory; expose it as a named parameter without a default, and ask.
+- Step numbers are the planner's, 1 to 14 with 4.1 and 9a to 9e, as in `agent-context.md` sections 21 to 23; task IDs D, T, P, M and R are the build plan's, `docs/figures/src/22-build-plan.py`.
 
 ## 1. Purpose and problem
 
-The software finds the closest final state in which the two fragments of a dissociated adsorbate do not bond back. That is the whole scope for now, fixed on 21 October 2026: not catalysis, not kinetics, and not yet the barrier. The barrier from the initial state to that final state is the reason the state is chosen this way, because a validated nearest final state gives a short band with one saddle that needs fewer DFT force calls and fails less often, but computing it is a later phase. Tools 3.9 to 3.11 and the band rows of the build order are kept for that phase and are not built now.
+Scope, fixed 21 October 2026: given a surface with adsorbate AB\* and the desired product A\* + B\*, both fragments adsorbed, determine the final state in which B\* is as close to A\* as possible while the two stay fully dissociated. Not catalysis, not kinetics, not yet the barrier. The nearest validated final state is chosen because it gives a short band with one saddle, fewer DFT force calls and fewer failures; the band itself, tools 3.9 to 3.11, is a later phase.
 
-The problem in the team's words:
-
-> Given an input system (surface + adsorbate) and desired product/final state (surface + cleaved adsorbate #1 + dissociated part of the adsorbate #1, which needs to be adsorbed as well, so it is effectively adsorbate #2), determine the product/final state such that adsorbate #2 is as close to adsorbate #1 as possible while remaining fully dissociated, i.e. the two do not bond back.
-
-In the docs' notation the adsorbate is AB\*. Adsorbate #1 is A, the fragment that keeps the binding atom; adsorbate #2 is B. The rule: over every symmetry-distinct pair of sites, one for A and one for B, minimise the site-graph distance between A\* and B\*, with the in-plane distance as tiebreaker, subject to the final-state gate of section 3.8. Keep the first few survivors in that order. Then pair each with the chosen initial states, run an ML band with a climbing image, validate the saddle, refine with DFT and report. The nearest product is not always the lowest in energy, because adjacent fragments can repel, so report both.
+A keeps the binding atom, the team's adsorbate #1; B, the dissociated part, is adsorbate #2. Rule: over every symmetry-distinct site pair, minimise the site-graph distance between A\* and B\*, in-plane distance as tiebreaker, subject to the gate of 3.8; keep the first few survivors in order. Adjacent fragments can repel, so the nearest is not always lowest in energy: report both. Later: pair with the chosen initial states, ML band with climbing image, saddle validation, DFT refinement, report.
 
 | Item          | Content                                                                                                         |
 |---------------|-----------------------------------------------------------------------------------------------------------------|
@@ -26,7 +21,6 @@ In the docs' notation the adsorbate is AB\*. Adsorbate #1 is A, the fragment tha
 | First case    | \*OH → \*O + \*H on Pt(111), our final state against the product frame of the OC20NEB band                     |
 
 Quantities the code computes:
-
 - Barrier and reaction energy: `E_a = E(TS) − E(IS)`, `ΔE = E(FS) − E(IS)`.
 - Separated product: `E(FS ∞) = E(A*) + E(B*) − E(slab)`, from separate cells with the locked settings.
 - Lateral interaction: `E(FS near) − E(FS ∞)`.
@@ -35,7 +29,7 @@ Quantities the code computes:
 
 ## 2. Owners
 
-Tools do every deterministic step. The LLM chooses with a stated reason, diagnoses failures and drafts. Humans approve, pick and interpret. Skills hold the procedures the LLM follows. Where the docs name more than one owner, all are listed; the first does the work.
+Tools do every deterministic step; the LLM chooses with a stated reason, diagnoses and drafts; humans approve, pick and interpret; skills hold the procedures. Where several owners are named, the first does the work.
 
 | Owner      | Means                                                                                          |
 |------------|------------------------------------------------------------------------------------------------|
@@ -77,7 +71,7 @@ Tools do every deterministic step. The LLM chooses with a stated reason, diagnos
 
 ## 3. Tools to implement
 
-Every tool returns each structure it produces through the descriptor card of section 3.5. Every tool logs every parameter beside its outputs, as AtomisticSkills does. The docs name five calls: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)` and `render(structure)`. The tool names are fixed in section 9; the headings below use the build-plan labels. Write each tool's documentation for the model, following the MatTools finding.
+Every tool returns each structure through the descriptor card of 3.5 and logs every parameter beside its outputs, as AtomisticSkills does. The docs name five calls: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)`, `render(structure)`. Tool names are fixed in section 9; headings use the build-plan labels. Write tool documentation for the model, per MatTools.
 
 ### 3.1 Settings lock and convergence: T1, step 1
 
@@ -105,7 +99,7 @@ Every tool returns each structure it produces through the descriptor card of sec
 | Force, SCF         | Convention from SKILL.md                                                                   | 0.02–0.03 eV/Å; 1e-5 to 1e-6 eV                                      |
 | Benchmark match    | If OC20NEB is the ground truth, the lock matches OC20                                      | RPBE and PAW; open: team decision                                    |
 
-The next steps name H on Pt(111) as the first sweep. The test adsorbate for the \*OH case is open: team decision.
+H on Pt(111) is the first sweep; the test adsorbate for the \*OH case is open: team decision.
 
 ### 3.2 Site and pair enumeration: T2, steps 2, 4, 9a, 9b
 
@@ -160,7 +154,7 @@ The next steps name H on Pt(111) as the first sweep. The test adsorbate for the 
 | 10 | Bond re-formed, FS only | A and B bonded again after relaxation                            | A–B distance threshold open: team decision     |
 | 11 | Periodic image, FS only | The pair interacts with its periodic images                      | Images ≥ 10 Å apart                            |
 
-The gate has nine checks on every structure, checks 1 to 9, as in section 6 of `agent-context.md`; the final-state gate adds checks 10 and 11. Figure 23 runs the gate before and after relaxation; which checks run before is open: team decision. Whether frequencies come from the MLIP or from DFT is open: team decision.
+Checks 1 to 9 run on every structure, `agent-context.md` section 6; the final-state gate adds 10 and 11. Figure 23 runs the gate before and after relaxation; which checks run before is open: team decision. Frequencies from the MLIP or from DFT: open: team decision.
 
 ### 3.5 Descriptor card: T5
 
@@ -216,7 +210,7 @@ The gate has nine checks on every structure, checks 1 to 9, as in section 6 of `
 
 ### 3.8 Nearest non-recombining final state: P1, sub-steps 9a to 9e
 
-The tool is CatTSunami's AutoFrameDissociation with four changes: complete enumeration, an explicit nearest-first objective, the full gate, and a report of what was rejected.
+CatTSunami's AutoFrameDissociation with four changes: complete enumeration, a nearest-first objective, the full gate, a report of rejections.
 
 | Sub-step | Does                                                    | CatTSunami does                                  | We do                                                                 | Output                                   |
 |----------|---------------------------------------------------------|--------------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
@@ -273,7 +267,7 @@ The tool is CatTSunami's AutoFrameDissociation with four changes: complete enume
 | Frames           | Enough frames to sample the saddle                        | CatTSunami failure mode            |
 | Band convergence | fmax < 0.05 eV/Å                                          | CatTSunami                         |
 
-On failure the LLM diagnoses with the Skill procedure and revises once; TSBench reports success rising from 50 % to 67 % with such revision. A case that still fails is a flagged case for human review. Wraps: ASE vibrations, Sella, CatTSunami band checks. Logs: every verdict, the diagnosis, the revision, and the endpoint-to-barrier shift. Open: the tolerance for "reaches"; which elongation factor in the range applies to which bond; the minimum frame count.
+On failure the LLM diagnoses by the Skill procedure and revises once, as in TSBench, 50 % to 67 %; a case that still fails goes to human review. Wraps ASE vibrations, Sella, CatTSunami band checks. Logs every verdict, diagnosis, revision and the endpoint-to-barrier shift. Open: the tolerance for "reaches"; the elongation factor per bond; the minimum frame count.
 
 ### 3.12 DFT refinement: P5, step 13
 
@@ -302,7 +296,7 @@ On failure the LLM diagnoses with the Skill procedure and revises once; TSBench 
 
 ## 4. Data formats
 
-The docs list fields; they fix no file format or schema for any of the five records below. The format of each is open: team decision.
+The docs list fields but fix no file format or schema for the five records below: open: team decision.
 
 ### 4.1 PROJECT.md
 
@@ -341,7 +335,7 @@ The docs list fields; they fix no file format or schema for any of the five reco
 | Total magnetic moment                                                 |                                                  |
 | Validity verdicts                                                     | "one imaginary mode, 120i cm⁻¹"                  |
 
-Fields for an A\* + B\* pair, such as the A–B distance and the site-graph distance, are not in the docs' list: open: team decision.
+Pair fields, such as A–B and site-graph distance: open: team decision.
 
 ### 4.3 Lessons-log entry
 
@@ -353,11 +347,11 @@ Fields for an A\* + B\* pair, such as the A–B distance and the site-graph dist
 | Source     | The checkpoint where it was made: flagged-case review or the pick of initial states |
 | Becomes    | A skill line, a check or a prior, once it recurs                          |
 
-How many recurrences trigger promotion is open: team decision.
+Recurrences before promotion: open: team decision.
 
 ### 4.4 Decision trace
 
-The docs list the decision-trace format as missing. They say what it must hold:
+Its format is missing in the docs; it must hold:
 
 | Entry                                              | Written by |
 |----------------------------------------------------|------------|
@@ -387,7 +381,7 @@ The docs list the decision-trace format as missing. They say what it must hold:
 
 ## 5. Rules the LLM must obey
 
-The LLM plans, chooses with a reason, diagnoses and drafts; code decides every geometric and numerical question. These rules come from the geometry rules and the locked decisions.
+Code decides every geometric and numerical question; the LLM plans, chooses with a reason, diagnoses and drafts.
 
 1. Never write, edit or reason from raw coordinates.
 2. Act only through named tool calls. Bypassing a tool is a failure; the geometry benchmark exists to catch it.
@@ -405,7 +399,7 @@ The LLM plans, chooses with a reason, diagnoses and drafts; code decides every g
 
 ## 6. Benchmark and measurables
 
-The claim is measured now by two numbers on an OC20NEB subset that starts with \*OH → \*O + \*H on Pt(111); the third, the barrier shift and band cost, belongs to the later phase.
+Two numbers are measured now on an OC20NEB subset starting with \*OH → \*O + \*H on Pt(111); the barrier shift and band cost are later.
 
 | Number             | Definition                                                                          | Compared                                    |
 |--------------------|-------------------------------------------------------------------------------------|---------------------------------------------|
@@ -419,7 +413,7 @@ The claim is measured now by two numbers on an OC20NEB subset that starts with \
 | OC20NEB                   | 932 DFT NEB calculations, released with CatTSunami                                 | Subset size and selection             |
 | Settings                  | OC20 used RPBE and PAW; our lock must match if OC20NEB is ground truth             | Accept it as ground truth: D3         |
 | First case                | \*OH → \*O + \*H on Pt(111): simplest in OC20NEB's list, with DFT bands to compare | Confirm: D1                           |
-| Single-placement baseline | Endpoints from single placement, as in the propagation experiment; adsorption baselines are a plain AdsorbML-style run and AtomisticSkills addadsorbate | Exact definition for the path benchmark |
+| Single-placement baseline | Endpoints from single placement, as in the propagation experiment; adsorption baselines are a plain AdsorbML-style run and AtomisticSkills mat-surface-adsorption | Exact definition for the path benchmark |
 | Pass criterion            | Our final state is a validated minimum with no A–B bond, at least as near as the OC20NEB product frame, within an energy tolerance of it | The tolerance and the distance rule   |
 | Reference points          | TSAgent 83 % on a 100-example OC20NEB subset; CatTSunami within 0.1 eV 91 %; 0.1 eV ≈ 10× in rate at 500 K; activity trends need about 50 meV | None is stated as the criterion |
 | DFT check                 | One DFT check of the propagation experiment                                        | Compute: D2                           |
@@ -433,7 +427,7 @@ The claim is measured now by two numbers on an OC20NEB subset that starts with \
 
 ## 7. Build order
 
-Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Each lists what it needs and what it reuses, as in the figure 22 script. The path tasks are listed under the later phase and are not built now.
+Build the eight numbered tasks first, the shortest route to one validated nearest final state; needs and reuses follow the figure 22 script. Path tasks are later.
 
 Critical path:
 
@@ -446,7 +440,7 @@ Critical path:
 - [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
 - [ ] 8 · R1 Release: SKILL.md, MCP tools on AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
-The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs D5, M2 needs P5, R1 needs M1. Build each when the path reaches it.
+Off-path tasks are built when the path needs them: T1 needs D3, T4 T3, T6 D2, P1 D5, M2 P5, R1 M1.
 
 - Column 0, decide first
   - [ ] D2 Compute and codes: DFT code and budget; GPU for MLIPs; any DFT NEB at all, or ML only?
@@ -491,7 +485,7 @@ The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs 
 
 ## 8. Open decisions that block coding
 
-Each question below blocks the step or task named beside it. Do not code around one with a guessed value.
+Each question blocks the step or task beside it; never code around one with a guessed value.
 
 | Question                                                                                                  | Blocks                         |
 |-----------------------------------------------------------------------------------------------------------|--------------------------------|
@@ -520,7 +514,7 @@ Each question below blocks the step or task named beside it. Do not code around 
 
 ## 9. Repository layout
 
-The repository is a Claude Code plugin that installs beside AtomisticSkills. It stays readable by three rules: every file has one kind and lives in the folder of that kind; calls go one way, agents to skills to tools to the library, never up or sideways; and every kind has one reading order, one for a human and one for an agent. Figure 24 of the design document draws it.
+A Claude Code plugin beside AtomisticSkills, figure 24. Three rules: each file has one kind and lives in that kind's folder; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent.
 
 ```
 open-science-hackathon/
@@ -576,7 +570,7 @@ Reading orders:
 
 ### Compute: what runs where
 
-HPC is needed for DFT and for nothing else. Every check, enumeration, mapping and report runs on a laptop; every machine-learned relaxation, band and frequency runs on one GPU; every DFT step runs on a cluster. Figure 25 of the design document draws the three lanes.
+HPC is needed for DFT and nothing else: checks, enumeration, mapping and reports run on a laptop; ML relaxations, bands and frequencies on one GPU; DFT on a cluster. Figure 25.
 
 | Lane   | Steps                                                                                              | Without HPC in the hackathon                                                                 |
 |--------|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
@@ -584,11 +578,11 @@ HPC is needed for DFT and for nothing else. Every check, enumeration, mapping an
 | GPU    | 5, 7 committee, 9c, 11, 12 ML frequencies                                                          | Unchanged; one workstation or cloud GPU                                                      |
 | HPC    | 1 settings sweep, 7 calibration labels, 13, the benchmark DFT check, DFT frequencies (optional)    | Replaced, not skipped: OC20's RPBE and PAW values instead of the sweep; OC20NEB's released DFT bands as labels and ground truth; one DFT check of the propagation experiment run once beforehand and recorded |
 
-Cost, from experience and not measured here: an ML relaxation of a small Pt(111) cell takes seconds on one GPU and an ML band minutes; the same relaxation in DFT takes core-hours and a DFT band many core-hours. The decision is D2 in section 8.
+Cost, from experience, not measured here: an ML relaxation of a small Pt(111) cell takes seconds on one GPU and an ML band minutes; in DFT, core-hours and many core-hours. Decision D2, section 8.
 
 ### Agents and skills: the roster and why it is short
 
-Tools do the work. A role is added only when a human can say in one sentence what it decides, and a skill only when it is a procedure a human has written and checked. The evidence in the design document, section 8: skill selection precision falls from 29.6 % with 5 skills to 3.3 % with 100, curated skills gain about 16 points and self-written skills about none, CatDT runs eight agents and has published no result, and in the Virtual Lab the human wrote about 1 % of the words and set every agenda.
+Add a role only when a human can say in one sentence what it decides, and a skill only when a human has written and checked it. Evidence, design document section 8: selection precision falls from 29.6 % with 5 skills to 3.3 % with 100; curated skills gain about 16 points, self-written about none; CatDT runs eight agents and has published no result; in the Virtual Lab the human wrote about 1 % of the words and set every agenda.
 
 | Agent       | Decides                                                       | Status                         |
 |-------------|---------------------------------------------------------------|--------------------------------|
@@ -598,7 +592,7 @@ Tools do the work. A role is added only when a human can say in one sentence wha
 | dft-job-steward          | Resubmit, adjust or escalate a failed DFT job                 | Only with HPC                  |
 | general-peer-review      | Whether the report would pass peer review                     | Reused AtomisticSkills skill; not a new role |
 
-The geometry critic and the settings interviewer are separate roles for one reason each: the critic must not see the planner's reasoning, or its check is anchored; the interviewer holds a fixed question list that the planner must not rewrite.
+The critic is separate so it cannot see the planner's reasoning and be anchored; the interviewer, so the planner cannot rewrite its fixed questions.
 
 | Skill, ours      | Procedure                                                      | Status         |
 |------------------|----------------------------------------------------------------|----------------|
@@ -609,18 +603,18 @@ The geometry critic and the settings interviewer are separate roles for one reas
 | hpc-dft-jobs             | Submission; what custodian handles; what to escalate           | Only with HPC  |
 | neb-saddle-diagnosis     | What to do when a band or saddle fails validation; revise once | Later phase    |
 
-Reused from AtomisticSkills: ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune, chem-neb-barrier, chem-thermochemistry, general-peer-review. Twelve skills in all stays well inside the range where selection precision holds.
+Reused from AtomisticSkills: ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune, chem-neb-barrier, chem-thermochemistry, general-peer-review. Twelve in all keeps selection precision high.
 
 Rules that keep it readable:
 
-- One kind per file. A skill never contains code; an agent file never contains a procedure; a tool never contains logic. If a reader finds logic outside `finalstate/`, that is a bug.
-- One tool, one file, one library module, one test, all with the same name: `mcp/tools/validity_gate.py` wraps `finalstate/validity_gate.py` and is tested by `tests/test_validity_gate.py`.
-- Names say what the thing computes, in the words of the field: `dissociation_final_state`, not `final_state`; `dft_settings_lock`, not `settings`; `geometry-critic`, not `critic`. A name a surface scientist cannot read without the docs is wrong.
-- Few agents. The final-state planner and the human do the work; the settings interviewer runs once; the geometry critic is an extension; the DFT job steward exists only with HPC.
-- Few skills. Four of ours now, five with HPC, the saddle diagnosis in the later phase, each under 200 lines, each naming the tools it calls. Facts and ranges live in `finalstate/` and `PROJECT.md`, not in skills.
-- Logs live in `runs/`, never in the repository root; `lessons.md` is the one log a human edits.
-- Hooks enforce what prose cannot: the hook that blocks coordinate edits and the hook that pauses at a checkpoint sit in `hooks/hooks.json`, so the rules of section 5 do not depend on the model reading them.
-- The plugin manifest is the only place that lists skills, agents and the server, so adding one is one line there and one folder.
+- One kind per file: a skill holds no code, an agent no procedure, a tool no logic; logic outside `finalstate/` is a bug.
+- One tool, one file, one library module, one test, one name: `mcp/tools/validity_gate.py` wraps `finalstate/validity_gate.py`, tested by `tests/test_validity_gate.py`.
+- Names say what is computed, in the field's words: `dissociation_final_state`, not `final_state`; `dft_settings_lock`, not `settings`; `geometry-critic`, not `critic`.
+- Few agents: the planner and the human work; the interviewer runs once; the critic is an extension; the job steward exists only with HPC.
+- Few skills: four of ours now, five with HPC, the saddle diagnosis later, each under 200 lines and naming its tools; facts and ranges live in `finalstate/` and `PROJECT.md`.
+- Logs live in `runs/`; `lessons.md` is the one log a human edits.
+- Hooks in `hooks/hooks.json` block coordinate edits and pause at checkpoints, so section 5 does not depend on the model reading it.
+- The plugin manifest alone lists skills, agents and the server; adding one is one line there and one folder.
 
 ## 10. Sources
 
