@@ -9,7 +9,7 @@ This document records the reasoning behind that direction, so that a colleague o
 
 **The position in one paragraph.** A generic "agent that computes adsorption energies" already exists several times over (Adsorb-Agent, AdsMind, DREAMS, CatMaster, Catalyst-Agent, AutoDFT). Our contribution is therefore not the workflow itself but its trustworthiness: symmetry-complete site enumeration, explicit validity checks, detection of machine-learning failures (notably on magnetic Ni and Co), designed human checkpoints, a measured failure rate against a baseline, and an open, reusable release.
 
-**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Section 14 records the whiteboard solution planner, its gaps and its extension layer. Section 15 augments that pipeline with refinements from the transition-state papers, the gaps, and what is ours. Sections 16 and 17 give strategy, decisions and open questions.
+**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Section 14 records the whiteboard solution planner, its gaps and its extension layer. Section 15 augments that pipeline with refinements from the transition-state papers, the gaps, and what is ours. Section 16 states the final-state problem for a dissociation step and who has solved it. Sections 17 and 18 give strategy, decisions and open questions.
 
 **Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 13 carries its own key.
 
@@ -483,6 +483,8 @@ Reading the figure: on the left, the grey curve is a reaction profile from initi
 | [TSAgent](https://arxiv.org/abs/2605.14154) (2026)                                                    | LLM agent         | Plan–execute–analyse–replan loop at DFT level; 83% on a 100-example OC20NEB subset; 70% on held-out versus 73 ± 12% for human experts; reproduces BEP for NH₃ dissociation | Abstract does not mention imaginary-mode or IRC validation or how endpoints are chosen |
 | [CatDT](https://urop.hkust.edu.hk/node/40500) (HKUST, in development)                                 | LLM multi-agent   | Eight agents on UMA or CHGNet; a propose–validate hard gate iterates up to ten rounds to produce valid NEB endpoints before any barrier run; microkinetic rates | No published results or code yet; electrochemical reactions only                        |
 | [CopyCAT](https://iciq.org/es/?p=72665) (ICIQ, 2026)                                                  | LLM multi-agent   | Turns chemical reasoning into 3D structures for adsorbates and transition states on surfaces                           | Thesis-stage; accuracy against DFT not reported where we looked                         |
+| [Pynta](https://chemrxiv.org/engage/chemrxiv/article-details/647114454f8b1884b755bc5a) (JCIM 2023)      | Automated, no LLM | Reactants, products and atom maps in; symmetry-unique adsorbate configurations; harmonically forced saddle guesses; frequencies and IRC on every saddle; rate coefficients out | DFT-level cost; closest-product choice not an explicit objective                        |
+| [El Agente Potente](https://arxiv.org/abs/2609.14840) (2026)                                         | LLM agent         | Typed execution graphs plus a coding mode on MLIPs; adsorption and catalytic reaction workflows; the agent selects the band's initial and final images | Abstract gives no success rate and does not say how final images are chosen             |
 | [TSBench](https://arxiv.org/abs/2609.08503) (2026)                                                    | Benchmark         | Seven frontier LLMs build TS guesses with structure-editing tools for 78 elementary reactions; 50% success, 67% with diagnosis-driven revision | Most failures are plausible saddles that connect the wrong reactant–product pair         |
 
 Two readings. First, CatDT's propose–validate gate on endpoints is the closest thing to our trust layer and confirms the need; it is unpublished, so the field is open on measured results. Second, TSBench's main failure mode, a saddle that connects the wrong pair, is an endpoint problem, not a saddle-finding problem: it is exactly what symmetry-complete enumeration, co-adsorption pair enumeration and connectivity checks prevent. The gap we fill is therefore *barrier-ready endpoints*, validated before any barrier is run, and a measurement of how much endpoint quality moves the barrier, which nobody above reports.
@@ -587,6 +589,47 @@ Reading the figure: the legend at the top is the key. Each row is one step of th
 
 **Questions this raises for the team.** Whether an OC20NEB subset is acceptable as ground truth, since it fixes the DFT settings to OC20's RPBE and PAW choices and our locked settings must then match them; which of the four claims is the headline of the three-minute demo; whether the product forms from two adsorbates, which moves pair enumeration into the core; and whether any DFT nudged-elastic-band compute exists for the propagation experiment, or whether it runs on ML with OC20NEB labels as the reference.
 
+## The final-state problem: the nearest non-recombining product
+
+The product state of a dissociation step is the co-adsorbed pair that sits as close together as possible without bonding back; CatTSunami already builds it heuristically, so our contribution is to enumerate it completely, gate it in code, and report what was rejected.
+
+**The problem as stated (21 October 2026).** Given a surface with adsorbate AB\* and the desired product, A\* and B\* both adsorbed, find the final state in which B\* is as close to A\* as possible while the two stay fully dissociated after relaxation. We call it the *nearest non-recombining final state*. CatTSunami calls the placements *proximate*; the classical DFT literature writes it as the fragments co-adsorbed at nearest-neighbour or next-nearest-neighbour sites.
+
+**Why nearest.** The nudged elastic band from AB\* to a far-away product passes the bond-breaking saddle and then one or more diffusion saddles; the band then holds several maxima, the climbing image can lock onto the wrong one, and the barrier reported is not the elementary step. The nearest valid product gives a band with one saddle. The nearest product is not necessarily the lowest in energy: fragments at adjacent sites often repel, so E(FS near) can lie above the infinite-separation value E(FS ∞) = E(A\*) + E(B\*) − E(slab) from separate cells. Both should be reported; the difference is the lateral interaction, and the diffusion from the near to the stable product is a separate step.
+
+![The product fragments go as close as possible without bonding back; a far final state folds diffusion into the band](figures/21-nearest-non-recombining-final-state.png)
+
+*Figure: nearest non-recombining final state · 4 candidates, 1 profile, 4 recipe steps, schematic, not to scale*
+
+Reading the figure: the top row shows the initial state AB\* and three product candidates on a close-packed surface, A in blue and B in orange. Candidate 1 puts B at the adjacent hollow; it relaxes back onto A and is rejected, red outline. Candidate 2 puts B one lattice spacing away; the bond does not re-form, so it is chosen, blue highlight. Candidate 3 is far away and valid, but the band from AB\* to it includes diffusion. The profile at bottom left shows the single saddle to the near product in blue and the extra diffusion saddles a far product adds in dashed grey. The recipe at bottom right lists CatTSunami's four steps and, in each box, what we add.
+
+**Formal statement.** Over all symmetry-distinct pairs of sites (s_A, s_B), choose the pair that minimises the site-graph distance between A\* and B\*, with the in-plane distance as a tiebreaker, subject to: after relaxation the connectivity graph is the product graph, so no A–B bond; neither fragment desorbed, moved to another site or went subsurface; the surface is unchanged; and exactly zero imaginary modes. Keep the first few survivors in that order, not one.
+
+**Who has done it.**
+
+| Work                                                                                                   | What it does for the product state                                                                                                                                                                   | What it does not do                                                                        |
+|--------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| [CatTSunami](https://arxiv.org/abs/2405.02078), AutoFrameDissociation (2024)                           | Product 1 is the fragment with the reactant's binding atom; 5 lowest-energy placements within 2 Å; for each, 5 placements of product 2 in a 1 to 3 Å shell; 25 frames relaxed by ML; frames "where the products react or some other anomaly occurs" discarded; one survivor picked at random | No explicit minimum-distance objective; sampled, not symmetry-complete; random pick; rejected frames not reported |
+| [Pynta](https://chemrxiv.org/engage/chemrxiv/article-details/647114454f8b1884b755bc5a) (JCIM 2023)      | Takes reactants, products and atom maps; enumerates unique adsorbate configurations with surface symmetry; saddle guesses by harmonically forced search; frequencies and IRC on every saddle            | Built for rate coefficients, not for the closest product; DFT-level cost                   |
+| [NEBscape](https://www.nature.com/articles/s41524-026-02298-1) (2026)                                   | Both endpoints by global optimisation, paired by atom mapping                                                                                                                                         | Global optimisation finds the lowest product, which may be the far one                     |
+| [Reproducible NEB orchestration](https://arxiv.org/abs/2603.14737) (2026)                               | Snakemake workflow: endpoint minimisation, structural alignment, initial path generation with PET-MAD and eOn                                                                                          | Gas-phase molecules; no surface product placement                                          |
+| [El Agente Potente](https://arxiv.org/abs/2609.14840) (2026)                                            | LLM agent with typed execution graphs; adsorption and catalytic reaction workflows on MLIPs; the agent selects the initial and final images for the band                                              | How the final image is chosen for a dissociation is not described in the abstract          |
+| Classical DFT studies, by hand                                                                          | Fragments placed co-adsorbed at nearest-neighbour or next-nearest-neighbour hollows, chosen by the author                                                                                              | Not automated; the choice is rarely justified in the paper                                 |
+
+So the answer to "has someone done this" is yes in heuristic form: CatTSunami's AutoFrameDissociation is this problem solved by sampling, and it is open source in fairchem. What is not done is the explicit objective, the complete enumeration, the code gate on both endpoints and the report of how many nearest pairs recombined. That last number is a measurable result on its own, and it feeds the propagation experiment of section 12.
+
+**Where it sits in the pipeline.** It is step 9 of the solution planner, final-state enumeration, with the gate of step 4.1 applied to the product and a connectivity criterion added, and it feeds step 10, pairing. The pair enumeration of section 12, A\* + B\* in one cell with Burnside counting, is the enumeration this step needs.
+
+**Questions for the team.**
+
+- Distance metric: site-graph distance with in-plane distance as tiebreaker, or in-plane distance between the two binding atoms alone?
+
+- Should the fragment that keeps the binding atom stay at the reactant's site, as CatTSunami assumes, or may it move?
+
+- Target: the nearest surviving pair, or the lowest-energy pair within one site hop? They differ when adjacent fragments repel.
+
+- Which dissociation to run first: \*OH → \*O + \*H on Pt(111) is the simplest in OC20NEB's list and has DFT bands to compare with.
+
 ## Positioning and hackathon strategy
 
 Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an agent that computes adsorption energies" to "an agent that knows when not to trust itself".
@@ -669,6 +712,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Does a rendered image beside the descriptor card help the agent catch geometry errors, or add noise? Decide from the geometry test in the benchmark.
 
+- For the nearest non-recombining final state: site-graph distance or in-plane distance; does the binding fragment stay at the reactant's site; nearest survivor or lowest energy within one hop?
+
 - Is an OC20NEB subset acceptable as ground truth for the path steps, given that it fixes the DFT settings to OC20's RPBE and PAW choices, so our locked settings must match them?
 
 - Does any DFT nudged-elastic-band compute exist for the propagation experiment, or does it run on ML with OC20NEB labels as the reference?
@@ -724,6 +769,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - [ ] Write the initial–final connectivity check (same reaction, atom mapping as in NEBscape) and the saddle validation tool (one imaginary mode, path ends at both endpoints)
 
 - [ ] Select an OC20NEB subset and the single-placement baseline for the path benchmark
+
+- [ ] Build the nearest-non-recombining final-state tool (enumerate pairs, relax, gate, rank by distance, report rejected pairs and E(FS near) − E(FS ∞)) and run it for *OH → *O + *H on Pt(111) against the OC20NEB band
 
 ## Sources
 
@@ -798,6 +845,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - Tacit knowledge and agents: [LLMs for tacit knowledge discovery](https://arxiv.org/pdf/2507.03811), [KUPAS MASTER](https://arxiv.org/abs/2609.37673), [Tacit Fragments](https://www.alphaxiv.org/abs/2609.operationalising-tacit-knowledge-agentic-ai)
 
 - [OpenAI FrontierScience](https://openai.com/index/frontierscience)
+
+- Final-state generation and automated kinetics: [Pynta (JCIM 2023, preprint)](https://chemrxiv.org/engage/chemrxiv/article-details/647114454f8b1884b755bc5a) and [code](https://github.com/zadorlab/pynta), [El Agente Potente](https://arxiv.org/abs/2609.14840), [Reproducible orchestration of NEB best practices](https://arxiv.org/abs/2603.14737)
 
 - Transition-state agents and benchmarks: [TSAgent](https://arxiv.org/abs/2605.14154), [TSBench](https://arxiv.org/abs/2609.08503), [NEBscape](https://www.nature.com/articles/s41524-026-02298-1), [CatDT](https://urop.hkust.edu.hk/node/40500), [CopyCAT (ICIQ thesis)](https://iciq.org/es/?p=72665)
 

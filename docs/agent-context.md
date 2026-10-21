@@ -254,6 +254,7 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - How many lessons-log entries before Ni(111) is caught without a human; can that curve be shown?
 - Can an interview agent run the Formulate interview without losing what a human interviewer catches?
 - Does a rendered image beside the descriptor card help catch geometry errors, or add noise?
+- Nearest non-recombining final state: site-graph or in-plane distance; binding fragment fixed or free; nearest survivor or lowest energy within one hop?
 - Is an OC20NEB subset acceptable as ground truth for the path steps, given it fixes the DFT settings to OC20's RPBE and PAW choices, so our locked settings must match them?
 - Does any DFT nudged-elastic-band compute exist for the propagation experiment, or does it run on ML with OC20NEB labels as the reference?
 - Move the headline claim to "barrier-ready endpoints" with measured endpoint-to-barrier error propagation? TSAgent and CatDT crowd the plain TS-agent claim.
@@ -282,6 +283,7 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - [ ] Define the product as a structure with one set of gas-phase references; add pair enumeration for A* + B* if the product forms from two adsorbates
 - [ ] Write the initial–final connectivity check and the saddle validation tool (one imaginary mode, path ends at both endpoints)
 - [ ] Select an OC20NEB subset and the single-placement baseline for the path benchmark
+- [ ] Build the nearest-non-recombining final-state tool and run *OH → *O + *H on Pt(111) against the OC20NEB band
 
 ## 20. Geometry rules: the LLM never touches coordinates
 
@@ -347,6 +349,26 @@ Rule: every step of the current pipeline is borrowed or standard; the claim rest
 Verdict: already taken: ML NEB (CatTSunami), LLM barrier agents (TSAgent, CatDT, CopyCAT), automated endpoints (NEBscape), validity checks and top-k DFT (AdsorbML). Still missing: product as structure and gas references; pair enumeration; connectivity check; validation code; calibration; OC20NEB subset. Ours: barrier-ready endpoints with measured propagation; calibrated ML doubt; agentic uncertainty; open skill and tools scored on OC20NEB.
 
 Questions for the team: OC20NEB subset as ground truth (our settings must then match OC20's RPBE and PAW choices); which of the four claims is the demo headline; product from two adsorbates or one molecule; any DFT NEB compute for the propagation experiment.
+
+## 23. Nearest non-recombining final state (dissociation steps)
+
+Problem: given AB* on the surface and the product A* + B*, choose the final state with B* as close to A* as possible while the two stay dissociated after relaxation.
+
+Rule: over all symmetry-distinct site pairs (s_A, s_B), minimise the site-graph distance between A* and B* (in-plane distance as tiebreaker), subject to: product connectivity after relaxation (no A–B bond); neither fragment desorbed, moved site or subsurface; surface unchanged; zero imaginary modes. Keep the first few survivors in that order.
+
+Why: a band from AB* to a far product contains the bond-breaking saddle plus diffusion saddles; the nearest valid product gives one saddle. The nearest product is not always the lowest in energy (adjacent fragments can repel). Report E(FS near) and E(FS ∞) = E(A*) + E(B*) − E(slab) from separate cells; the difference is the lateral interaction.
+
+Recipe (CatTSunami AutoFrameDissociation → ours):
+1. Place A, the fragment keeping the binding atom. CatTSunami: 5 lowest-energy placements within 2 Å of the old binding site. Ours: all symmetry-distinct placements, counted.
+2. Place B in a shell around A. CatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs. Ours: all symmetry-distinct pairs ordered by site-graph distance.
+3. Relax each pair with the MLIP, then gate. CatTSunami: discard frames where the products react or an anomaly occurs. Ours: the section 6 gate plus the bond-re-formed check.
+4. Choose. CatTSunami: one survivor at random. Ours: nearest survivor first, then energy; keep several; report rejected pairs and E(FS near) − E(FS ∞).
+
+Prior work: CatTSunami (heuristic, sampled, open source in fairchem); Pynta (atom maps in, symmetry-unique configurations, IRC validation, DFT cost); NEBscape (global optimisation finds the lowest product, possibly the far one); Reproducible NEB orchestration (gas phase only); El Agente Potente (LLM agent, final-image choice not described); classical DFT papers place fragments at nearest or next-nearest hollows by hand.
+
+Position in the pipeline: step 9 of the planner with the step 4.1 gate on the product and a connectivity criterion; feeds step 10. Measurable on its own: how often the nearest pair recombines.
+
+Open with the team: distance metric; whether the binding fragment stays put; nearest survivor or lowest energy within one hop; first case *OH → *O + *H on Pt(111) against the OC20NEB band.
 
 ## 19. Sources
 
