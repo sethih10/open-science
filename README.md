@@ -206,7 +206,7 @@ The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decisio
 
 ## Repository layout
 
-The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise: the plugin side as Claude Code documents it, with `agents/`, `skills/`, `hooks/` and `.mcp.json`; the package side as ChemCrow, Biomni and ChemGraph lay out theirs, with a registry, tools by category, schemas, a runtime and an evaluation harness. The tree is generated from the files on disk, the registry and the roster, so every tool, skill and agent in it is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
+The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise. The plugin side is the one Claude Code documents and its own `hookify` plugin uses: `agents/`, `skills/`, `hooks/` and `.mcp.json`. The package side is [ChemGraph](https://github.com/argonne-lcf/ChemGraph)'s, folder for folder: `registry/`, `tools/`, `schemas/`, `runtime/`, `memory/`, `execution/`, `agent/`, `mcp/`, `eval/`, `cli/` under `src/`; the tools are grouped by category as ChemCrow and Biomni group theirs. Which step, tools and agents run next, and where the human is asked, is code in `agent/pipeline.py`, not a prompt. The tree is generated from the files on disk, the registry and the roster, so every tool, skill and agent in it is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
 
 <!-- registry:layout -->
 ```
@@ -231,11 +231,11 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   ├── dissociation-final-state/SKILL.md
 │   ├── final-state-report/SKILL.md
 │   └── hpc-dft-jobs/SKILL.md
-├── src/fragplace/                         the package, in the layout of ChemCrow, Biomni and ChemGraph
+├── src/fragplace/                         the package; the folder names are ChemGraph's, the tools by category ChemCrow's and Biomni's
 │   ├── registry/                          every tool and every agent defined once
 │   │   ├── tools.py                       ToolSpec and REGISTRY, the tools of section 3; CATEGORY maps each tool to its module
 │   │   └── agents.py                      the roster, the checkpoints, the skill names; the figures import it
-│   ├── tools/                             one module per category, as ChemCrow groups its tools; a function per tool, parameters as in the registry
+│   ├── tools/                             one module per category, as ChemCrow and Biomni group theirs; a function per tool, parameters as in the registry
 │   │   ├── literature.py                  literature_lookup
 │   │   ├── structure.py                   structure_retrieval, calculation_protocol
 │   │   ├── uncertainty.py                 mlip_selection, uncertainty_estimation, active_learning
@@ -249,12 +249,12 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   │   └── dft.py                         dft_single_points
 │   ├── schemas/                           the records of section 4
 │   │   └── records.py                     the Pydantic records every tool takes and returns
-│   ├── runtime/                           what every tool runs under
+│   ├── runtime/                           what every tool runs under; the names are ChemGraph's
 │   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash
 │   │   ├── journal.py                     Run, trace.jsonl, the @traced decorator
 │   │   ├── cache.py                       content-addressed results of relaxations and force calls
-│   │   ├── checkpoints.py                 the five checkpoints: require, record
-│   │   ├── state.py                       the resumable run state in state.json
+│   │   ├── checkpoints.py                 the five checkpoints of registry/agents.py: require, record
+│   │   ├── state.py                       the position in the pipeline, persisted in state.json
 │   │   └── policy.py                      the two hook commands of hooks/hooks.json
 │   ├── memory/                            what a campaign learns
 │   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
@@ -266,8 +266,8 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   │   ├── local.py                       the laptop and GPU lanes
 │   │   ├── slurm.py                       the HPC lane, custodian inside the job script
 │   │   └── tracker.py                     job attempts, diagnoses, the retry cap of three
-│   ├── agent/                             the roster as code
-│   │   ├── roles.py                       the roster, from registry/agents.py
+│   ├── agent/                             who runs next, as code
+│   │   ├── pipeline.py                    the steps in execution order, each with its tools, its agents and its checkpoint; the deterministic rollout
 │   │   └── prompts.py                     loads agents/<name>.md, the one copy Claude Code also reads
 │   ├── mcp/                               the MCP side
 │   │   └── server.py                      one MCP tool per registry entry; the fragplace-server command

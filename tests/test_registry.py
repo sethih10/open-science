@@ -79,3 +79,40 @@ def test_agent_file_lists_exactly_the_tools_the_registry_allows(name: str):
     allowed = {f"mcp__fragplace__{t.name}" for t in for_role(name)}
     assert listed == allowed, f"{name}: listed {sorted(listed)} but the registry allows {sorted(allowed)}"
     assert re.search(r"^name:\s*" + re.escape(name) + r"\s*$", text, re.M)
+
+
+def test_pipeline_agrees_with_the_board_and_the_registry():
+    from fragplace.agent import pipeline
+    from fragplace.runtime import checkpoints, state
+    assert state.STEP_ORDER == pipeline.STEP_ORDER
+    assert checkpoints.CHECKPOINTS == CHECKPOINTS == _board.CHECKPOINTS
+    board = {s.key: s for s in _board.STEPS}
+    for step in pipeline.PIPELINE:
+        b = board[step.key]
+        assert step.checkpoint == b.checkpoint, step.key
+        assert set(step.agents) - {pipeline.PLANNER} == {n for n, _ in b.agents} - {pipeline.PLANNER}, step.key
+        assert set(step.tools) == set(b.tools), step.key
+        assert set(step.ext_tools) == set(b.ext_tools), step.key
+    assert set(pipeline.STEP_ORDER) | {"3.1"} == set(board)  # 3.1 runs inside 5 and is not a step of its own
+
+
+def test_rollout_stops_at_each_checkpoint_and_resumes(tmp_path: Path):
+    from fragplace.agent import pipeline
+    from fragplace.errors import CheckpointPending
+    from fragplace.runtime import checkpoints
+    from fragplace.schemas.records import HumanChoice
+    calls = []
+    invoke = lambda tool, step: calls.append((step, tool))  # noqa: E731
+    stops = []
+    for _ in range(6):
+        try:
+            assert pipeline.run(tmp_path, "c", invoke) == "done"
+            break
+        except CheckpointPending as e:
+            stops.append(e.name)
+            checkpoints.record(tmp_path, HumanChoice(checkpoint=stops[-1], chosen=[], reason="ok", who="team"))
+    assert len(stops) == 5
+    steps_called = [s for s, _ in calls]
+    assert steps_called == sorted(steps_called, key=pipeline.STEP_ORDER.index)
+    assert "3.6" not in steps_called and "3.5" in steps_called
+    assert ("prompt", "literature_lookup") in calls and ("8", "ranking") in calls

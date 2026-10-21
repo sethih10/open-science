@@ -1,7 +1,7 @@
 """The five human checkpoints. The planner stops at each and waits; the hook enforces it.
 
 A checkpoint is passed when a HumanChoice for it exists in runs/<campaign>/checkpoints.json. The choice and its
-reason also go to the case bank. Names are the ones in agent.md section 3 and the figures' data module.
+reason also go to the case bank. Names are defined once in registry.agents; agent.pipeline says which step each sits after.
 """
 from __future__ import annotations
 
@@ -12,11 +12,7 @@ from typing import List
 from ..errors import CheckpointPending
 from ..schemas.records import HumanChoice
 
-CHECKPOINTS = ("approve settings", "approve the plan", "review flagged cases", "pick up to five final states", "interpret results")
-
-# which board step each checkpoint sits after; the "approve the plan" placement is the team's to confirm
-AFTER_STEP = {"approve settings": "1", "approve the plan": "1*", "review flagged cases": "7",
-              "pick up to five final states": "8", "interpret results": "solution"}
+from ..registry.agents import CHECKPOINTS  # noqa: E402  defined once, in the registry; agent.pipeline says which step each sits after
 
 
 def _path(run_dir: Path) -> Path:

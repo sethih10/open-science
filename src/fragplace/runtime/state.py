@@ -1,7 +1,7 @@
 """Resumable run state: which board step the campaign is at, which are done, which checkpoint is pending.
 
 runs/<campaign>/state.json. A run that stops, at a checkpoint, on an escalation or on a crash, resumes from here;
-nothing is recomputed that the cache and the trace already hold. The pattern is TSAgent's runtime state file.
+nothing is recomputed that the cache and the trace already hold. The pattern is TSAgent's runtime state file; the step order itself is agent.pipeline.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from ..errors import CheckpointPending
 
-STEP_ORDER = ["prompt", "1", "1*", "2", "3.5", "3.2", "3.3", "3.4", "3.6", "4", "5", "6", "7", "8", "solution"]
+from ..agent.pipeline import STEP_ORDER  # noqa: E402  the order is the pipeline's; this module only persists the position
 
 
 class RunState(BaseModel):

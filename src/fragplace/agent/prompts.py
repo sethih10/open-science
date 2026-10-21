@@ -1,4 +1,4 @@
-"""Load an agent's prompt from agents/<name>.md, the single copy Claude Code also reads."""
+"""Load an agent's prompt from agents/<name>.md, the one copy Claude Code also reads as its subagent definition."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
