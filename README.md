@@ -206,69 +206,86 @@ The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decisio
 
 ## Repository layout
 
-The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise: the plugin side as Claude Code documents it, with `agents/`, `skills/`, `hooks/` and `.mcp.json`; the package side as ChemCrow, Biomni and ChemGraph lay out theirs, with a registry, tools by category, schemas, a runtime and an evaluation harness. Every tool, skill and agent in the tree is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
+The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise: the plugin side as Claude Code documents it, with `agents/`, `skills/`, `hooks/` and `.mcp.json`; the package side as ChemCrow, Biomni and ChemGraph lay out theirs, with a registry, tools by category, schemas, a runtime and an evaluation harness. The tree is generated from the files on disk, the registry and the roster, so every tool, skill and agent in it is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
 
+<!-- registry:layout -->
 ```
-open-science-hackathon/                 the FragPlace plugin, laid out as Claude Code lays out a plugin
-├── README.md, CLAUDE.md, AGENTS.md     the entry points; CLAUDE.md points a coding agent to AGENTS.md
-├── PROJECT.md, lessons.md              the settings template; the case bank
-├── pyproject.toml                      package `fragplace`, commands `fragplace` and `fragplace-server`, one extra per lane
-├── .claude-plugin/plugin.json          declares skills/, agents/, hooks/hooks.json and .mcp.json
-├── .mcp.json                           the MCP server: fragplace-server, one tool per registry entry, prefix mcp__fragplace__
-├── hooks/hooks.json                    PreToolUse: block coordinate edits; require the checkpoint before a gated tool
-├── agents/                             the seven agents of section 6, one page each, tools in the frontmatter
-│   ├── solution-planner.md        the next tool call and when to stop
-│   ├── literature-reader.md       which published values and sources to put before the human: E_ads with functional and site
-│   ├── computational-chemist.md   which protocol and settings to propose for the lock
-│   ├── surface-chemist.md         which site types and orderings to try per fragment
-│   ├── mlip-specialist.md         which potential to use
-│   ├── scientific-critic.md       whether the plan and the report hold up
-│   ├── dft-recovery-agent.md      how to retry a failed DFT step; only with HPC
-├── skills/                             the five skills of section 6; five more are reused from AtomisticSkills
+open-science-hackathon/                    the FragPlace plugin, laid out as Claude Code lays out a plugin
+├── README.md, CLAUDE.md, AGENTS.md        the entry points; CLAUDE.md points a coding agent to AGENTS.md
+├── PROJECT.md, lessons.md                 the settings template; the case bank
+├── pyproject.toml                         package fragplace, commands fragplace and fragplace-server, one extra per lane
+├── .claude-plugin/plugin.json             declares skills/, agents/, hooks/hooks.json and .mcp.json
+├── .mcp.json                              the MCP server fragplace-server; its tools are called as mcp__fragplace__<tool>
+├── hooks/hooks.json                       PreToolUse: block coordinate edits; require the checkpoint before a gated tool
+├── agents/                                the seven agents of section 6, one page each, allowed tools in the frontmatter
+│   ├── solution-planner.md                the next tool call and when to stop
+│   ├── literature-reader.md               which published values and sources to put before the human: E_ads with functional and site
+│   ├── computational-chemist.md           which protocol and settings to propose for the lock
+│   ├── surface-chemist.md                 which site types and orderings to try per fragment
+│   ├── mlip-specialist.md                 which potential to use
+│   ├── scientific-critic.md               whether the plan and the report hold up
+│   └── dft-recovery-agent.md              how to retry a failed DFT step; only with HPC
+├── skills/                                the five skills of section 6; five more are reused from AtomisticSkills
 │   ├── dft-settings-protocol/SKILL.md
 │   ├── mlip-doubt-calibration/SKILL.md
 │   ├── dissociation-final-state/SKILL.md
-│   ├── final-state-report/SKILL.md   
-│   ├── hpc-dft-jobs/SKILL.md         
-├── src/fragplace/                      the package, in the layout of ChemCrow, Biomni and ChemGraph
-│   ├── registry/tools.py               ToolSpec and REGISTRY: the 19 tools of section 3, defined once; CATEGORY maps each to its module
-│   ├── registry/agents.py              the roster, the checkpoints, the skill names; the figures import it
-│   ├── tools/                          one module per category, as ChemCrow groups its tools; a function per tool, parameters as in the registry
-│   │   ├── literature.py    literature_lookup
-│   │   ├── structure.py     structure_retrieval, calculation_protocol
-│   │   ├── uncertainty.py   mlip_selection, uncertainty_estimation, active_learning
-│   │   ├── sites.py         site_enumeration, pair_enumeration
-│   │   ├── placement.py     adsorbate_placement, minima_hopping
-│   │   ├── screening.py     pull_force_screen
-│   │   ├── relaxation.py    relaxation, reference_energies
-│   │   ├── filtering.py     anomaly_filter, descriptor_card
-│   │   ├── clustering.py    soap_clustering, ranking
-│   │   ├── report.py        report
-│   │   ├── dft.py           dft_single_points
-│   ├── schemas/records.py              the records of section 4
-│   ├── runtime/project.py              PROJECT.md: read, write, lock, require_locked, settings_hash
-│   ├── runtime/journal.py              Run, trace.jsonl, the @traced decorator
-│   ├── runtime/cache.py                content-addressed results of relaxations and force calls
-│   ├── runtime/checkpoints.py          the five checkpoints: require, record
-│   ├── runtime/state.py                the resumable run state
-│   ├── runtime/policy.py               the two hook commands
-│   ├── memory/casebank.py              lessons.md as records; retrieve by system and failure
-│   ├── calculators/                    one interface; uma, mace with committees, chgnet
-│   ├── execution/                      Job and Backend; local, slurm with custodian in the job script; the tracker with its retry cap
-│   ├── agent/                          roles.py, the roster as code; prompts.py loads agents/<name>.md
-│   ├── mcp/server.py                   builds the MCP tool list from the registry
-│   ├── eval/harness.py                 the campaign with and without each skill and agent, on the OC20NEB subset
-│   ├── cli/main.py                     fragplace registry | check | init
-│   └── errors.py                       SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
-├── tests/                              registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs
-├── ci/github-workflow.yml              ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
-├── runs/<campaign>/                    PROJECT.md copy, trace.jsonl, checkpoints.json, state.json, cards/, structures/, cache/, report.md
-├── figures/                            the README figures, PNG and SVG
-└── docs/                               README.md indexes it
-    ├── design/                         the design history and the three reviews
-    ├── figures/src/_board.py           the data module the figures 29 to 32 and the generated blocks come from
-    └── benchmark/                      the OC20NEB subset, baselines, scoring: planned
+│   ├── final-state-report/SKILL.md
+│   └── hpc-dft-jobs/SKILL.md
+├── src/fragplace/                         the package, in the layout of ChemCrow, Biomni and ChemGraph
+│   ├── registry/                          every tool and every agent defined once
+│   │   ├── tools.py                       ToolSpec and REGISTRY, the tools of section 3; CATEGORY maps each tool to its module
+│   │   └── agents.py                      the roster, the checkpoints, the skill names; the figures import it
+│   ├── tools/                             one module per category, as ChemCrow groups its tools; a function per tool, parameters as in the registry
+│   │   ├── literature.py                  literature_lookup
+│   │   ├── structure.py                   structure_retrieval, calculation_protocol
+│   │   ├── uncertainty.py                 mlip_selection, uncertainty_estimation, active_learning
+│   │   ├── sites.py                       site_enumeration, pair_enumeration
+│   │   ├── placement.py                   adsorbate_placement, minima_hopping
+│   │   ├── screening.py                   pull_force_screen
+│   │   ├── relaxation.py                  relaxation, reference_energies
+│   │   ├── filtering.py                   anomaly_filter, descriptor_card
+│   │   ├── clustering.py                  soap_clustering, ranking
+│   │   ├── report.py                      report
+│   │   └── dft.py                         dft_single_points
+│   ├── schemas/                           the records of section 4
+│   │   └── records.py                     the Pydantic records every tool takes and returns
+│   ├── runtime/                           what every tool runs under
+│   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash
+│   │   ├── journal.py                     Run, trace.jsonl, the @traced decorator
+│   │   ├── cache.py                       content-addressed results of relaxations and force calls
+│   │   ├── checkpoints.py                 the five checkpoints: require, record
+│   │   ├── state.py                       the resumable run state in state.json
+│   │   └── policy.py                      the two hook commands of hooks/hooks.json
+│   ├── memory/                            what a campaign learns
+│   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
+│   ├── calculators/                       one interface, adapters imported lazily
+│   │   ├── uma.py                         UMA through fairchem; needs HF_TOKEN
+│   │   ├── mace.py                        MACE, single model or committee
+│   │   └── chgnet.py                      CHGNet
+│   ├── execution/                         Job and Backend
+│   │   ├── local.py                       the laptop and GPU lanes
+│   │   ├── slurm.py                       the HPC lane, custodian inside the job script
+│   │   └── tracker.py                     job attempts, diagnoses, the retry cap of three
+│   ├── agent/                             the roster as code
+│   │   ├── roles.py                       the roster, from registry/agents.py
+│   │   └── prompts.py                     loads agents/<name>.md, the one copy Claude Code also reads
+│   ├── mcp/                               the MCP side
+│   │   └── server.py                      one MCP tool per registry entry; the fragplace-server command
+│   ├── eval/                              the agent-level benchmark
+│   │   └── harness.py                     the campaign with and without each skill and agent, on the OC20NEB subset
+│   ├── cli/                               the command line
+│   │   └── main.py                        fragplace registry | check | init
+│   └── errors.py                          SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
+├── tests/                                 registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs
+├── ci/github-workflow.yml                 ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
+├── runs/<campaign>/                       PROJECT.md copy, trace.jsonl, checkpoints.json, state.json, cards/, structures/, cache/, report.md
+├── figures/                               the README figures, PNG and SVG
+└── docs/                                  README.md indexes it
+    ├── design/                            the design history and the three reviews
+    ├── figures/src/_board.py              the data module figures 29 to 32 and the generated blocks come from
+    └── benchmark/                         the OC20NEB subset, baselines, scoring: planned
 ```
+<!-- /registry:layout -->
 
 ## Where everything else is
 
