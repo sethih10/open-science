@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from typing import Any, List, Tuple
-from ..schemas.records import SiteEnumeration, StructureRef
+from ..schemas.records import Candidate, SiteEnumeration, StructureRef
 from ..runtime.journal import traced
 
 
 @traced(step="3.5", tool="adsorbate_placement")
-def adsorbate_placement(sites: SiteEnumeration, fragment: StructureRef, site_index: int, orientation: int, height_A: float, displacement_amplitude_A: float) -> Any:
+def adsorbate_placement(sites: SiteEnumeration, fragment: StructureRef, site_index: int, orientation: int, height_A: float, displacement_amplitude_A: float, base: Candidate) -> Any:
     """Place fragment A at every symmetry-distinct site near its old site and B at a given site, by script; orientations under the site's stabiliser; a random displacement before relaxation.
 
     Board steps: 3.5, 4. Status: core. Lane: laptop. Allowed roles: solution-planner.
@@ -19,6 +19,7 @@ def adsorbate_placement(sites: SiteEnumeration, fragment: StructureRef, site_ind
         orientation: int
         height_A: float
         displacement_amplitude_A: float
+        base: Candidate | None, the candidate the fragment is added to; the slab of the enumeration when None
     Outputs:
         candidate: Candidate
     Checks:

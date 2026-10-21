@@ -139,13 +139,13 @@ Place fragment A at every symmetry-distinct site near its old site and B at a gi
 
 | Field | Content |
 |---|---|
-| Inputs | sites: SiteEnumeration; fragment: StructureRef; site_index: int; orientation: int; height_A: float; displacement_amplitude_A: float |
+| Inputs | sites: SiteEnumeration; fragment: StructureRef; site_index: int; orientation: int; height_A: float; displacement_amplitude_A: float; base: Candidate \| None, the candidate the fragment is added to; the slab of the enumeration when None |
 | Outputs | candidate: Candidate |
 | Checks | start 2 to 3 Å above the site; the LLM never places atoms |
 | Thresholds | displacement_amplitude_A: open: team decision; fragment_A_fixed_at_old_site: open: team decision |
 | Wraps | ase.build.add_adsorbate; fairchem.data.oc.core.AdsorbateSlabConfig as the baseline |
 | Logs | site, orientation, height, displacement and random draw |
-| Module | `src/fragplace/tools/placement.py`, function `adsorbate_placement(sites, fragment, site_index, orientation, height_A, displacement_amplitude_A)` |
+| Module | `src/fragplace/tools/placement.py`, function `adsorbate_placement(sites, fragment, site_index, orientation, height_A, displacement_amplitude_A, base)` |
 
 ### 3.7 `pair_enumeration`, board step 3.2, core
 
@@ -390,7 +390,7 @@ The records are the Pydantic classes of `src/fragplace/schemas/records.py`; a to
 | `Case` | system: str, card: str, correction: str, reason: str, source_checkpoint: str, promoted_to: Optional[str], when: datetime.datetime |
 | `CheckVerdict` | check_id: int, name: str, passed: bool, measured: Optional[float], threshold: Optional[str], reason: str, fragment: Optional[str] |
 | `Cluster` | id: int, members: List[str], nearest: str, lowest: str |
-| `DescriptorCard` | candidate_id: str, composition: str, cell: str, facet: str, layers: int, vacuum_A: float, fixed_layers: int, site_label: str, point_group: str, coordination: int, height_A: float, nn_distances_A: List[float], tilt_deg: Optional[float], displacement_from_start: str, magnetic_moment: Optional[float], verdicts: List[fragplace.schemas.records.CheckVerdict], AB_distance_A: Optional[float], site_graph_distance: Optional[int], image_path: Optional[str] |
+| `DescriptorCard` | candidate_id: str, composition: str, cell: str, facet: str, layers: int, vacuum_A: float, fixed_layers: int, site_label: str, point_group: str, coordination: int, height_A: float, nn_distances_A: List[float], tilt_deg: Optional[float], displacement_from_start: str, magnetic_moment: Optional[float], verdicts: List[fragplace.schemas.records.CheckVerdict], AB_distance_A: Optional[float], site_graph_distance: Optional[int], energy_eV: Optional[float], image_path: Optional[str] |
 | `DoubtFlag` | candidate_id: str, committee_spread_eV: float, calibrated_error_eV: Optional[float], trigger: str, escalate: bool |
 | `FinalState` | candidate_id: str, E_near_eV: float, E_inf_eV: float, lateral_interaction_eV: float, AB_distance_A: float, site_graph_distance: int, recombined: bool |
 | `ForceScreen` | candidate_id: str, force_on_B_along_AB_eV_per_A: float, flagged: bool, threshold_eV_per_A: Optional[float], queue_position: int |
@@ -400,12 +400,13 @@ The records are the Pydantic classes of `src/fragplace/schemas/records.py`; a to
 | `LiteratureValue` | quantity: str, value: float, unit: str, system: str, functional: Optional[str], site: Optional[str], source: str, verified_by_human: bool |
 | `Pair` | candidate_id: str, site_A: int, site_B: int, site_graph_distance: int, in_plane_distance_A: float, within_window: bool, window_A: Tuple[float, float], d_bond_A: float |
 | `RankedCandidate` | candidate_id: str, rank: int, site_graph_distance: int, energy_eV: float, doubt: Optional[fragplace.schemas.records.DoubtFlag], reason: str |
-| `RelaxationResult` | candidate_id: str, energy_eV: float, fmax_eV_per_A: float, steps: int, converged: bool, trajectory_path: Optional[str], calculator: str, cache_hit: bool |
+| `RelaxationResult` | candidate_id: str, energy_eV: float, fmax_eV_per_A: float, steps: int, converged: bool, trajectory_path: Optional[str], calculator: str, cache_hit: bool, structure: Optional[fragplace.schemas.records.StructureRef] |
 | `Report` | campaign: str, final_states: List[fragplace.schemas.records.FinalState], rejected: List[fragplace.schemas.records.GateResult], recombination_rate: float, recombination_rate_by_shell: Dict[int, float], doubt: List[fragplace.schemas.records.DoubtFlag], comparison_oc20neb: Dict[str, float], cost: Dict[str, float], trace_path: str, settings_hash: str |
 | `Settings` | metal: str, facet: str, adsorbate: str, product: Tuple[str, str], functional: str, dispersion: Optional[str], spin_polarised: bool, initial_moments: Dict[str, float], hubbard_u: Dict[str, float], pseudopotential_family: Optional[str], pseudopotential_version: Optional[str], cutoff_eV: Optional[float], kmesh: Optional[Tuple[int, int, int]], smearing: Optional[str], sigma_eV: Optional[float], layers: Optional[int], fixed_layers: Optional[int], vacuum_A: Optional[float], dipole_correction: bool, cell_repeat: Optional[Tuple[int, int]], min_image_distance_A: float, force_threshold_eV_per_A: float, scf_threshold_eV: float, convergence_target_meV: Optional[float], gas_references: List[fragplace.schemas.records.GasReference], protocol: Optional[str], protocol_reason: Optional[str], mlip: Optional[str], mlip_committee: List[str], decisions: Dict[str, Any], locked: bool, approved_by: Optional[str], approved_at: Optional[datetime.datetime] |
-| `Site` | index: int, label: str, point_group: str, coordination: int, atom_beneath: Optional[str], position: Tuple[float, float, float] |
-| `SiteEnumeration` | sites: List[fragplace.schemas.records.Site], count: int, burnside_count: int, symmetry_group: str, edges: List[Tuple[int, int]], baseline_count: Optional[int] |
+| `Site` | index: int, label: str, point_group: str, coordination: int, atom_beneath: Optional[str], position: Tuple[float, float, float], orbit: int, anchor_atoms: List[int] |
+| `SiteEnumeration` | sites: List[fragplace.schemas.records.Site], count: int, burnside_count: int, symmetry_group: str, edges: List[Tuple[int, int]], baseline_count: Optional[int], slab: Optional[fragplace.schemas.records.StructureRef], operations: List[fragplace.schemas.records.SymmetryOperation], total_sites: int |
 | `StructureRef` | path: str, format: str, role: <enum Role, energy_eV: Optional[float], settings_hash: Optional[str], calculator: Optional[str] |
+| `SymmetryOperation` | rotation: List[List[float]], translation: List[float] |
 | `TraceEvent` | when: datetime.datetime, step: str, tool: str, actor: str, inputs_hash: str, outputs_ref: str, message: str |
 <!-- /records:models -->
 

@@ -56,10 +56,10 @@ Each step is one or two tools, defined once in `src/fragplace/registry/tools.py`
 | Step 3: adsorbate placement, the stated problem | (3.2) Window [1.5 d, 5] Å | `literature_lookup` | system, quantity, sources | values | core |
 | Step 3: adsorbate placement, the stated problem | (3.3) Pull force with the MLIP | `pull_force_screen` | candidates, calculator | screens | core |
 | Step 3: adsorbate placement, the stated problem | (3.4) Agentic critique of the cleavage | `descriptor_card` | candidate, gate, sites | card | core |
-| Step 3: adsorbate placement, the stated problem | (3.5) Site and orientation, pymatgen | `adsorbate_placement` | sites, fragment, site_index, orientation, height_A, displacement_amplitude_A | candidate | core |
+| Step 3: adsorbate placement, the stated problem | (3.5) Site and orientation, pymatgen | `adsorbate_placement` | sites, fragment, site_index, orientation, height_A, displacement_amplitude_A, base | candidate | core |
 | Step 3: adsorbate placement, the stated problem | (3.6) Or minima hopping with the MLIP | `minima_hopping` | slab, fragments, calculator, n_hops | candidates | core |
 | Select and report | (4) Initial configurations | `relaxation` | candidates, calculator, fmax_eV_per_A, max_steps | results | core |
-| Select and report | (4) Initial configurations | `adsorbate_placement` | sites, fragment, site_index, orientation, height_A, displacement_amplitude_A | candidate | core |
+| Select and report | (4) Initial configurations | `adsorbate_placement` | sites, fragment, site_index, orientation, height_A, displacement_amplitude_A, base | candidate | core |
 | Select and report | (5) Physics-based and anomaly filtering | `anomaly_filter` | candidate, start, slab, settings, prior_E_ads_eV, frequencies_cm | gate | core |
 | Select and report | (5) Physics-based and anomaly filtering | `descriptor_card` | candidate, gate, sites | card | core |
 | Select and report | (6) SOAP clustering | `soap_clustering` | survivors, energies, pairs | clusters, kept | core |

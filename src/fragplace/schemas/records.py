@@ -94,15 +94,26 @@ class Site(BaseModel):
     coordination: int
     atom_beneath: Optional[str] = None
     position: Tuple[float, float, float]
+    orbit: int = Field(0, description="sites with the same orbit are symmetry-equivalent")
+    anchor_atoms: List[int] = Field(default_factory=list, description="indices of the slab atoms that define the site")
+
+
+class SymmetryOperation(BaseModel):
+    """One operation of the slab's symmetry group in Cartesian coordinates: x' = R x + t."""
+    rotation: List[List[float]]
+    translation: List[float]
 
 
 class SiteEnumeration(BaseModel):
     sites: List[Site]
-    count: int
-    burnside_count: int
+    count: int                       # the symmetry-inequivalent sites: the number of orbits
+    burnside_count: int              # the same number from Burnside's lemma; must equal count
     symmetry_group: str
-    edges: List[Tuple[int, int]] = Field(default_factory=list, description="site-graph edges")
+    edges: List[Tuple[int, int]] = Field(default_factory=list, description="site-graph edges between neighbouring sites")
     baseline_count: Optional[int] = Field(None, description="pymatgen's count for the same slab")
+    slab: Optional[StructureRef] = Field(None, description="the slab the sites were found on, with cell_repeat applied")
+    operations: List[SymmetryOperation] = Field(default_factory=list, description="the operations the orbits were formed under")
+    total_sites: int = Field(0, description="every site in the cell, before symmetry reduction")
 
 
 class Candidate(BaseModel):
@@ -144,6 +155,7 @@ class RelaxationResult(BaseModel):
     trajectory_path: Optional[str] = None
     calculator: str
     cache_hit: bool = False
+    structure: Optional[StructureRef] = Field(None, description="the relaxed structure, with its energy")
 
 
 class CheckVerdict(BaseModel):
@@ -198,6 +210,7 @@ class DescriptorCard(BaseModel):
     verdicts: List[CheckVerdict] = Field(default_factory=list)
     AB_distance_A: Optional[float] = None
     site_graph_distance: Optional[int] = None
+    energy_eV: Optional[float] = None
     image_path: Optional[str] = None
 
     def text(self) -> str:
@@ -206,6 +219,8 @@ class DescriptorCard(BaseModel):
                  "nearest neighbours " + ", ".join(f"{d:.2f}" for d in self.nn_distances_A) + " Å"]
         if self.AB_distance_A is not None:
             lines.append(f"A–B distance {self.AB_distance_A:.2f} Å; site-graph distance {self.site_graph_distance}")
+        if self.energy_eV is not None:
+            lines.append(f"energy {self.energy_eV:.3f} eV")
         if self.displacement_from_start:
             lines.append(self.displacement_from_start)
         if self.magnetic_moment is not None:

@@ -122,7 +122,7 @@ REGISTRY: List[ToolSpec] = [
     ToolSpec(
         name="adsorbate_placement", board_steps=("3.5", "4"),
         purpose="Place fragment A at every symmetry-distinct site near its old site and B at a given site, by script; orientations under the site's stabiliser; a random displacement before relaxation.",
-        inputs={"sites": "SiteEnumeration", "fragment": "StructureRef", "site_index": "int", "orientation": "int", "height_A": "float", "displacement_amplitude_A": "float"},
+        inputs={"sites": "SiteEnumeration", "fragment": "StructureRef", "site_index": "int", "orientation": "int", "height_A": "float", "displacement_amplitude_A": "float", "base": "Candidate | None, the candidate the fragment is added to; the slab of the enumeration when None"},
         outputs={"candidate": "Candidate"},
         checks=("start 2 to 3 Å above the site", "the LLM never places atoms"),
         thresholds={"displacement_amplitude_A": OPEN, "fragment_A_fixed_at_old_site": OPEN},
