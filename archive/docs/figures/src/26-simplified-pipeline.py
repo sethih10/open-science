@@ -8,12 +8,12 @@ OWNER_COL = {"TOOL": "#374151", "LLM": "#0e7490", "HUMAN": "#be185d"}
 fig = plt.figure(figsize=(14, 4.9))
 ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
 title(fig, "The plan in five steps: relaxed inputs in, the dissociated final state out",
-      "the team's numbering is kept; the grey line under each box names the rows of the full pipeline it corresponds to · schematic")
+      "numbered in flow order; the grey line under each box names the rows of the full pipeline it corresponds to · schematic")
 steps = [("(1) Inputs", "relaxed initial state AB* on the surface;\nrelaxed clean surface; relaxed adsorbate\nin vacuum; settings locked in PROJECT.md", "HUMAN · TOOL", "rows 1 and 1*", False),
-         ("(3) Unit cell and unique sites", "symmetry-inequivalent sites on the slab,\ncounted; the fragment that keeps the\nbinding atom placed near its old site", "TOOL", "rows 2 and 9a", False),
-         ("(4) Least distance before pull-back", "B sites around A within [1.5 d, 5] Å;\none force call per pair, then relaxation;\nthe gate: no A–B bond, nothing desorbed", "TOOL", "rows 9b, 9c, 9d", True),
-         ("(5) Best configuration for both", "survivors clustered by SOAP; nearest first,\nthen energy; a few kept per cluster; doubt from\nthe committee; the human picks up to five", "TOOL · LLM", "rows 9e, 7, 8", False),
-         ("(2) Output: the final state", "A* + B* as close as they can be without\nbonding back; E(FS near), E(FS ∞), pairs\nrejected with reasons, recombination rate", "TOOL · HUMAN", "row 14", False)]
+         ("(2) Unit cell and unique sites", "symmetry-inequivalent sites on the slab,\ncounted; the fragment that keeps the\nbinding atom placed near its old site", "TOOL", "rows 2 and 9a", False),
+         ("(3) Least distance before pull-back", "B sites around A within [1.5 d, 5] Å;\none force call per pair, then relaxation;\nthe gate: no A–B bond, nothing desorbed", "TOOL", "rows 9b, 9c, 9d", True),
+         ("(4) Best configuration for both", "survivors clustered by SOAP; nearest first,\nthen energy; a few kept per cluster; doubt from\nthe committee; the human picks up to five", "TOOL · LLM", "rows 9e, 7, 8", False),
+         ("(5) Output: the final state", "A* + B* as close as they can be without\nbonding back; E(FS near), E(FS ∞), pairs\nrejected with reasons, recombination rate", "TOOL · HUMAN", "row 14", False)]
 W, H, G = 0.178, 0.46, 0.0225; x0 = 0.02
 for i, (t, b, own, rows, hi) in enumerate(steps):
     x = x0 + i * (W + G); y = 0.30

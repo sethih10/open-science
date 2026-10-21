@@ -24,25 +24,25 @@ Reading the figure: panel 1, three relaxed inputs; panel 3, the unit cell and it
 
 ## The pipeline in five steps
 
-The team's five panels map onto the full pipeline without changing their numbering; panel 4, the least distance before pull-back, is the stated problem.
+The team's five panels, numbered here in flow order, map onto the full pipeline; step 3, the least distance before pull-back, is the stated problem.
 
 ![The plan in five steps, each with its owners and the rows of the full pipeline it corresponds to](figures/simplified-pipeline.png)
 
 *Figure: simplified pipeline · 5 steps, owners, row mapping, schematic*
 
-Reading the figure: boxes run left to right in the team's numbering, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the rows of the full pipeline. The table below carries the same owners and row mapping.
+Reading the figure: boxes run left to right in flow order, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the rows of the full pipeline. The table below carries the same owners and row mapping.
 
 | Step | What it does | Owner | Rows of the full pipeline |
 |---|---|---|---|
 | 1 Inputs | Relaxed AB\* on the surface, clean surface, adsorbate in vacuum, retrieved and locked with the settings in `PROJECT.md`; the human approves; the MLIP chosen before any placement | Human, Tool | 1, 1\* |
-| 3 Unit cell and unique sites | Cell wide enough that the pair never sees its periodic image, locked in row 1; symmetry-inequivalent sites on the slab, counted; the fragment keeping the binding atom placed near its old site | Tool | 2, 9a |
-| 4 Least distance before pull-back | B sites around A within [1.5 d, 5] Å; one force call per pair, then relaxation; the validity gate: no A–B bond, nothing desorbed | Tool | 9b, 9c, 9d |
-| 5 Best configuration for both | For adsorbent #1, A, and adsorbent #2, B: survivors clustered by SOAP; nearest first, then energy; the nearest and the lowest kept per cluster, more is open: team decision; the geometry-critic may order, never remove; doubt from the committee; the human picks up to five | Tool, LLM | 9e, 7, 8 |
-| 2 Output | A\* + B\* as close as they can be without bonding back; both energies; rejected pairs with reasons; recombination rate; the calibrated doubt from mlip_doubt; the LLM drafts the report and the human interprets | Tool, Human | 14 |
+| 2 Unit cell and unique sites | Cell wide enough that the pair never sees its periodic image, locked in row 1; symmetry-inequivalent sites on the slab, counted; the fragment keeping the binding atom placed near its old site | Tool | 2, 9a |
+| 3 Least distance before pull-back | B sites around A within [1.5 d, 5] Å; one force call per pair, then relaxation; the validity gate: no A–B bond, nothing desorbed | Tool | 9b, 9c, 9d |
+| 4 Best configuration for both | For adsorbent #1, A, and adsorbent #2, B: survivors clustered by SOAP; nearest first, then energy; the nearest and the lowest kept per cluster, more is open: team decision; the geometry-critic may order, never remove; doubt from the committee; the human picks up to five | Tool, LLM | 9e, 7, 8 |
+| 5 Output | A\* + B\* as close as they can be without bonding back; both energies; rejected pairs with reasons; recombination rate; the calibrated doubt from mlip_doubt; the LLM drafts the report and the human interprets | Tool, Human | 14 |
 
 Owners: Tool is deterministic code; LLM plans, chooses and drafts from descriptor cards and never touches coordinates; Human locks settings, picks and interprets; Skill is a written procedure the LLM follows; Literature enters before the run and after it only, and a human verifies every value.
 
-The board's step 3, placing the dissociated fragment, has six points; each lands in one row of step 4 or step 5.
+The board's step 3, placing the dissociated fragment, has six points; each lands in one row of step 3 or step 4 above.
 
 | Point of the board's step 3 | Row that holds it |
 |---|---|
