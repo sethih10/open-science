@@ -119,11 +119,27 @@ Automate the deterministic middle; keep humans where a wrong choice silently cor
 | ML pre-screening                 | Tool  | Relax all candidates cheaply, keep the top few                  | Universal ML potentials, AdsorbML |
 | DFT relaxation                   | Tool  | Accurate energies for the best candidates                       | VASP or QE via AiiDA or atomate2  |
 | Diagnose failed jobs             | LLM   | Read errors, adjust, resubmit                                   | Agent                             |
-| Validity checks                  | Tool  | Desorbed, migrated, dissociated, reconstructed, imaginary modes | Custom scripts                    |
+| Validity checks                  | Tool  | The nine checks of the gate below, on every relaxed structure   | Custom scripts                    |
 | Review flagged cases             | Human | Only cases that failed checks                                   | —                                 |
 | Energies and curves              | Tool  | E_ads, ΔG, E(z), E(θ)                                           | Custom scripts                    |
 | Benchmark comparison             | Tool  | Error against known values                                      | OC20-Dense, CE27                  |
 | Interpret results                | Human | Mechanism, next targets                                         | —                                 |
+
+**The validity gate.** One code path, run on every relaxed structure, initial or final, before anything is ranked or paired. The agent context restates it as rules.
+
+| #  | Check                  | Fails when                                                              | Threshold                              |
+|----|------------------------|-------------------------------------------------------------------------|----------------------------------------|
+| 1  | Desorbed               | Adsorbate centre too far above the surface plane                        | 3 Å                                    |
+| 2  | Migrated               | Adsorbate ends on a site other than the one enumerated                  | Site label differs                     |
+| 3  | Dissociated            | An intramolecular bond stretched beyond its breaking threshold          | Open                                   |
+| 4  | Reconstructed          | Surface atoms displaced from their clean-slab positions                 | Open                                   |
+| 5  | Intercalated           | An adsorbate atom below the top surface layer                           | Layer index                            |
+| 6  | Not a minimum          | One or more imaginary vibrational modes                                 | Zero allowed                           |
+| 7  | Magnetism collapsed    | Total moment of a magnetic slab vanishes on adsorption                  | Open                                   |
+| 8  | Outside expected range | E_ads far from the prior for this adsorbate and metal                   | Prior width open                       |
+| 9  | Settings mismatch      | Slab and slab+A differ in cutoff, mesh, smearing or pseudopotentials    | Exact equality                         |
+
+Checks 1 to 4 are AdsorbML's anomaly checks, with intercalation as its fourth; the rest are ours. The final-state gate of section 16 adds two more: the A–B bond re-formed, and the pair interacting with its periodic image.
 
 The largest gains from automation are site enumeration (dozens of inequivalent configurations instead of three or four guesses), ML pre-screening (roughly an order of magnitude less DFT), job handling, and validity checks.
 
