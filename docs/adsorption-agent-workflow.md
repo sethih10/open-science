@@ -646,7 +646,7 @@ Reading the figure: the two boxes at the top state the input, a slab with AB\* a
 | 9b       | Tool  | Enumerate B sites around each A, ordered by site-graph distance                           | Symmetry-distinct pairs, nearest first, counted     |
 | 9c       | Tool  | Relax every pair with the same potential and settings as the initial state               | Relaxed pairs                                        |
 | 9d       | Tool  | Gate: no A–B bond, nothing desorbed, moved or subsurface, surface intact, no imaginary mode | Survivors; every rejection with its reason         |
-| 9e       | Tool  | Choose the nearest survivor first, then by energy; keep several                           | Final states, E(FS near), E(FS ∞), recombination rate |
+| 9e       | Tool, LLM writes it up | Choose the nearest survivor first, then by energy; keep several          | Final states, E(FS near), E(FS ∞), recombination rate |
 
 **Questions for the team.**
 
@@ -752,7 +752,7 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 ![The shortest route to one measured barrier runs through ten numbered boxes; everything else hangs off them](figures/22-build-plan.png)
 
-*Figure: build plan · 5 columns, 25 tasks, critical path of 10, schematic*
+*Figure: build plan · 5 columns, 26 tasks, critical path of 10, schematic*
 
 Reading the figure: column 0 holds the decisions only the team can make, in grey. Column 1 is the code foundation: settings lock, enumeration, placement, validity gate, descriptor card. Column 2 is ML relaxation and trust: potential choice, calibrated doubt, the human checkpoint, with the board's two question marks dashed. Column 3 is the path: the nearest non-recombining final state, pairing, the ML band, saddle validation, DFT refinement and the report. Column 4 is what gets measured, in amber, and the release, in blue. Each box names what it reuses in green and what it needs in grey. The numbered blue path is: system and product, settings lock, enumeration, validity gate, potential choice, nearest final state, ML band, saddle validation, the \*OH → \*O + \*H comparison against OC20NEB, release. The band at the bottom is the LLM and human layer, written last because it only calls the tools.
 

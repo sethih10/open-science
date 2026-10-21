@@ -23,10 +23,11 @@ Edit in place; do not append a changelog. If new thinking contradicts the doc, f
 
 ## How to write
 
-Follow `docs/agent-writing-style.md`: prose rules, figure conventions, the text-only form for `agent-context.md`, and commit messages. The three agent files have one job each:
+Follow `docs/agent-writing-style.md`: prose rules, figure conventions, the text-only form for `agent-context.md`, and commit messages. The agent files have one job each:
 
 | File                          | Job                                                             |
 |-------------------------------|-----------------------------------------------------------------|
 | `docs/agent-context.md`       | What the humans know: the design document without figures       |
 | `docs/agent-writing-style.md` | How to write and draw for this project                          |
+| `docs/agent-build-context.md` | What to build: tools, formats, rules, order, open decisions      |
 | `docs/CLAUDE.md` (this file)  | When to update which file                                       |

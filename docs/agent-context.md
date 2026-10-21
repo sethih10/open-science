@@ -98,6 +98,7 @@ Reject or flag when any of these holds:
 - Migrated: adsorbate moved to a different site than the one enumerated.
 - Dissociated: an intramolecular bond stretched beyond its breaking threshold.
 - Reconstructed: surface atoms displaced beyond a threshold from their clean-slab positions.
+- Intercalated: an adsorbate atom below the top surface layer.
 - Not a minimum: one or more imaginary vibrational modes.
 - Magnetism collapsed: total magnetic moment of a magnetic slab vanished on adsorption.
 - Outside expected range: E_ads far from the prior for this adsorbate–metal pair (see section 8).
