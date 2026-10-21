@@ -168,26 +168,26 @@ The actor that does the work in each step, in order: Input prompt human, (1) Str
 
 ## The architecture in one picture
 
-![The human at both ends, three LLM agents in one box, five skills under them, nine tools in a chain below](figures/architecture.png)
+![The human at both ends, the LLM agents in one box, the skills under them, the seventeen tools in call order below](figures/architecture.png)
 
-*Figure: architecture · 2 human boxes, 3 agents, 10 skills, 9 tools, schematic*
+*Figure: architecture · 2 human boxes, the agents, 10 skills, 17 tools, schematic*
 
-Reading the figure: the human supplies the inputs and answers the interview on the left and takes the five checkpoints and the interpretation on the right; the three agents in the middle only plan, propose and draft; the skills under them are the procedures they follow; the tools at the bottom, in the order the planner calls them, do every calculation and return descriptor cards. Nothing the agents say is a number they computed.
+Reading the figure: the human supplies the inputs and answers the interview on the left and takes the five checkpoints and the interpretation on the right; the agents in the middle only plan, propose and draft; the skills under them are the procedures they follow; the tools at the bottom, in the order the planner calls them, do every calculation and return descriptor cards. Nothing the agents say is a number they computed.
 
 ## Build order
 
 The shortest route to one validated nearest final state runs through eight numbered tasks; the answers in column 0 unblock everything to their right.
 
 1. D1 System and product: AB\*, surface, A\* + B\*; first case \*OH → \*O + \*H on Pt(111). Human decision.
-2. T1 Settings lock. Needs D1, D3. Reuses AiiDA common workflows and SSSP.
-3. T2 Site and pair enumeration. Needs T1. Reuses spglib and ACAT, pymatgen as the baseline.
-4. T4 Validity gate. Needs T3. Reuses fairchem anomaly detection.
-5. T6 MLIP choice. Needs D2. Reuses AtomisticSkills ml-mlip-benchmark.
-6. P1 Nearest non-recombining final state. Needs T2, T4, T6, D5. Reuses the NEBscape endpoint generator and fairchem AutoFrameDissociation.
+2. T1 `structure_retrieval` and `calculation_protocol`. Needs D1, D3. Reuses AiiDA common workflows and SSSP.
+3. T2 `site_enumeration`. Needs T1. Reuses spglib and ACAT, pymatgen as the baseline.
+4. T4 `anomaly_filter`. Needs T3. Reuses fairchem's anomaly detection.
+5. T6 `mlip_selection`. Needs D2. Reuses CatBench and AtomisticSkills ml-mlip-benchmark.
+6. P1 `pair_enumeration`, `pull_force_screen`, `relaxation`, `soap_clustering`, with `minima_hopping` as the baseline. Needs T2, T4, T6, D5. Reuses the NEBscape endpoint generator and fairchem's helpers.
 7. M2 The \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
-8. R1 Release: SKILL.md, MCP tools on AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
+8. R1 Release: the skills, the MCP server beside AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
-Off-path tasks the path needs, built when it needs them: T3 Placement script, needs T2, reuses ASE; P5 the final-state report, needs P1 and T7, reuses AtomisticSkills logging and general-peer-review; M1 H on Pt(111) end to end, needs T1 to T8. T9, DFT single points on the chosen final states, is an extension that needs T8 and D2.
+Off-path tasks the path needs, built when it needs them: T0 `literature_lookup`, needs D1; T3 `adsorbate_placement`, needs T2; T5 `descriptor_card`, needs T4; T7 `uncertainty_estimation`, needs T6 and T4; T8 `ranking` with the checkpoint record, needs T5 and T7; P5 `reference_energies` and `report`, needs P1 and T7; M1 H on Pt(111) end to end, needs T1 to T8. T9 `dft_single_points` and T10 `active_learning` are extensions that need D2.
 
 Decisions D2 compute and codes, D3 benchmark and pass criterion, D4 headline claim and D5 final-state rules are open: team decision. The LLM and human layer, the skills, the Formulate interview run by dft-settings-interviewer, the lessons log and final-state-planner, is written last because it only calls the tools.
 
