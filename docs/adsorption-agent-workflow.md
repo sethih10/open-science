@@ -441,28 +441,30 @@ Reading the figure: the dashed loop sends rate-controlling steps from the microk
 
 ## The solution planner from the whiteboard
 
-The whiteboard plan of 21 October 2026 finds configurations well and stops before the path. It is a double-ended search: the start, surface and adsorbates relaxed in vacuum with their energies, and the end, the adsorbed product, are known; the path is not, and the transition energy sets how fast the product forms.
+The second board of 21 October 2026 makes step 3, placing the dissociated fragment, the heart of the plan, and its six points are the final-state procedure 9a to 9e of section 16. The plan follows NEBscape's shape: potential chosen first, sites by symmetry, a distance window for the fragment, SOAP clustering of the survivors, minima hopping as the alternative generator. The start is known, surface and adsorbates with their energies, and E_ads for the adsorbate is in the literature.
 
-![The whiteboard pipeline finds configurations; the path steps are what still has to be built](figures/19-solution-planner-pipeline.png)
+![Step 3 of the board is the final-state problem; its six points land in 9a to 9e](figures/19-solution-planner-pipeline.png)
 
-*Figure: solution planner · core, gaps, extension layer, schematic*
+*Figure: solution planner, second board · 10 steps, 6 points, extension layer, schematic*
 
-Reading the figure: the eight whiteboard steps, grey, carry red notes naming each problem and fix. Step 8, the human choosing up to five configurations, hands over to the six highlighted path steps the board lacks: final-state enumeration, atom mapping and pairing, path search, saddle validation, DFT refinement, report. The dashed bottom band is the extension layer, each box naming its step; the core runs without it.
+Reading the figure: the board's steps in grey carry a red problem and fix each; step 3 is highlighted because it is the stated problem. The blue block takes the six points written under step 3 and names the sub-step each becomes. The dashed band holds the board's question marks.
 
 | Whiteboard step | Workflow step, section 3 | Status |
 |---|---|---|
 | (1) Structure retriever | Choose system and settings | Keep; lock settings and references in PROJECT.md first |
-| (2) Adsorption sites with pymatgen | Site and orientation enumeration | Fix: symmetry-complete with spglib and CatKit; fcc and hcp hollows apart |
-| (3) Adsorbate placement | Site and orientation enumeration | Fix: script only; symmetry, random displacement; the LLM never places atoms |
+| (1*) MLIP selection, before placement | ML pre-screening | Benchmark on the system class, record why; one potential for IS and FS; spin for Ni and Co |
+| (2) Adsorption sites with pymatgen | Site and orientation enumeration | Fix: symmetry-complete with spglib and ACAT; fcc and hcp hollows apart |
+| (3) Adsorbate placement, six points | The final-state procedure 9a to 9e | Point 1, least distance before B is pulled back: the bond-re-formed check, 9d. Point 2, window [1.5 d, 5] Å with d the length of the bond to break: the range of B sites around A, 9b; NEBscape cuts at 4.5 Å. Point 3, the MLIP's pull force on the binding fragment: a one-force-call pre-filter per pair before relaxing, new in 9c. Point 4, agentic critique of the cleavage: the geometry critic proposes a site type per fragment and never overrides a check. Point 5, pymatgen site and orientation so the fragment adsorbs: 9a, symmetry-complete and counted. Point 6, minima hopping with the MLIP: NEBscape's generator, wrapped as the baseline policy |
 | (4) Initial configurations | Site and orientation enumeration | Fix: conformers in vacuum first, Burnside counting; start 2 to 3 Å up |
 | (4.1) Physics-based filtering | Validity checks | Fix: write the tests of section 3 |
 | (5) MLIP selection | ML pre-screening; flag ML doubt | Problem: organometallics; dispersion, spin, images 10 Å apart |
-| (6) Anomaly filter | Validity checks | Same code as (4.1), on every relaxed structure |
+| (6) SOAP clustering, lowest per cluster | Choose, 9e | Cluster the gate's survivors by SOAP as NEBscape does; keep the nearest and the lowest per cluster; three or more per cluster is open |
 | (7) Uncertainty estimation | Flag ML doubt | Fix: calibrate disagreement against a few DFT labels |
-| (8) Rank; human picks up to five | Review flagged cases | Fix: choose on card, rank and uncertainty; then DFT on the five |
-| (9) to (14) path steps | Extension to reaction pathways, section 12 | New: the part to build |
+| (8) Rank; human picks up to five | Review flagged cases | Fix: choose on card, rank and uncertainty; choice and reason to the case bank |
+| Input prompt: critic and knowledge prompts, reasoning questions | Skill and interview | Knowledge as a written skill, prompts as a fixed list; the LLM reads cards only |
+| (9) to (14) path steps | Extension to reaction pathways, section 12 | Later phase |
 
-**Extension layer**, the board's question marks: agentic uncertainty, the variance of the planner's choices over several runs on one input; active learning from high uncertainty to DFT labels to a fine-tuned MLIP; an LLM critic of descriptor cards that never overrides a code check; DFT on the five chosen configurations before any path search; multi-step mechanisms by energetic span, then catalysis. Open questions: section 18.
+**Extension layer**, the board's question marks: a vision model that predicts the whole placement, only after the geometry benchmark shows an image helps; more than three configurations per cluster, set by the recombination rate per cluster; agentic uncertainty, the variance of the planner's choices over several runs on one input; active learning from high uncertainty to DFT labels to a fine-tuned MLIP; an LLM critic of descriptor cards that never overrides a code check; DFT on the five chosen configurations before any path search; multi-step mechanisms by energetic span, then catalysis. Open questions: section 18.
 
 ## The augmented pipeline: what to borrow, what is missing, what is ours
 

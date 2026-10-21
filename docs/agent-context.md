@@ -291,20 +291,21 @@ Rules:
 
 ## 21. Solution planner (whiteboard, 21 October 2026)
 
-Double-ended search: start, surface and adsorbates relaxed in vacuum with energies; end, the known product; unknown path, whose transition energy sets the rate.
+Second board, 21 October 2026: step 3, placing the dissociated fragment, is the final-state problem; the plan follows NEBscape's shape. Known: surface and adsorbates with energies; E_ads from the literature.
 
 Core steps and fixes:
 1. Structure retriever: surface, adsorbates, description from the prompt. Fix: lock settings and references in PROJECT.md first.
-2. Sites with pymatgen. Fix: symmetry-complete, spglib and CatKit; fcc and hcp hollows apart.
-3. Placement. Fix: script only; symmetry plus random displacement; conformers in vacuum first; start 2–3 Å up, not 10 Å.
+1*. MLIP selection before placement, active-learning prospect. Fix: benchmark on the system class, record why; one potential for IS and FS; spin for Ni and Co.
+2. Sites with pymatgen. Fix: symmetry-complete, spglib and ACAT; fcc and hcp hollows apart.
+3. Placement of the dissociated fragment, six points on the board: (i) least distance before B is pulled back → the bond-re-formed check, 9d; (ii) window [1.5 d, 5] Å, d the length of the bond to break → range of B sites around A, 9b, NEBscape cuts at 4.5 Å; (iii) the MLIP's pull force on the binding fragment → one force call per pair before relaxing, new pre-filter in 9c: force on B towards A means likely recombination; (iv) agentic critique of the cleavage → geometry-critic proposes a site type per fragment, never overrides a check; (v) pymatgen site and orientation so the fragment adsorbs → 9a, symmetry-complete and counted; (vi) minima hopping with the MLIP → NEBscape's generator, the baseline policy. For AB* itself: script only; symmetry plus random displacement; conformers in vacuum first; start 2–3 Å up.
 4. Initial configurations, all DoF × all sites. Fix: Burnside counting; few conformers.
 4.1. Physics filter. Fix: the checks of section 6.
 5. MLIP selection. Problem: organometallics, where universal MLIPs fail; dispersion; spin; periodic images ≥ 10 Å apart.
-6. Anomaly filter: the code of 4.1 on every relaxed structure; verdict into the card.
+6. SOAP clustering of the gate's survivors, as NEBscape; keep the nearest and the lowest per cluster; how many per cluster is open. The anomaly filter is the code of 4.1 on every relaxed structure, verdict into the card.
 7. Uncertainty across the MLIPs of 5. Fix: calibrate on a few DFT labels first.
-8. Rank; human picks up to five on card, rank and uncertainty; then DFT on the five.
+8. Rank; human picks up to five on card, rank and uncertainty; choice and reason to the case bank. Input prompt: critic and knowledge prompts into 3 and 8, reasoning questions into 3 and 5: knowledge as a written skill, prompts as a fixed list, the LLM reads cards only.
 
-Later path steps: 9 final-state enumeration: product geometry, sites, orientations, pair distances; 10 atom mapping and IS–FS pairing, minimal displacement after symmetry, several pairs; 11 ML NEB, then climbing image or dimer; 12 saddle validation, one imaginary mode, path reaches this IS and FS; 13 DFT single points, then relax with locked settings; 14 report: barrier, path, MLIP and agentic uncertainties, energetic span if multi-step. The board's question marks are the extension column of section 22. Open questions: section 17.
+Later path steps: 9 final-state enumeration: product geometry, sites, orientations, pair distances; 10 atom mapping and IS–FS pairing, minimal displacement after symmetry, several pairs; 11 ML NEB, then climbing image or dimer; 12 saddle validation, one imaginary mode, path reaches this IS and FS; 13 DFT single points, then relax with locked settings; 14 report: barrier, path, MLIP and agentic uncertainties, energetic span if multi-step. The board's question marks are the extension column of section 22, plus a vision model for placement, only after the geometry benchmark shows an image helps, and more than three per cluster, set by the recombination rate. Open questions: section 17.
 
 ## 22. Augmented pipeline: borrow, gaps, ours (figure 20 as a table)
 

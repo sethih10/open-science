@@ -215,10 +215,10 @@ NEBscape's endpoint generator (MIT) with fairchem's helpers, and four changes: c
 | Sub-step | Does                                                    | CatTSunami does                                  | We do                                                                 | Output                                   |
 |----------|---------------------------------------------------------|--------------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
 | 9a       | Place A, the fragment that keeps the binding atom, near the IS site | 5 lowest-energy placements within 2 Å of the old binding site | All symmetry-distinct placements, counted, or A fixed at its IS site: D5 | Placements of A\*, counted        |
-| 9b       | Enumerate B sites around each A                         | 5 placements in a 1–3 Å shell, 25 pairs          | All symmetry-distinct pairs ordered by site-graph distance, in-plane tiebreak, counted | Ordered pairs and their count |
-| 9c       | Relax every pair                                        | MLIP relaxation                                  | Same potential and settings as the IS; random displacement first      | Relaxed pairs                            |
+| 9b       | Enumerate B sites around each A                         | 5 placements in a 1–3 Å shell, 25 pairs          | All symmetry-distinct pairs ordered by site-graph distance, in-plane tiebreak, counted; the board's window [1.5 d, 5] Å, d the length of the bond to break, bounds the list; NEBscape cuts at 4.5 Å | Ordered pairs and their count |
+| 9c       | Pre-filter, then relax every pair                       | MLIP relaxation                                  | The board's pull-force test: one force call per pair; a force on B towards A above a threshold marks likely recombination and the pair goes to the back of the queue, not out; then relax with the IS potential and settings, random displacement first | Flagged pairs; relaxed pairs |
 | 9d       | Gate every pair                                         | Discard frames where the products react or another anomaly occurs | Checks 1 to 11 of 3.4; every rejection logged with its reason | Survivors; rejections with reasons |
-| 9e       | Choose                                                  | One survivor at random                           | Nearest survivor first, then energy; keep several                     | Final states; E(FS near); E(FS ∞); recombination rate |
+| 9e       | Choose                                                  | One survivor at random                           | Cluster survivors by SOAP as NEBscape does; keep the nearest and the lowest per cluster; nearest first overall, then energy | Final states; E(FS near); E(FS ∞); recombination rate |
 
 | Field   | Content                                                                                                    |
 |---------|------------------------------------------------------------------------------------------------------------|
@@ -227,7 +227,8 @@ NEBscape's endpoint generator (MIT) with fairchem's helpers, and four changes: c
 | Recombination rate | How often the nearest pair bonds back: pairs failing check 10 over pairs relaxed; per distance or nearest shell only is open: team decision |
 | Wraps   | fairchem AutoFrameDissociation; tools 3.2, 3.3, 3.4 and 3.6                                                 |
 | Logs    | Counts of placements and pairs; every rejection with its reason; E(FS near), E(FS ∞) and their difference; recombination rate |
-| Open    | The three D5 questions; the A–B threshold; how many survivors to keep                                      |
+| Open    | The three D5 questions; the A–B threshold; how many survivors to keep; the pull-force threshold; whether d is the vacuum or the adsorbed bond length; 5 Å or NEBscape's 4.5 Å as the upper bound; configurations per SOAP cluster |
+| Critic  | The geometry-critic may propose a site type per fragment from the card, AdsMind style, to order the list; it never removes a pair |
 | Extensions | Coverage scan over cell sizes at 9b; lowest energy within one site hop at 9e                            |
 
 ### 3.9 Atom mapping, pairing and the intended-reaction check: P2, step 10
