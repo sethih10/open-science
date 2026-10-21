@@ -1,0 +1,19 @@
+# GitHub Actions workflow. It lives here because pushing a file under .github/workflows/ needs a token with the
+# `workflow` scope; move it to .github/workflows/ci.yml from a checkout whose token has that scope.
+name: check
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -e ".[dev,figures]"
+      - run: ruff check finalstate tests
+      - run: pytest -q
+      - name: figures and documents agree with the data module
+        run: |
+          for n in 29-board-evolution 30-board-flowchart 31-who-does-what 32-architecture; do python archive/docs/figures/src/$n.py; done
+          python archive/docs/figures/src/board_tables.py --check
+          python archive/docs/figures/src/board_check.py

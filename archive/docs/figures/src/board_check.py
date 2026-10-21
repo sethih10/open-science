@@ -31,12 +31,12 @@ for s in STEPS:
             need(s.open in flat[n], f"figure {n}: open decision missing at {s.key}: {s.open}")
     if s.ext:
         need(s.ext in flat[29], f"figure 29: extension missing at {s.key}")
-    for t in s.tools:
+    for t in s.tools + s.ext_tools:
         for n in (30, 31, 32):
             need(t in flat[n], f"figure {n}: tool missing: {t} (step {s.key})")
-    if s.agent:
+    for name, _ in s.agents:
         for n in (30, 31, 32):
-            need(s.agent[0] in flat[n], f"figure {n}: agent missing: {s.agent[0]} (step {s.key})")
+            need(name in flat[n], f"figure {n}: agent missing: {name} (step {s.key})")
     if s.skill:
         need(s.skill.split(";")[0].split(",")[0].strip() in flat[31], f"figure 31: skill missing at {s.key}: {s.skill}")
 for c in CHECKPOINTS:
@@ -61,8 +61,7 @@ for l in rows:
     by_first[cells[0]] = cells
 for s in STEPS:
     if s.key == "prompt": continue
-    head = s.title.replace("(", "").replace(")", "").replace("\\", "")
-    match = next((c for k, c in by_first.items() if k.replace("\\", "").startswith(head.split(" ")[0] + " ") or k.replace("\\", "") == head), None)
+    match = by_first.get(s.title.replace("*", "\\*"))
     if not match:
         fails.append(f"agent.md section 2: no row for {s.title}"); continue
     owner_word = {"T": "Tool", "L": "LLM", "H": "Human", "S": "Skill"}[s.owners[0]]

@@ -9,6 +9,9 @@ L
 dft-settings-interviewer: asks the fixed questions, writes PROJECT.md
 S
 dft-settings-protocol
+T
+literature_lookup: published E_ads and the bond length d, with source,
+for the human to verify
 (1) Structure retriever
 ❚❚ approve settings
 H
@@ -19,8 +22,9 @@ final-state-planner: picks the protocol and states why
 S
 dft-settings-protocol
 T
-dft_settings_lock: the three relaxed inputs, A and B as structures, the
-cell; settings locked in PROJECT.md
+structure_retrieval and calculation_protocol: the three relaxed inputs,
+A and B by cleaving the named bond, the cell; settings locked in
+PROJECT.md
 (1*) MLIP selection, AL prospect
 ❚❚ approve the plan
 H
@@ -31,8 +35,10 @@ final-state-planner: records the choice and the reason
 S
 ml-mlip-benchmark, reused
 T
-mlip_choice: two or three candidates benchmarked on the system class;
+mlip_selection: two or three candidates benchmarked on the system class;
 the chosen one relaxes, all form the committee of step 7
+T
+extension: active_learning
 (2) Adsorption sites with pymatgen
 T
 site_enumeration: symmetry-inequivalent sites, fcc and hcp apart,
@@ -41,20 +47,20 @@ counted; pymatgen as the baseline
 S
 dissociation-final-state
 T
-validity_gate, check 10: the A–B bond re-formed after relaxation; runs
+anomaly_filter, check 10: the A–B bond re-formed after relaxation; runs
 inside step 5
 (3.2) Window [1.5 d, 5] Å
 S
 dissociation-final-state
 T
-dissociation_final_state: every symmetry-distinct A–B pair in [1.5 d, 5]
-Å, nearest first by site-graph distance, counted
+pair_enumeration: every symmetry-distinct A–B pair in [1.5 d, 5] Å,
+nearest first by site-graph distance, counted; d from literature_lookup
 (3.3) Pull force with the MLIP
 S
 dissociation-final-state
 T
-dissociation_final_state: one MLIP force call per pair; a pull towards
-the other fragment queues the pair last
+pull_force_screen: one MLIP force call per pair; a pull towards the
+other fragment queues the pair last
 (3.4) Agentic critique of the cleavage
 L
 geometry-critic: proposes a site type per fragment, orders the list;
@@ -75,28 +81,28 @@ or
 S
 dissociation-final-state
 T
-dissociation_final_state: NEBscape's endpoint generator with the chosen
-MLIP, the alternative and the baseline policy
+minima_hopping: NEBscape's endpoint generator with the chosen MLIP, the
+alternative and the baseline policy
 (4) Initial configurations
 S
 dissociation-final-state
 T
-dissociation_final_state: relax every pair with the chosen MLIP and the
-locked settings, random displacement first; Burnside-counted
+relaxation: relax every pair with the chosen MLIP and the locked
+settings, random displacement first; Burnside-counted
 (5) Physics-based and anomaly filtering
 L
 extension: geometry-critic: comments on cards, never overrides
 S
 dissociation-final-state
 T
-validity_gate: nine checks per fragment plus two final-state checks,
+anomaly_filter: nine checks per fragment plus two final-state checks,
 before and after relaxation; verdict into the card; rejections logged
 (6) SOAP clustering
 S
 dissociation-final-state
 T
-dissociation_final_state: SOAP clusters of the survivors; the nearest
-and the lowest per cluster; E(FS near), E(FS ∞)
+soap_clustering: SOAP clusters of the survivors; the nearest and the
+lowest per cluster kept
 (7) Uncertainty estimation
 ❚❚ review flagged cases
 H
@@ -105,13 +111,15 @@ reviews the flagged cases
 L
 final-state-planner: stops on doubt and asks
 L
-extension: agentic uncertainty: N planner runs; DFT single points if D2
+extension: agentic uncertainty: N planner runs; dft_single_points if D2
 allows
 S
 mlip-doubt-calibration
 T
-mlip_doubt: committee disagreement across the 1* candidates, calibrated
-on DFT or OC20NEB labels; doubt escalates
+uncertainty_estimation: committee disagreement across the 1* candidates,
+calibrated on DFT or OC20NEB labels; doubt escalates
+T
+extension: dft_single_points
 (8) Rank; user chooses up to 5
 ❚❚ pick up to five final states
 H
@@ -120,8 +128,9 @@ picks up to five on the cards; choice and reason to the case bank
 L
 final-state-planner: shows the cards with rank, doubt and verdicts
 T
-descriptor_card: one card per final state with rank, doubt and verdicts;
-the human picks; choice and reason to lessons.md
+ranking: nearest first, then energy; one descriptor_card per final state
+with doubt and verdicts; the human picks; choice and reason to
+lessons.md
 Solution
 ❚❚ interpret results
 H
@@ -132,8 +141,10 @@ final-state-planner: drafts the report
 S
 final-state-report; general-peer-review, reused
 T
-final_state_report: E(FS near), E(FS ∞), rejections with reasons,
-recombination rate, decision trace
+reference_energies and report: E(FS near), E(FS ∞) from separate cells,
+rejections with reasons, recombination rate, decision trace
+T
+extension: dft_single_points
 Legend: H human · L LLM agent · S skill, a written procedure the LLM follows · T tool, deterministic code · thick edge does the work · dashed, an extension · ❚❚ a checkpoint where the agent waits for the human.
 final-state-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.
 Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work

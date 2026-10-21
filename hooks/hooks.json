@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{"type": "command", "command": "python -m finalstate.hooks block-coordinate-edits"}]
+      },
+      {
+        "matcher": "mcp__finalstate__.*",
+        "hooks": [{"type": "command", "command": "python -m finalstate.hooks require-checkpoint"}]
+      }
+    ]
+  }
+}

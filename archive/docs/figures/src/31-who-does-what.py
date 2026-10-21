@@ -4,7 +4,7 @@ All text from _board.py. Axes in inches."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from _style import *
-from _board import STEPS, BY_KEY, PHASES, BOARD_DATE
+from _board import STEPS, BY_KEY, PHASES, BOARD_DATE, PLANNER
 from matplotlib.patches import FancyBboxPatch
 
 FW, FH = 16.0, 13.8
@@ -33,10 +33,11 @@ def chip(x, y, w, lane, text, owner=False, ext=False, pause=False):
 def chips_of(s):
     rows = []
     if s.human: rows.append(("H", s.human, s.owners[0] == "H", False, bool(s.checkpoint)))
-    if s.agent: rows.append(("L", f"{s.agent[0]}: {s.agent[1]}", s.owners[0] == "L", False, False))
+    for i, (name, role) in enumerate(s.agents): rows.append(("L", f"{name}: {role}", s.owners[0] == "L" and i == 0, False, False))
     if s.agent_ext: rows.append(("L", "extension: " + s.agent_ext, False, True, False))
     if s.skill: rows.append(("S", s.skill, s.owners[0] == "S", False, False))
     if s.tools: rows.append(("T", s.action, s.owners[0] == "T", False, False))
+    if s.ext_tools: rows.append(("T", "extension: " + ", ".join(s.ext_tools), False, True, False))
     return rows
 
 def card(x, ytop_, s):
@@ -77,6 +78,6 @@ for ph, x in COLS.items():
     band_bottom[ph] = yb
 x = COLS["step3"]; ax.add_patch(FancyBboxPatch((x - 0.05, band_bottom["step3"] - 0.25), CW, TOPY + 0.5 - (band_bottom["step3"] - 0.25), boxstyle="round,pad=0.02,rounding_size=0.15", fc=CORAL_F, ec=CORAL_E, lw=1.4, zorder=1))
 ax.text(FW / 2, 0.22, "Legend: H human · L LLM agent · S skill, a written procedure the LLM follows · T tool, deterministic code · thick edge does the work · dashed, an extension · "
-                      f"{PAUSE} a checkpoint where the agent waits for the human.\nfinal-state-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.",
+                      f"{PAUSE} a checkpoint where the agent waits for the human.\n{PLANNER} runs every card: it calls each tool by name, reads cards, never writes coordinates.",
         ha="center", va="bottom", fontsize=7.4, style="italic", color="#444444", linespacing=1.4)
 finish(fig, os.path.join(os.path.dirname(__file__), "..", "31-who-does-what.png"), copy_to="who-does-what")

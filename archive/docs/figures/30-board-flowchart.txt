@@ -1,32 +1,34 @@
 Input prompt
-dft-settings-interviewer: five fixed questions, answers into PROJECT.md
+literature_lookup: published E_ads and the bond length d, with source,
+for the human to verify
 (1) Structure retriever
-dft_settings_lock: the three relaxed inputs, A and B as structures, the
-cell; settings locked in PROJECT.md
+structure_retrieval and calculation_protocol: the three relaxed inputs, A
+and B by cleaving the named bond, the cell; settings locked in PROJECT.md
 ❚❚ approve settings
 open: one set of gas references for
 AB, A and B
 (1*) MLIP selection, AL prospect
-mlip_choice: two or three candidates benchmarked on the system class; the
-chosen one relaxes, all form the committee of step 7
+mlip_selection: two or three candidates benchmarked on the system class;
+the chosen one relaxes, all form the committee of step 7
 ❚❚ approve the plan
 (2) Adsorption sites with pymatgen
 site_enumeration: symmetry-inequivalent sites, fcc and hcp apart,
 counted; pymatgen as the baseline
 (3) Adsorbate placement, very important: the stated problem
 (3.1) Least distance before pull-back
-validity_gate, check 10: the A–B bond re-formed after relaxation;
+anomaly_filter, check 10: the A–B bond re-formed after relaxation;
 runs inside step 5
 open: the A–B distance threshold
 (3.2) Window [1.5 d, 5] Å
-dissociation_final_state: every symmetry-distinct A–B pair in [1.5
-d, 5] Å, nearest first by site-graph distance, counted
+pair_enumeration: every symmetry-distinct A–B pair in [1.5 d, 5] Å,
+nearest first by site-graph distance, counted; d from
+literature_lookup
 open: d from vacuum or from the
 adsorbed molecule; 5 Å or NEBscape's
 4.5 Å
 (3.3) Pull force with the MLIP
-dissociation_final_state: one MLIP force call per pair; a pull
-towards the other fragment queues the pair last
+pull_force_screen: one MLIP force call per pair; a pull towards the
+other fragment queues the pair last
 open: the force threshold
 (3.4) Agentic critique of the cleavage
 geometry-critic reads descriptor_card text, proposes a site type
@@ -39,51 +41,50 @@ site, counted; A fixed is the cheap
 baseline
 (3.6) Or minima hopping
 with the MLIP
-dissociation_final_state: NEBscape's
-endpoint generator with the chosen
-MLIP, the alternative and the
-baseline policy
+minima_hopping: NEBscape's endpoint
+generator with the chosen MLIP, the
+alternative and the baseline policy
 or
 open: the binding fragment fixed at
 its old site, or enumerated
 in code: 3.5, 3.2, 3.3, 3.4; 3.6 is the alternative; 3.1 runs inside step 5
 (4) Initial configurations
-dissociation_final_state: relax every pair with the chosen MLIP and the
-locked settings, random displacement first; Burnside-counted
+relaxation: relax every pair with the chosen MLIP and the locked
+settings, random displacement first; Burnside-counted
 open: the displacement amplitude
 (5) Physics-based and anomaly filtering
-validity_gate: nine checks per fragment plus two final-state checks,
+anomaly_filter: nine checks per fragment plus two final-state checks,
 before and after relaxation; verdict into the card; rejections logged
 (6) SOAP clustering
-dissociation_final_state: SOAP clusters of the survivors; the nearest and
-the lowest per cluster; E(FS near), E(FS ∞)
+soap_clustering: SOAP clusters of the survivors; the nearest and the
+lowest per cluster kept
 open: how many per cluster
 (7) Uncertainty estimation
-mlip_doubt: committee disagreement across the 1* candidates, calibrated
-on DFT or OC20NEB labels; doubt escalates
+uncertainty_estimation: committee disagreement across the 1* candidates,
+calibrated on DFT or OC20NEB labels; doubt escalates
 ❚❚ review flagged cases
 (8) Rank; user chooses up to 5
-descriptor_card: one card per final state with rank, doubt and verdicts;
-the human picks; choice and reason to lessons.md
+ranking: nearest first, then energy; one descriptor_card per final state
+with doubt and verdicts; the human picks; choice and reason to lessons.md
 ❚❚ pick up to five final states
 open: up to five, or fewer
 Solution
-final_state_report: E(FS near), E(FS ∞), rejections with reasons,
-recombination rate, decision trace
+reference_energies and report: E(FS near), E(FS ∞) from separate cells,
+rejections with reasons, recombination rate, decision trace
 ❚❚ interpret results
 open: the pass criterion against the
 OC20NEB product frame
 dft-settings-interviewer
-runs the Formulate interview, writes
+asks the fixed questions, writes
 PROJECT.md
 board: Critic, knowledge prompts
 active-learning loop
-active learning: doubt → a few DFT
+active_learning: doubt → a few DFT
 labels → fine-tune → re-run
 geometry-critic
 point 3.4: proposes a site type per
 fragment, orders the list; never
-overrides
+overrides a check
 board: Critic, knowledge
 vision model
 a vision model to predict the sites,
@@ -95,8 +96,8 @@ an LLM critic reads the card and
 comments; it never overrides a check
 board: Reasoning questions
 agentic uncertainty, DFT
-agentic uncertainty: N planner runs; DFT
-single points if D2 allows DFT
+agentic uncertainty: N planner runs;
+dft_single_points if D2 allows DFT
 board: Agentic uncertainty (?), DFT (?)
 final-state-planner
 shows the cards with rank, doubt and

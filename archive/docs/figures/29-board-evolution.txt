@@ -65,7 +65,7 @@ benchmark two or three, record why; spin for Ni
 and Co; the candidates become the committee of
 step 7
 EXTENSION
-active learning: doubt → a few DFT labels →
+active_learning: doubt → a few DFT labels →
 fine-tune → re-run
 (2) Adsorption sites with pymatgen
 TOOL
@@ -222,8 +222,8 @@ disagreement calibrated on a few DFT or OC20NEB
 labels; doubt escalates to the human instead of
 guessing
 EXTENSION
-agentic uncertainty: N planner runs; DFT
-single points if D2 allows DFT
+agentic uncertainty: N planner runs;
+dft_single_points if D2 allows DFT
 (8) Rank; user chooses up to 5
 HUMAN
 LLM

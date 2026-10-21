@@ -37,41 +37,291 @@ Quantities the code computes:
 
 The board's order and numbering, one row per step; tools do every deterministic step, the LLM chooses with a stated reason and drafts, humans approve, pick and interpret, skills hold the procedures. The plan follows NEBscape's shape; NEBscape is the closest prior work and CatTSunami is secondary. The six points of step 3 run in the board's order 3.1 → 3.2 → 3.3 → 3.4 → 3.5 or 3.6 as a design; in code 3.5 places first, 3.2 lists the pairs, 3.3 screens them, 3.4 orders the list, 3.6 is the alternative generator, and 3.1 is applied as a check inside step 5.
 
-| Step | Owner | What it does | Tool, section 3 | Logs | Archive row |
-|------|-------|--------------|-----------------|------|-------------|
-| 1 Structure retriever | Tool | Takes the three supplied relaxed structures with their energies and A and B as structures; selects the surface cell so periodic images stay 10 Å apart; locks the settings the inputs were relaxed with, plus the human's physics choices, in PROJECT.md; `dft-settings-protocol` holds the protocol | dft_settings_lock | Settings as supplied; the cell and why; protocol and reason | 1 |
-| 1\* MLIP selection | Tool | Benchmarks two or three candidate potentials on the system class before any placement; the chosen one relaxes every candidate; all candidates form the committee of step 7; spin for Ni and Co; active learning is an extension | mlip_choice | Benchmark results; the choice and the reason the LLM states | 5 |
-| 2 Adsorption sites | Tool | Symmetry-inequivalent sites of the selected cell, fcc and hcp hollows apart, counted; pymatgen's finder as the baseline | site_enumeration | Symmetry group; every site; the count N and its check | 2 |
-| 3.5 Site and orientation for the binding fragment | Tool | The fragment keeping the binding atom, A, placed at every symmetry-distinct site near its old site, counted; A fixed at its old site is the cheap baseline | adsorbate_placement, dissociation_final_state | Placements of A\* and their count | 3.5 |
-| 3.2 Window for the dissociated atom | Tool | B sites around each A within [1.5 d, 5] Å, d the length of the bond to break; every symmetry-distinct pair, ordered by site-graph distance with in-plane tiebreak, counted | dissociation_final_state, site_enumeration | Ordered pairs and their count | 3.2 |
-| 3.4 Agentic critique | LLM | `geometry-critic` reads the descriptor cards, proposes a site type and orientation per fragment, may reorder or add candidates; never edits coordinates, never removes a pair, never overrides a check | descriptor_card | Every proposal and what it changed | 3.5, 3.2 |
-| 3.6 Minima hopping, alternative | Tool | NEBscape's endpoint generator with the chosen MLIP as the alternative generator and the baseline policy | dissociation_final_state | Generator used; its candidates | 3.5 |
-| 3.3 Pull force | Tool | One MLIP force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it | dissociation_final_state, mlip_choice | Flagged pairs; force calls | 3.3 |
-| 4 Initial configurations | Tool | Every pair relaxed with the chosen potential and the locked settings; orientations under the site's stabiliser, Burnside-counted; random displacement first | site_enumeration, adsorbate_placement, dissociation_final_state | Every orientation and count; relaxed pairs | 4, 3.3 |
-| 3.1 Least distance before pull-back | Tool | The bond-re-formed check as code, applied inside step 5 after relaxation; a pair that fails is never kept; the A–B threshold open: team decision | validity_gate | Every rejection with its reason | 9d |
-| 5 Physics-based and anomaly filtering | Tool | The gate of section 3.4 on every structure before and after relaxation: nine checks per fragment plus the two final-state checks, 3.1 among them as the bond-re-formed check; verdict into the card; a failing pair is never kept; the ML variant not taken; an LLM critic comments only, extension | validity_gate, descriptor_card | Every verdict with its value; every rejection with its reason | 4.1, 6, 5 |
-| 6 SOAP clustering | Tool | Cluster the survivors by SOAP as NEBscape does; keep the lowest per cluster as the board says and the nearest, our objective; nearest first overall; E(A\*), E(B\*), E(FS ∞) with the chosen MLIP | dissociation_final_state | Final states; E(FS near); E(FS ∞); recombination rate | 6 |
-| 7 Uncertainty estimation | Tool | Disagreement across the committee of 1\*, calibrated on a few DFT labels if available, else OC20NEB labels; doubt escalates instead of guessing; `mlip-doubt-calibration` says when | mlip_doubt | Labels used; disagreement against label error; every flag and escalation | 7 |
-| 8 Rank; user chooses up to 5 | Human | Cards with rank, doubt and verdicts; the human picks; the choice and its reason go to the case bank | descriptor_card, 3.10 | The cards shown and their order; the choice; the reason | 8 |
-| Solution | LLM | Drafts the report: both energies, lateral interaction, rejections with reasons, recombination rate, doubt, decision trace; `final-state-report` holds the format; the human interprets | final_state_report | The full decision trace | 14 |
+<!-- board:pipeline -->
+| Step | Owner | What it does | Tools | Checkpoint |
+|---|---|---|---|---|
+| Input prompt | Human | The human supplies the surface, the adsorbates and a description and answers the five interview questions; the interviewer writes PROJECT.md; the literature reviewer fetches E_ads and d with sources | `literature_lookup` |  |
+| (1) Structure retriever | Tool | Takes the three supplied relaxed structures with their energies and A and B as structures; selects the surface cell so periodic images stay 10 Å apart; locks the settings the inputs were relaxed with, plus the human's physics choices, in PROJECT.md; `dft-settings-protocol` holds the protocol | `structure_retrieval`, `calculation_protocol` | approve settings |
+| (1\*) MLIP selection, AL prospect | Tool | Benchmarks two or three candidate potentials on the system class before any placement; the chosen one relaxes every candidate; all candidates form the committee of step 7; spin for Ni and Co; active learning is an extension | `mlip_selection` ; extension: `active_learning` | approve the plan |
+| (2) Adsorption sites with pymatgen | Tool | Symmetry-inequivalent sites of the selected cell, fcc and hcp hollows apart, counted; pymatgen's finder as the baseline | `site_enumeration` |  |
+| (3.1) Least distance before pull-back | Tool | The bond-re-formed check as code, applied inside step 5 after relaxation; a pair that fails is never kept; the A–B threshold open: team decision | `anomaly_filter` |  |
+| (3.2) Window [1.5 d, 5] Å | Tool | B sites around each A within [1.5 d, 5] Å, d the length of the bond to break; every symmetry-distinct pair, ordered by site-graph distance with in-plane tiebreak, counted | `pair_enumeration`, `literature_lookup` |  |
+| (3.3) Pull force with the MLIP | Tool | One MLIP force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it | `pull_force_screen` |  |
+| (3.4) Agentic critique of the cleavage | LLM | `geometry-critic` reads the descriptor cards, proposes a site type and orientation per fragment, may reorder or add candidates; never edits coordinates, never removes a pair, never overrides a check | `descriptor_card` |  |
+| (3.5) Site and orientation, pymatgen | Tool | The fragment keeping the binding atom, A, placed at every symmetry-distinct site near its old site, counted; A fixed at its old site is the cheap baseline | `adsorbate_placement` |  |
+| (3.6) Or minima hopping with the MLIP | Tool | NEBscape's endpoint generator with the chosen MLIP as the alternative generator and the baseline policy | `minima_hopping` |  |
+| (4) Initial configurations | Tool | Every pair relaxed with the chosen potential and the locked settings; orientations under the site's stabiliser, Burnside-counted; random displacement first | `relaxation`, `adsorbate_placement` |  |
+| (5) Physics-based and anomaly filtering | Tool | The gate of section 3.4 on every structure before and after relaxation: nine checks per fragment plus the two final-state checks, 3.1 among them as the bond-re-formed check; verdict into the card; a failing pair is never kept; the ML variant not taken; an LLM critic comments only, extension | `anomaly_filter`, `descriptor_card` |  |
+| (6) SOAP clustering | Tool | Cluster the survivors by SOAP as NEBscape does; keep the lowest per cluster as the board says and the nearest, our objective; nearest first overall; E(A\*), E(B\*), E(FS ∞) with the chosen MLIP | `soap_clustering` |  |
+| (7) Uncertainty estimation | Tool | Disagreement across the committee of 1\*, calibrated on a few DFT labels if available, else OC20NEB labels; doubt escalates instead of guessing; `mlip-doubt-calibration` says when | `uncertainty_estimation` ; extension: `dft_single_points` | review flagged cases |
+| (8) Rank; user chooses up to 5 | Human | Cards with rank, doubt and verdicts; the human picks; the choice and its reason go to the case bank | `ranking`, `descriptor_card` | pick up to five final states |
+| Solution | LLM | Drafts the report: both energies, lateral interaction, rejections with reasons, recombination rate, doubt, decision trace; `final-state-report` holds the format; the human interprets | `reference_energies`, `report` ; extension: `dft_single_points` | interpret results |
+<!-- /board:pipeline -->
 
 Human checkpoints, where the agent stops and waits: approve settings; approve the plan; review flagged cases; pick up to five final states; interpret results. Autonomy level and which checkpoints a Balanced mode skips: open: team decision.
 
 ## 3. The tools
 
-Nine core tools and one extension tool, one file each under `mcp/tools/`, each wrapping one module of the same name under `finalstate/`. The human checkpoint, T8, is a procedure, not a tool, section 3.10. Every tool returns each structure through the descriptor card of 3.5 and logs every parameter beside its outputs, as AtomisticSkills does. Write the tool docstrings for the model, per MatTools. Named calls the LLM may issue: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)`, `render(structure)`; the pair call name is open: team decision. Module and class names below were read from source on 21 October 2026, `archive/docs/repo-survey.md`.
+Every tool is defined once, in `finalstate/registry.py`, as a ToolSpec: purpose, board steps, inputs, outputs, checks, thresholds, the modules it wraps, what it logs, status. One module per tool under `finalstate/tools/`, a function of the same name with the spec's parameter names; `mcp/server.py` builds the MCP tool list from the registry; the tests hold the three in step. Thresholds marked "open: team decision" are parameters without defaults and must be asked for. Every tool runs under `finalstate.provenance.traced`, so each call lands in `runs/<campaign>/trace.jsonl`; every structure a tool writes goes through `descriptor_card` before an agent sees it. The block below is generated by `archive/docs/figures/src/board_tables.py`; edit the registry, not this text.
 
-### 3.1 dft_settings_lock, step 1
+<!-- registry:tools -->
+### 3.1 `literature_lookup`, board steps prompt, 3.2, core
 
-Record the settings the three supplied structures were relaxed with, lock them in PROJECT.md with the human's physics choices, and select the surface cell. One file serves IS, FS and the later band. The convergence sweep on E_ads is an extension that runs only when no relaxed inputs exist and DFT is available.
+Published E_ads values with functional and site, and the length d of the bond to break, for a human to verify; one or two values, never from the model's memory.
 
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | The three relaxed structures with their energies and the settings they were relaxed with; A and B as structures; physics choices from the human: functional, dispersion, spin, U; metal, facet; protocol chosen by the LLM with its reason; DFT code, if any |
-| Outputs | Settings block in PROJECT.md; the surface cell; every later tool reads it; sweep data only when the sweep ran       |
-| Procedure | Check that the three inputs share one settings set, check 8 of 3.4; select the cell so periodic images are 10 Å apart; lock. Extension, no relaxed inputs: one test adsorbate on the target surface; sweep cutoff, k-mesh, smearing and layers; report the cheapest setting with E_ads inside the target of the converged value |
-| Wraps  | The precision-protocol pattern of `aiida_common_workflows.workflows.relax.CommonRelaxWorkChain`; SSSP; pymatgen input sets, `MPRelaxSet` as atomate2 uses it; ASE; VASP or Quantum ESPRESSO for the sweep |
-| Logs   | Settings as supplied; the cell and its reason; protocol and the LLM's reason; every sweep point when the sweep ran; chosen values; pseudopotential family and version. Rejected: the LLM writing cutoff or k-points from memory |
+| Field | Content |
+|---|---|
+| Inputs | system: str, metal, facet, adsorbate; quantity: E_ads \| bond_length_d \| site; sources: list of source names |
+| Outputs | values: list[LiteratureValue], verified_by_human False until the checkpoint |
+| Checks | every value carries a DOI or URL; at most two values per quantity |
+| Wraps | paper-qa2 for papers; Materials Project API through the LLaMP pattern; Catalysis-Hub |
+| Logs | query; every value with its source |
+| Module | `finalstate/tools/literature_lookup.py`, function `literature_lookup(system, quantity, sources)` |
+
+### 3.2 `structure_retrieval`, board step 1, core
+
+Take the three supplied relaxed structures with their energies, cleave the named bond to make A and B, and select the surface cell so periodic images stay apart.
+
+| Field | Content |
+|---|---|
+| Inputs | slab: StructureRef; adsorbate_vacuum: StructureRef; initial_state: StructureRef; bond_to_break: tuple[int, int], atom indices in AB |
+| Outputs | fragment_A: StructureRef; fragment_B: StructureRef; cell_repeat: tuple[int, int]; structures: list[StructureRef] |
+| Checks | the three inputs share one settings set, check 8; images at least min_image_distance_A apart |
+| Thresholds | min_image_distance_A: 10 |
+| Wraps | ase.io; pymatgen.core |
+| Logs | input hashes; the cell and why |
+| Module | `finalstate/tools/structure_retrieval.py`, function `structure_retrieval(slab, adsorbate_vacuum, initial_state, bond_to_break)` |
+
+### 3.3 `calculation_protocol`, board step 1, core
+
+Lock the numerical and physical settings in PROJECT.md from the inputs' settings, the human's physics choices and a verified protocol; never from the model's memory.
+
+| Field | Content |
+|---|---|
+| Inputs | settings_from_inputs: Settings, as read from the relaxed inputs; physics_choices: dict from the human: functional, dispersion, spin, U; protocol: aiida_common_workflows \| sssp \| oc20; protocol_reason: str, stated by the planner |
+| Outputs | settings: Settings with locked False until the human approves |
+| Checks | cutoff, k-mesh, smearing, layers from the protocol table of agent.md section 3; if OC20NEB is the benchmark, RPBE and PAW as OC20 |
+| Thresholds | convergence_target_meV: open: team decision; gas_references: open: team decision |
+| Wraps | aiida_common_workflows.workflows.relax.CommonRelaxWorkChain protocols; SSSP; pymatgen.io.vasp.sets.MPRelaxSet |
+| Logs | protocol and reason; every setting and its origin |
+| Module | `finalstate/tools/calculation_protocol.py`, function `calculation_protocol(settings_from_inputs, physics_choices, protocol, protocol_reason)` |
+
+### 3.4 `mlip_selection`, board step 1*, core
+
+Benchmark two or three candidate potentials on the system class and choose one; every candidate becomes the committee of uncertainty_estimation.
+
+| Field | Content |
+|---|---|
+| Inputs | candidates: list[str], calculator names; system_class: str, metal \| oxide \| organometallic; labels: list[StructureRef] with DFT energies, or OC20NEB |
+| Outputs | chosen: str; committee: list[str]; benchmark: dict name -> error_eV and anomaly classes |
+| Checks | spin initialised on Co and Ni; cross-family comparison on E_ads only, never total energies |
+| Thresholds | candidates: open: team decision; label_count: open: team decision |
+| Wraps | catbench.adsorption.AdsorptionCalculation; catbench.adsorption.AdsorptionAnalysis; AtomisticSkills ml-mlip-benchmark; fairchem.core.FAIRChemCalculator; mace.calculators.MACECalculator; chgnet |
+| Logs | benchmark results; the choice and the planner's reason |
+| Module | `finalstate/tools/mlip_selection.py`, function `mlip_selection(candidates, system_class, labels)` |
+
+### 3.5 `site_enumeration`, board step 2, core
+
+Every symmetry-inequivalent site of the slab, fcc and hcp hollows apart, with the site graph and a Burnside-checked count; pymatgen's finder as the baseline.
+
+| Field | Content |
+|---|---|
+| Inputs | slab: StructureRef; cell_repeat: tuple[int, int] |
+| Outputs | sites: SiteEnumeration |
+| Checks | Burnside count equals the explicit list; C4v square cell with two identical adsorbates gives 2 |
+| Wraps | spglib.get_symmetry_dataset; acat.adsorption_sites.SlabAdsorptionSites; acat.adsorption_sites.SlabAdsorptionSites.get_graph; pymatgen.core.adsorption.AdsorbateSiteFinder as baseline |
+| Logs | symmetry group; every site; count and check |
+| Module | `finalstate/tools/site_enumeration.py`, function `site_enumeration(slab, cell_repeat)` |
+
+### 3.6 `adsorbate_placement`, board steps 3.5, 4, core
+
+Place fragment A at every symmetry-distinct site near its old site and B at a given site, by script; orientations under the site's stabiliser; a random displacement before relaxation.
+
+| Field | Content |
+|---|---|
+| Inputs | sites: SiteEnumeration; fragment: StructureRef; site_index: int; orientation: int; height_A: float; displacement_amplitude_A: float |
+| Outputs | candidate: Candidate |
+| Checks | start 2 to 3 Å above the site; the LLM never places atoms |
+| Thresholds | displacement_amplitude_A: open: team decision; fragment_A_fixed_at_old_site: open: team decision |
+| Wraps | ase.build.add_adsorbate; fairchem.data.oc.core.AdsorbateSlabConfig as the baseline |
+| Logs | s; i; t; e; ,;  ; o; r; i; e; n; t; a; t; i; o; n; ,;  ; h; e; i; g; h; t; ,;  ; d; i; s; p; l; a; c; e; m; e; n; t;  ; a; n; d;  ; r; a; n; d; o; m;  ; d; r; a; w |
+| Module | `finalstate/tools/adsorbate_placement.py`, function `adsorbate_placement(sites, fragment, site_index, orientation, height_A, displacement_amplitude_A)` |
+
+### 3.7 `pair_enumeration`, board step 3.2, core
+
+Every symmetry-distinct (A site, B site) pair inside the window [1.5 d, 5] Å, ordered by site-graph distance with in-plane distance as tiebreaker, nearest first, counted.
+
+| Field | Content |
+|---|---|
+| Inputs | sites: SiteEnumeration; d_bond_A: float, from literature_lookup or the adsorbate structure; window: tuple[float, float] in units of d and Å |
+| Outputs | pairs: list[Pair], nearest first; count: int |
+| Checks | no pair outside the window; symmetry duplicates removed and counted |
+| Thresholds | d_definition: open: team decision: vacuum or adsorbed bond length; upper_bound_A: open: team decision: 5 or NEBscape's 4.5 |
+| Wraps | acat.adsorption_sites.SlabAdsorptionSites.get_neighbor_site_list; acat.build.adlayer.SystematicPatternGenerator |
+| Logs | every pair with both distances; the count |
+| Module | `finalstate/tools/pair_enumeration.py`, function `pair_enumeration(sites, d_bond_A, window)` |
+
+### 3.8 `pull_force_screen`, board step 3.3, core
+
+One MLIP force call per pair; the force on B along the A–B axis; a pull towards A above the threshold queues the pair last, never drops it.
+
+| Field | Content |
+|---|---|
+| Inputs | candidates: list[Candidate]; calculator: str |
+| Outputs | screens: list[ForceScreen], queue order |
+| Checks | one force call, no relaxation |
+| Thresholds | threshold_eV_per_A: open: team decision |
+| Wraps | finalstate.calculators |
+| Logs | force per pair; queue order |
+| Module | `finalstate/tools/pull_force_screen.py`, function `pull_force_screen(candidates, calculator)` |
+
+### 3.9 `minima_hopping`, board step 3.6, core
+
+NEBscape's endpoint generator with the chosen potential as the alternative generator and the baseline policy our nearest-first choice is scored against.
+
+| Field | Content |
+|---|---|
+| Inputs | slab: StructureRef; fragments: tuple[StructureRef, StructureRef]; calculator: str; n_hops: int |
+| Outputs | candidates: list[Candidate] with generator minima_hopping |
+| Checks | Hookean constraints keep A and B intact during hopping, as NEBscape |
+| Wraps | nebscape endpoint generator, MIT; ase.optimize.minimahopping.MinimaHopping |
+| Logs | hops; minima found |
+| Module | `finalstate/tools/minima_hopping.py`, function `minima_hopping(slab, fragments, calculator, n_hops)` |
+
+### 3.10 `relaxation`, board step 4, core
+
+Relax every candidate with the chosen potential and the locked settings, random displacement first; cached by content hash.
+
+| Field | Content |
+|---|---|
+| Inputs | candidates: list[Candidate]; calculator: str; fmax_eV_per_A: float; max_steps: int |
+| Outputs | results: list[RelaxationResult] |
+| Checks | same settings as the initial state, check 8 |
+| Wraps | ase.optimize; finalstate.calculators; finalstate.cache |
+| Logs | s; t; e; p; s; ,;  ; f; m; a; x; ,;  ; c; o; n; v; e; r; g; e; n; c; e; ,;  ; c; a; c; h; e;  ; h; i; t;  ; p; e; r;  ; c; a; n; d; i; d; a; t; e |
+| Module | `finalstate/tools/relaxation.py`, function `relaxation(candidates, calculator, fmax_eV_per_A, max_steps)` |
+
+### 3.11 `anomaly_filter`, board steps 5, 3.1, core
+
+The nine checks of the gate per fragment, before and after relaxation, plus the two final-state checks: the A–B bond re-formed, and the periodic image; verdict into the card; a failing candidate is never kept.
+
+| Field | Content |
+|---|---|
+| Inputs | candidate: Candidate; start: Candidate; slab: StructureRef; settings: Settings; prior_E_ads_eV: float \| None; frequencies_cm: list[float] \| None |
+| Outputs | gate: GateResult |
+| Checks | 1 desorbed per fragment; 2 migrated; 3 dissociated within a fragment; 4 reconstructed; 5 not a minimum; 6 magnetism collapsed; 7 outside expected range; 8 settings mismatch; 9 intercalated; 10 A–B bond re-formed; 11 periodic image |
+| Thresholds | desorbed_A: 3; AB_bond_reformed_A: open: team decision; migrated: open: team decision; dissociated: open: team decision; reconstructed: open: team decision; imaginary_noise_cm: open: team decision; expected_range_width_eV: open: team decision; magnetism_collapsed: open: team decision; intercalated: open: team decision |
+| Wraps | fairchem.data.oc.utils.DetectTrajAnomaly; ase.vibrations.Vibrations; acat.adsorbate_coverage.SlabAdsorbateCoverage; CatBench anomaly classes as names |
+| Logs | every verdict with its measured value; every rejection with its reason |
+| Module | `finalstate/tools/anomaly_filter.py`, function `anomaly_filter(candidate, start, slab, settings, prior_E_ads_eV, frequencies_cm)` |
+
+### 3.12 `soap_clustering`, board step 6, core
+
+Cluster the survivors by SOAP; keep the nearest and the lowest per cluster; nearest first overall.
+
+| Field | Content |
+|---|---|
+| Inputs | survivors: list[Candidate]; energies: list[RelaxationResult]; pairs: list[Pair] |
+| Outputs | clusters: list[Cluster]; kept: list[str] |
+| Checks | nearest-first ordering preserved across clusters |
+| Thresholds | per_cluster: open: team decision: the board says 3, could be more |
+| Wraps | dscribe.descriptors.SOAP; sklearn.cluster |
+| Logs | c; l; u; s; t; e; r; s;  ; a; n; d;  ; r; e; p; r; e; s; e; n; t; a; t; i; v; e; s |
+| Module | `finalstate/tools/soap_clustering.py`, function `soap_clustering(survivors, energies, pairs)` |
+
+### 3.13 `uncertainty_estimation`, board step 7, core
+
+Committee disagreement across the candidates benchmarked at 1*, calibrated on a few DFT or OC20NEB labels; a doubt flag that escalates to the human instead of guessing.
+
+| Field | Content |
+|---|---|
+| Inputs | candidates: list[Candidate]; committee: list[str]; labels: list[StructureRef] \| None |
+| Outputs | flags: list[DoubtFlag] |
+| Checks | disagreement compared on E_ads, never on total energies across families; magnetic metals always flagged; unseen chemistry always flagged |
+| Thresholds | escalation_threshold_eV: open: team decision; label_count: open: team decision |
+| Wraps | mace.calculators.MACECalculator with model_paths; uncertainty_toolbox.metrics.get_all_metrics; AtomisticSkills ml-committee-uncertainty |
+| Logs | labels used; spread against label error; every flag and escalation |
+| Module | `finalstate/tools/uncertainty_estimation.py`, function `uncertainty_estimation(candidates, committee, labels)` |
+
+### 3.14 `descriptor_card`, board steps 3.4, 5, 8, core
+
+Render a structure as the text card the LLM reads, with site, distances, verdicts and the A–B distance; a PNG beside it as a second look.
+
+| Field | Content |
+|---|---|
+| Inputs | candidate: Candidate; gate: GateResult \| None; sites: SiteEnumeration |
+| Outputs | card: DescriptorCard |
+| Checks | two configurations never share a card: distances and site labels always present |
+| Wraps | pymatgen; robocrystallographer pattern; ase.io.write png |
+| Logs | t; h; e;  ; c; a; r; d;  ; b; e; s; i; d; e;  ; t; h; e;  ; s; t; r; u; c; t; u; r; e |
+| Module | `finalstate/tools/descriptor_card.py`, function `descriptor_card(candidate, gate, sites)` |
+
+### 3.15 `ranking`, board step 8, core
+
+Rank the kept final states nearest first, then by energy, with doubt and verdicts on each card, for the human to pick up to five; record the choice and reason in the case bank.
+
+| Field | Content |
+|---|---|
+| Inputs | kept: list[str]; cards: list[DescriptorCard]; flags: list[DoubtFlag]; pairs: list[Pair] |
+| Outputs | ranked: list[RankedCandidate] |
+| Checks | the human picks; the tool never drops a candidate |
+| Thresholds | shortlist_size: open: team decision: up to five, or fewer |
+| Logs | the order shown; the human's choice and reason, to lessons.md |
+| Module | `finalstate/tools/ranking.py`, function `ranking(kept, cards, flags, pairs)` |
+
+### 3.16 `reference_energies`, board step solution, core
+
+E(A*), E(B*) and E(slab) each in its own cell with the chosen potential and the locked settings, for E(FS ∞) and the lateral interaction.
+
+| Field | Content |
+|---|---|
+| Inputs | slab: StructureRef; fragments: tuple[StructureRef, StructureRef]; calculator: str |
+| Outputs | E_slab_eV: float; E_A_eV: float; E_B_eV: float; E_inf_eV: float |
+| Checks | same settings as every candidate, check 8 |
+| Wraps | finalstate.calculators |
+| Logs | t; h; e;  ; t; h; r; e; e;  ; e; n; e; r; g; i; e; s |
+| Module | `finalstate/tools/reference_energies.py`, function `reference_energies(slab, fragments, calculator)` |
+
+### 3.17 `report`, board step solution, core
+
+One auditable record per campaign: final states with both energies, rejections with reasons, the recombination rate, doubt, the OC20NEB comparison, cost and the decision trace.
+
+| Field | Content |
+|---|---|
+| Inputs | campaign: str; final_states: list[FinalState]; rejected: list[GateResult]; flags: list[DoubtFlag]; comparison: dict |
+| Outputs | report: Report, written to runs/<campaign>/report.md and report.json |
+| Checks | every number traces to a tool output; the general-peer-review skill reads the draft |
+| Wraps | AtomisticSkills hyperparameter logging pattern |
+| Logs | t; h; e;  ; f; u; l; l;  ; t; r; a; c; e;  ; p; a; t; h |
+| Module | `finalstate/tools/report.py`, function `report(campaign, final_states, rejected, flags, comparison)` |
+
+### 3.18 `dft_single_points`, board steps 7, solution, extension
+
+DFT single points on the chosen final states and the separated fragments at the locked settings; only with a DFT code and compute.
+
+| Field | Content |
+|---|---|
+| Inputs | structures: list[StructureRef]; settings: Settings; backend: local \| slurm |
+| Outputs | energies: dict candidate_id -> eV; failures: list[str] |
+| Checks | settings mismatch against PROJECT.md before submission; custodian handlers before any agent diagnosis |
+| Wraps | ase.calculators; atomate2 through the AtomisticSkills MCP server; custodian.vasp.handlers |
+| Logs | f; o; r; c; e;  ; c; a; l; l; s; ,;  ; f; a; i; l; u; r; e; s; ,;  ; e; v; e; r; y;  ; r; e; s; u; b; m; i; s; s; i; o; n |
+| Module | `finalstate/tools/dft_single_points.py`, function `dft_single_points(structures, settings, backend)` |
+
+### 3.19 `active_learning`, board step 1*, extension
+
+High doubt to a few DFT labels to a fine-tuned potential to a re-run of steps 4 to 8.
+
+| Field | Content |
+|---|---|
+| Inputs | flags: list[DoubtFlag]; labels: list[StructureRef]; base_model: str |
+| Outputs | fine_tuned: str |
+| Wraps | AtomisticSkills ml-mace-finetune |
+| Logs | labels used; model path |
+| Module | `finalstate/tools/active_learning.py`, function `active_learning(flags, labels, base_model)` |
+<!-- /registry:tools -->
+
+### The settings `calculation_protocol` applies
 
 | Setting            | Rule                                                                                   | Value in the docs                                              |
 |--------------------|----------------------------------------------------------------------------------------|----------------------------------------------------------------|
@@ -87,43 +337,9 @@ Record the settings the three supplied structures were relaxed with, lock them i
 
 H on Pt(111) is the first sweep when a sweep runs; the test adsorbate for the \*OH case is open: team decision.
 
-### 3.2 site_enumeration, steps 2, 3.2, 3.5 and 4
+H on Pt(111) is the first sweep when a sweep runs; the test adsorbate for the \*OH case is open: team decision.
 
-List every symmetry-inequivalent site, orientation and A–B pair, with the count.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | The supplied slab in the selected cell; AB, A and B as structures; for pairs, the window [1.5 d, 5] Å              |
-| Outputs | Sites with label, site group, coordination and atom beneath; orientations inequivalent under the site's stabiliser group; pairs with site-graph distance and in-plane distance; the count N |
-| Checks | Sites are the inequivalent high-symmetry Wyckoff positions of the slab's layer group; fcc and hcp hollows told apart by the atom beneath; N = (1/\|G\|) Σ \|X^g\| checked against the explicit list |
-| Unit tests | Two identical adsorbates on the corners of a square cell under C4v give N = 2; the fcc(111) and fcc(100) site table of `archive/docs/agent-context.md` section 3 |
-| Wraps  | `spglib.get_symmetry_dataset` and `get_symmetry` for the operations Burnside needs; `spglib.get_layergroup` is a developer API, test it against the site table before relying on it; `acat.adsorption_sites.SlabAdsorptionSites` with `get_unique_sites`, `get_graph`, `get_neighbor_site_list`; `acat.build.adlayer.SystematicPatternGenerator` for unique pairs, `min_adsorbate_distance` 1.5 Å by default; CatKit `AdsorptionSites` as a pattern only, GPL; `pymatgen.core.adsorption.AdsorbateSiteFinder.find_adsorption_sites` as the baseline, no fcc or hcp label |
-| Logs   | Symmetry group; every site, orientation and pair; N and its check                                                     |
-
-### 3.3 adsorbate_placement, steps 3.5 and 4
-
-Put a fragment at an enumerated site, orientation and height, by script. The LLM never places atoms.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | Site and orientation from 3.2; conformer relaxed in vacuum first; height                                             |
-| Outputs | Structure and its descriptor card                                                                                   |
-| Checks | Start 2 to 3 Å above the site, never 10 Å; small random displacement before every relaxation, against the symmetry trap; few conformers |
-| Wraps  | `ase.build`; `fairchem.data.oc.core.AdsorbateSlabConfig` with modes `random`, `heuristic`, `random_site_heuristic_placement` and `MultipleAdsorbateSlabConfig` as the fallback when symmetry is unknown and as the benchmark baseline; CatKit `Builder.add_adsorbate` as a pattern only |
-| Logs   | Site, orientation, height, displacement amplitude and the random draw, conformer source                               |
-| Open   | Displacement amplitude, shown in the docs only as an example call of 0.05 Å; number of conformers                    |
-
-### 3.4 validity_gate, steps 3.1 and 5
-
-One code path, `check(structure)`, that gives a verdict on every structure, initial and final, before ranking or pairing. A failing state is never paired.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | Relaxed structure; its start structure and enumerated site; clean slab; settings record; E_ads prior; vibrational frequencies |
-| Outputs | Pass or fail per check with the measured value and the reason, written into the descriptor card                    |
-| Wraps  | `fairchem.data.oc.utils.DetectTrajAnomaly`: `is_adsorbate_dissociated`, `is_adsorbate_desorbed`, `has_surface_changed`, `is_adsorbate_intercalated`; `ase.vibrations.Vibrations`; `acat.adsorbate_coverage.SlabAdsorbateCoverage` for the moved-site check; CatBench's anomaly classes Normal, Migration, Energy Anom., Unphys. Relax and Reprod. Fail name each rejection |
-| Per-fragment rule | `DetectTrajAnomaly` treats A\* + B\* as one adsorbate and passes B leaving while A stays, so check 1 runs per fragment; `is_adsorbate_dissociated` flags any connectivity change, so it also catches check 10 |
-| Logs   | Every verdict with its measured value; every rejection with its reason                                               |
+### The eleven checks `anomaly_filter` applies
 
 | #  | Check                   | Fails when                                                              | Threshold in the docs                           |
 |----|-------------------------|-------------------------------------------------------------------------|-------------------------------------------------|
@@ -141,81 +357,11 @@ One code path, `check(structure)`, that gives a verdict on every structure, init
 
 Checks 1 to 9 run on every structure; the final-state gate adds 10 and 11. Which checks run before relaxation, and whether frequencies come from the MLIP or from DFT: open: team decision.
 
-### 3.5 descriptor_card
+Checks 1 to 9 run on every structure; the final-state gate adds 10 and 11. `DetectTrajAnomaly` treats A\* + B\* as one adsorbate and passes B leaving while A stays, so check 1 runs per fragment; `is_adsorbate_dissociated` flags any connectivity change, so it also catches check 10 Which checks run before relaxation, and whether frequencies come from the MLIP or from DFT: open: team decision.
 
-Turn every structure into the text the LLM reads; it is the only view of geometry the LLM gets. `render(structure)` makes the image. Layout, a machine-readable twin and pair fields: open: team decision.
+### Human checkpoints and the case bank
 
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | Structure; start structure and enumerated site; clean slab; verdicts from 3.4                                        |
-| Outputs | Text card with the fields of section 4.2 as a Pydantic model; PNG beside it                                         |
-| Rules  | Every structure-producing tool returns its output through the card. The PNG is a second look, never the basis of a decision until the benchmark shows it helps. Cards carry the distances and site labels that CatBERTa's text lacked, so two configurations never share a card |
-| Wraps  | pymatgen; the Robocrystallographer pattern; ASE rendering                                                            |
-| Logs   | The card beside the structure                                                                                        |
-
-### 3.6 mlip_choice, steps 1\* and 3.3
-
-Choose one potential for IS and FS, with a recorded reason, before any placement; every candidate benchmarked here is the committee of 3.7.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | System class; two or three candidate potentials; a few DFT labels if available, else OC20NEB labels                  |
-| Outputs | Chosen potential and reason; the calculator every relaxation and force call uses; the list of candidates benchmarked, as the committee of 3.7 |
-| Checks | Benchmark on the system class; spin initialised on Co and Ni; the same potential and settings for every IS and FS; cross-family checks on E_ads only, never on total energies |
-| Wraps  | `catbench.adsorption.AdsorptionCalculation` and `AdsorptionAnalysis` with `threshold_sensitivity_analysis`; the AtomisticSkills skill `ml-mlip-benchmark`; `fairchem.core.FAIRChemCalculator` with `pretrained_mlip.get_predict_unit`, models `uma-s-1p2p1` and `uma-m-1p1`, task `oc20`; `mace.calculators.MACECalculator`; CHGNet as a cross-family second opinion on E_ads and a magnetic-moment check on Ni and Co; EquiformerV2 only to reproduce CatTSunami numbers, under `fairchem-core==1.10` |
-| Logs   | Benchmark results; choice and reason                                                                                 |
-| Context | No potential is best everywhere; best adsorption MAE on CatBench is about 0.2 eV; universal MLIPs fail badly on magnetic Co and Ni. Which candidates and how many labels: open: team decision |
-
-### 3.7 mlip_doubt, step 7
-
-Turn committee disagreement into a calibrated doubt that escalates instead of guessing.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | The relaxed structures; every candidate potential benchmarked at 1\*, as the committee; a few DFT labels if available, else OC20NEB labels |
-| Outputs | A doubt flag per structure with its evidence; escalation to a checkpoint                                            |
-| Loop   | Sample a few configurations; label them; measure the error; fine-tune if needed; continue. If repair fails, stop at a checkpoint with the evidence |
-| Wraps  | `mace.calculators.MACECalculator` with several files in `model_paths`, returning `energy_var` and `forces_var`, for the MACE members; other families through their own calculators, compared on E_ads only; `uct.metrics.get_all_metrics` from uncertainty-toolbox for calibration error, miscalibration area and recalibration; AtomisticSkills skills `ml-committee-uncertainty`, `ml-mlip-benchmark`, `ml-mace-finetune` |
-| Triggers | The committee disagrees, threshold calibrated on the labels, value open: team decision; Co, Ni or another magnetic metal, always, initialise spin; unseen chemistry, oxide, high coverage, electrochemical interface or organometallics outside OC20, always; result outside the expected range, prior width open: team decision |
-| Logs   | Labels used; disagreement against the label error; every flag and escalation                                         |
-
-### 3.8 dissociation_final_state, step 3 with points 3.1 to 3.6, and steps 4 to 6
-
-NEBscape's endpoint generator shape with fairchem's helpers and four changes: complete, counted enumeration as the primary generator, with minima hopping kept as the alternative; a nearest-first objective instead of NEBscape's fixed cut-off and the energy–distance Pareto front; the full gate as a test after relaxation instead of Hookean constraints during sampling; a report of every rejection.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | The supplied initial state; A and B as structures; d, the length of the bond to break; the calculator and the committee from 3.6; PROJECT.md |
-| Outputs | Final states in order with cards; E(FS near); E(FS ∞); rejected pairs with reasons; recombination rate              |
-| Checks, 3.5 | All symmetry-distinct placements of A near its IS site, counted; A fixed at its IS site is the cheap baseline; the `geometry-critic` proposes a site type and orientation per fragment and may reorder or add candidates |
-| Checks, 3.2 | Pairs ordered by site-graph distance, in-plane tiebreak, within the board's window [1.5 d, 5] Å; whether d is the vacuum or the adsorbed bond length: open: team decision |
-| Checks, 3.3 and 4 | One force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it; threshold open: team decision; then relax with random displacement first |
-| Checks, 3.1 and 5 | Checks 1 to 11 of 3.4 on every relaxed pair                                                                       |
-| Checks, 6 | SOAP clustering of survivors as NEBscape does; keep the lowest-energy configurations per cluster as the board says and the nearest, our objective; configurations per cluster open: team decision |
-| Also computes | E(A\*) and E(B\*), each in its own cell with the chosen MLIP and the locked settings, for E(FS ∞); DFT single points are the extension 3.11 |
-| Generators | Primary: counted enumeration through 3.2 and 3.3. Alternative and baseline policy: minima hopping with the chosen MLIP, NEBscape's endpoint generator wrapped; its endpoint module is not named in `archive/docs/repo-survey.md`, read it from source before wrapping |
-| Recombination rate | Pairs failing check 10 over pairs relaxed; per distance shell or nearest shell only: open: team decision     |
-| Wraps  | NEBscape's endpoint generator, MIT, and its SOAP and farthest-point `selection`; secondary, `fairchem.applications.cattsunami.core.autoframe.AutoFrameDissociation` helpers `unwrap_atoms`, `traverse_adsorbate_dissociation`, `is_edge_list_respected`; its `get_best_sites_for_product1` and `get_best_unique_sites_for_product2`, 5 sites each and shells of 2× and 3× the largest slab covalent radius, are the shell-sampling policy we score against; tools 3.2, 3.3, 3.4 and 3.6 |
-| Critic | Core at 3.5 and 3.2: the `geometry-critic` reads the cards, proposes a site type and orientation per fragment, AdsMind style, may reorder or add candidates, never removes a pair and never overrides a check |
-| Extensions | Coverage scan over cell sizes at 3.2; lowest energy within one site hop at 6                                     |
-| Logs   | Counts of placements and pairs; generator used; every critic proposal; every rejection with its reason; E(FS near), E(FS ∞) and their difference; recombination rate |
-
-The later phase, the path from AB\* to the final state and its barrier, is out of scope; its tools and sources are in `archive/docs/agent-build-context.md`, sections 3.9 to 3.11.
-
-### 3.9 final_state_report, the Solution
-
-One auditable record per reaction, with every number traced to a tool output.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | Outputs of 3.4 to 3.8 and 3.10; the decision trace; DFT single points when the extension 3.11 ran                    |
-| Outputs | The report of section 4.5                                                                                           |
-| Checks | Every number traces to a tool output; the AtomisticSkills `general-peer-review` skill reads the draft                |
-| Wraps  | AtomisticSkills hyperparameter logging; Zenodo export. Logs the full decision trace                                   |
-
-### 3.10 Human checkpoint and lessons log, T8, step 8 and every checkpoint
-
-Stop where a wrong choice silently corrupts every later number; show the evidence; record the choice and its reason. T8 is a procedure the `final-state-planner` follows and the hook enforces, not a tool.
+Stop where a wrong choice silently corrupts every later number; show the evidence; record the choice and its reason. It is a procedure the planner follows and `finalstate.hooks` enforces, not a tool; the record is `finalstate.checkpoints`, the case bank `finalstate.casebank`.
 
 | Field  | Content                                                                                                              |
 |--------|----------------------------------------------------------------------------------------------------------------------|
@@ -233,21 +379,37 @@ Stop where a wrong choice silently corrupts every later number; show the evidenc
 | Pick up to five final states | Cards, rank, uncertainty               | Choice and reason, to the lessons log   |
 | Interpret results         | The report                                | Interpretation                          |
 
-### 3.11 Extension: dft_single_points, T9
-
-Score the chosen final states and the separated fragments with DFT at the locked settings. It runs only with HPC and a DFT code; the core scores with the chosen MLIP.
-
-| Field  | Content                                                                                                              |
-|--------|----------------------------------------------------------------------------------------------------------------------|
-| Inputs | Kept final states; A\* and B\* in their own cells; PROJECT.md                                                        |
-| Outputs | DFT single points, then relaxed endpoints; force calls; failures                                                    |
-| Checks | Settings-mismatch check against PROJECT.md before submission; 0.02 to 0.03 eV/Å for relaxations; custodian handlers run before any LLM diagnosis; a failed job goes to the `dft-job-steward` to diagnose, adjust and resubmit |
-| Wraps  | ASE calculators; atomate2 through the AtomisticSkills atomate2 MCP server; `custodian.vasp.handlers.VaspErrorHandler`, `UnconvergedErrorHandler`, `PotimErrorHandler`; VASP or Quantum ESPRESSO |
-| Logs   | DFT force calls and failure rate; every diagnosis and resubmission                                                   |
-
 ## 4. Data records
 
-The docs list fields but fix no file format or schema for the five records: open: team decision. Model each as a Pydantic class in `finalstate/`.
+The records are the Pydantic classes of `finalstate/records.py`; a tool takes and returns them and nothing else, so every number in the trace has a field name and a unit. The table is generated from the code.
+
+<!-- records:models -->
+| Record | Fields |
+|---|---|
+| `Candidate` | id: str, structure: finalstate.records.StructureRef, site_A: Optional[int], site_B: Optional[int], orientation: Optional[int], displacement_amplitude_A: float, generator: str, parent: Optional[str] |
+| `Case` | system: str, card: str, correction: str, reason: str, source_checkpoint: str, promoted_to: Optional[str], when: datetime.datetime |
+| `CheckVerdict` | check_id: int, name: str, passed: bool, measured: Optional[float], threshold: Optional[str], reason: str, fragment: Optional[str] |
+| `Cluster` | id: int, members: List[str], nearest: str, lowest: str |
+| `DescriptorCard` | candidate_id: str, composition: str, cell: str, facet: str, layers: int, vacuum_A: float, fixed_layers: int, site_label: str, point_group: str, coordination: int, height_A: float, nn_distances_A: List[float], tilt_deg: Optional[float], displacement_from_start: str, magnetic_moment: Optional[float], verdicts: List[finalstate.records.CheckVerdict], AB_distance_A: Optional[float], site_graph_distance: Optional[int], image_path: Optional[str] |
+| `DoubtFlag` | candidate_id: str, committee_spread_eV: float, calibrated_error_eV: Optional[float], trigger: str, escalate: bool |
+| `FinalState` | candidate_id: str, E_near_eV: float, E_inf_eV: float, lateral_interaction_eV: float, AB_distance_A: float, site_graph_distance: int, recombined: bool |
+| `ForceScreen` | candidate_id: str, force_on_B_along_AB_eV_per_A: float, flagged: bool, threshold_eV_per_A: Optional[float], queue_position: int |
+| `GasReference` | species: str, energy_eV: float, correction_eV: float, note: str |
+| `GateResult` | candidate_id: str, verdicts: List[finalstate.records.CheckVerdict], passed: bool, stage: str |
+| `HumanChoice` | checkpoint: str, chosen: List[str], reason: str, who: str, when: datetime.datetime |
+| `LiteratureValue` | quantity: str, value: float, unit: str, system: str, functional: Optional[str], site: Optional[str], source: str, verified_by_human: bool |
+| `Pair` | candidate_id: str, site_A: int, site_B: int, site_graph_distance: int, in_plane_distance_A: float, within_window: bool, window_A: Tuple[float, float], d_bond_A: float |
+| `RankedCandidate` | candidate_id: str, rank: int, site_graph_distance: int, energy_eV: float, doubt: Optional[finalstate.records.DoubtFlag], reason: str |
+| `RelaxationResult` | candidate_id: str, energy_eV: float, fmax_eV_per_A: float, steps: int, converged: bool, trajectory_path: Optional[str], calculator: str, cache_hit: bool |
+| `Report` | campaign: str, final_states: List[finalstate.records.FinalState], rejected: List[finalstate.records.GateResult], recombination_rate: float, recombination_rate_by_shell: Dict[int, float], doubt: List[finalstate.records.DoubtFlag], comparison_oc20neb: Dict[str, float], cost: Dict[str, float], trace_path: str, settings_hash: str |
+| `Settings` | metal: str, facet: str, adsorbate: str, product: Tuple[str, str], functional: str, dispersion: Optional[str], spin_polarised: bool, initial_moments: Dict[str, float], hubbard_u: Dict[str, float], pseudopotential_family: Optional[str], pseudopotential_version: Optional[str], cutoff_eV: Optional[float], kmesh: Optional[Tuple[int, int, int]], smearing: Optional[str], sigma_eV: Optional[float], layers: Optional[int], fixed_layers: Optional[int], vacuum_A: Optional[float], dipole_correction: bool, cell_repeat: Optional[Tuple[int, int]], min_image_distance_A: float, force_threshold_eV_per_A: float, scf_threshold_eV: float, convergence_target_meV: Optional[float], gas_references: List[finalstate.records.GasReference], protocol: Optional[str], protocol_reason: Optional[str], mlip: Optional[str], mlip_committee: List[str], locked: bool, approved_by: Optional[str], approved_at: Optional[datetime.datetime] |
+| `Site` | index: int, label: str, point_group: str, coordination: int, atom_beneath: Optional[str], position: Tuple[float, float, float] |
+| `SiteEnumeration` | sites: List[finalstate.records.Site], count: int, burnside_count: int, symmetry_group: str, edges: List[Tuple[int, int]], baseline_count: Optional[int] |
+| `StructureRef` | path: str, format: str, role: <enum Role, energy_eV: Optional[float], settings_hash: Optional[str], calculator: Optional[str] |
+| `TraceEvent` | when: datetime.datetime, step: str, tool: str, actor: str, inputs_hash: str, outputs_ref: str, message: str |
+<!-- /records:models -->
+
+The five human-facing files below hold these records; their on-disk formats are fixed by `finalstate.config` (PROJECT.md, a Markdown page with one ```yaml block), `finalstate.provenance` (trace.jsonl), `finalstate.casebank` (lessons.md, one ```json block per case) and `report` (report.md with report.json).
 
 ### 4.1 PROJECT.md
 
@@ -305,13 +467,13 @@ The lessons log, `lessons.md`, is the case bank: one file, two names in the arch
 
 | Entry                                              | Written by |
 |----------------------------------------------------|------------|
-| Settings as supplied; protocol choice and reason   | 3.1        |
-| Counts of sites, orientations and pairs            | 3.2, 3.8   |
-| Every verdict and rejection, with its reason       | 3.4, 3.8   |
-| MLIP choice and reason; doubt flags; escalations   | 3.6, 3.7   |
-| Critic proposals and what they changed             | 3.8        |
-| Human choices and reasons                          | 3.10       |
-| Failed-job diagnoses and resubmissions             | 3.11, extension |
+| Settings as supplied; protocol choice and reason   | calculation_protocol |
+| Counts of sites, orientations and pairs            | site_enumeration, pair_enumeration |
+| Every verdict and rejection, with its reason       | anomaly_filter |
+| MLIP choice and reason; doubt flags; escalations   | mlip_selection, uncertainty_estimation |
+| Critic proposals and what they changed             | descriptor_card, step 3.4 |
+| Human choices and reasons                          | finalstate.checkpoints |
+| Failed-job diagnoses and resubmissions             | dft_single_points, extension |
 
 ### 4.5 Report
 
@@ -319,9 +481,9 @@ The lessons log, `lessons.md`, is the case bank: one file, two names in the arch
 |-------------------------------------|------------------------------------------------------------------------------|
 | Final states                        | In order; the up to five the human picked; E(FS near), E(FS ∞), lateral interaction per kept state |
 | Rejected pairs                      | With reasons; recombination rate of nearest pairs                            |
-| ML uncertainty                      | Calibrated doubt from 3.7                                                    |
+| ML uncertainty                      | Calibrated doubt from uncertainty_estimation                                 |
 | Comparison with OC20NEB             | Our final state against the product frame: A–B distance, energy, validity    |
-| Cost                                | ML force calls; DFT force calls and failures when the extension 3.11 ran     |
+| Cost                                | ML force calls; DFT force calls and failures when dft_single_points ran        |
 | Decision trace                      | Section 4.4                                                                  |
 
 ## 5. Rules the LLM must obey
@@ -359,7 +521,7 @@ Four agents and five skills of ours: four core, hpc-dft-jobs only with HPC. The 
 | final-state-planner      | The next tool call and when to stop; holds the checkpoint list       | Core                           | AdsMind's pick-from-labels interface; CatDT's propose and validate rounds with fatal violations in code; TSAgent's replan log; El Agente Potente's typed graph for 3.1 to 3.6 |
 | dft-settings-interviewer | What the Formulate interview locks into PROJECT.md                   | Core, runs once before the run | Get Physics Done's Formulate step; AutoDFT's settings rules; DREAMS's comparability judge |
 | geometry-critic          | The site type and orientation to try per fragment at 3.5 and 3.2; whether a card and its verdicts disagree; never overrides | Core at 3.5 and 3.2; comments on gate cards as an extension | Adsorb-Agent's site-versus-binding-atom check; AdsMind's site-type proposal; AtomWorld and LLMConfBench on cards not coordinates |
-| dft-job-steward          | Resubmit, adjust or escalate a failed DFT job                        | Only with HPC, extension 3.11  | AutoDFT's capped recovery; TSAgent's failure taxonomy; VASPilot's handlers |
+| dft-job-steward          | Resubmit, adjust or escalate a failed DFT job                        | Only with HPC, dft_single_points | AutoDFT's capped recovery; TSAgent's failure taxonomy; VASPilot's handlers |
 
 The critic is separate so it cannot see the planner's reasoning and be anchored; the interviewer, so the planner cannot rewrite its fixed questions. `general-peer-review` from AtomisticSkills reviews the report; it is a reused skill, not a new role.
 
@@ -375,48 +537,76 @@ Reused from AtomisticSkills: `ml-committee-uncertainty`, `ml-mlip-benchmark`, `m
 
 ## 7. Repository layout
 
-A Claude Code plugin beside AtomisticSkills. Three rules: each file has one kind and lives in that kind's folder; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent.
+One Python package, `finalstate`, that a Claude Code plugin wraps. Three rules: each file has one kind and lives in that kind's folder; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent. The tree is the repository as it is, not a plan; `tests/` and `finalstate check` keep it so.
 
 ```
 open-science-hackathon/
-├── README.md                     the human entry point: problem, simplified and full pipeline, how to run the first case
+├── README.md                     the human entry point
 ├── CLAUDE.md                     points here
 ├── agent.md                      this file
-├── PROJECT.md                    the locked settings and decisions of the current campaign
-├── pyproject.toml                one package: the library, the server and the tests
-├── archive/docs/                 design document, agent context, build context, survey, review, figures
-├── figures/                      the README figures: the team's plan, the board, its evolution, who does what
-├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
-├── skills/<name>/SKILL.md        the five skills of section 6, one folder each
-├── agents/<role>.md              the four agents of section 6, one page each
-├── hooks/hooks.json              blocks coordinate edits; pauses at human checkpoints
-├── mcp/server.py                 registers the tools on the MCP Python SDK
-├── mcp/tools/                    dft_settings_lock, site_enumeration, adsorbate_placement, validity_gate,
-│                                 descriptor_card, mlip_choice, mlip_doubt, dissociation_final_state,
-│                                 final_state_report; extension: dft_single_points
-├── finalstate/                   pure Python, no LLM, no MCP: one module per tool, same name
-├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
-├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results
-├── runs/<campaign>/              PROJECT.md copy, trace.jsonl, cards/, structures/, report.md
-└── lessons.md                    the lessons log; a human promotes entries
+├── PROJECT.md                    the settings template; finalstate init copies it into runs/<campaign>/
+├── lessons.md                    the case bank, seeded with three known pitfalls
+├── pyproject.toml                the package, optional extras per lane, the finalstate command
+├── ci/github-workflow.yml        ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
+├── .claude-plugin/plugin.json    declares skills, agents, hooks and the MCP server
+├── hooks/hooks.json              PreToolUse: block coordinate edits; require the checkpoint before a tool
+├── skills/<name>/SKILL.md        the skills of section 6, one folder each
+├── agents/<role>.md              the agents of section 6, one page each
+├── mcp/server.py                 builds one MCP tool per registry entry
+├── finalstate/
+│   ├── registry.py               ToolSpec and REGISTRY: every tool defined once, section 3
+│   ├── records.py                the records of section 4
+│   ├── tools/<name>.py           one function per tool, parameters as in the registry
+│   ├── config.py                 PROJECT.md: read, write, lock, require_locked, settings_hash
+│   ├── provenance.py             Run, trace.jsonl, the @traced decorator
+│   ├── cache.py                  content-addressed results of relaxations and force calls
+│   ├── checkpoints.py            the five checkpoints: require, record
+│   ├── casebank.py               lessons.md as records; retrieve by system and failure
+│   ├── errors.py                 SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
+│   ├── calculators/              one interface; uma, mace with committees, chgnet
+│   ├── compute/                  Job and Backend; local, slurm with custodian in the job script
+│   ├── literature/               Source interface; materials_project, catalysis_hub, papers
+│   ├── hooks.py                  the two hook commands
+│   └── cli.py                    finalstate registry | check | init
+├── tests/                        registry, tool modules and the figures' data module agree; records and operations; hooks
+├── benchmark/                    the OC20NEB subset, baselines, scoring: planned, README inside
+├── runs/<campaign>/              PROJECT.md copy, trace.jsonl, checkpoints.json, cards/, structures/, cache/, report.md
+├── figures/                      the README figures, PNG and SVG
+└── archive/docs/                 the design history; figures/src/_board.py is the data module the figures and the generated blocks come from
 ```
 
-| Reader   | Reads, in order                                                                     |
-|----------|-------------------------------------------------------------------------------------|
-| A human  | `README.md`, `PROJECT.md`, the run's `report.md`, `lessons.md`                      |
-| An agent | `CLAUDE.md`, `agent.md`, the skill it was given, the tool docstrings                |
+| Reader   | Reads, in order                                                                                      |
+|----------|------------------------------------------------------------------------------------------------------|
+| A human  | `README.md`, `PROJECT.md`, the run's `report.md`, `lessons.md`                                       |
+| An agent | `CLAUDE.md`, `agent.md`, the skill it was given, `finalstate registry`, the tool docstrings          |
 
-| Kind    | Folder                              | One item is                                       | May call           | Holds logic |
-|---------|-------------------------------------|---------------------------------------------------|--------------------|-------------|
-| Agent   | `agents/`                           | A one-page role: what to do next and when to stop | Skills, tools      | No          |
-| Skill   | `skills/<name>/`                    | A procedure, step by step, naming tools           | Tools              | No          |
-| Tool    | `mcp/tools/`                        | One typed entry point, one file                   | One library module | No          |
-| Library | `finalstate/`                       | One module per tool, same name                    | Other modules      | Yes, tested |
-| Test    | `tests/`                            | One file per tool                                 | The library        | No          |
-| Data    | `runs/`, `benchmark/`, `lessons.md` | Outputs, never code                               |                    | No          |
-| Docs    | `archive/docs/`, `figures/`         | What and why; never how to call                   |                    | No          |
+| Kind    | Folder                              | One item is                                            | May call           | Holds logic |
+|---------|-------------------------------------|--------------------------------------------------------|--------------------|-------------|
+| Agent   | `agents/`                           | A one-page role: what it decides and when it stops     | Skills, tools      | No          |
+| Skill   | `skills/<name>/`                    | A procedure, step by step, naming tools                | Tools              | No          |
+| Tool    | `finalstate/tools/`                 | One function per registry entry, exposed by `mcp/server.py` | The library   | Yes, tested |
+| Library | `finalstate/` operations modules    | Records, config, trace, cache, checkpoints, case bank, calculators, compute, literature | Each other | Yes, tested |
+| Test    | `tests/`                            | Registry consistency, records, operations, hooks       | The library        | No          |
+| Data    | `runs/`, `benchmark/`, `lessons.md` | Outputs, never code                                    |                    | No          |
+| Docs    | `archive/docs/`, `figures/`         | What and why; never how to call                        |                    | No          |
 
-Naming: `mcp/tools/validity_gate.py` wraps `finalstate/validity_gate.py`, tested by `tests/test_validity_gate.py`. Names say what is computed in the field's words: `dissociation_final_state`, not `final_state`; `geometry-critic`, not `critic`. Licences: ASE, ACAT and Sella are LGPL and may be imported; CatKit, Pynta, arkimede and CatMAP are GPL, copy their ideas only; TSAgent and Adsorb-Agent state no licence; UMA weights need a Hugging Face account and the FAIR Chemistry License.
+| Operational need       | Where it lives                                                                                       |
+|------------------------|------------------------------------------------------------------------------------------------------|
+| Configuration          | `PROJECT.md` through `finalstate.config`; locked at the approve-settings checkpoint; a hash on every record |
+| Provenance             | `finalstate.provenance`: every tool call, choice and escalation in `trace.jsonl`; outputs stored by hash |
+| Caching                | `finalstate.cache`: key of structure, calculator and settings hash, so a changed setting never returns a stale result |
+| Errors and retries     | `finalstate.errors` typed; custodian handlers inside the DFT job script, before any agent diagnosis   |
+| Compute backends       | `finalstate.compute`: local for the laptop and GPU lanes, slurm for DFT                              |
+| Human checkpoints      | `finalstate.checkpoints` records; `finalstate.hooks` blocks tools past an unpassed checkpoint        |
+| Memory                 | `finalstate.casebank`: raw cases in `lessons.md`; a human promotes                                   |
+| Potentials             | `finalstate.calculators`: one interface, adapters imported lazily                                    |
+| Literature and databases | `finalstate.literature`: paper-qa, Materials Project, Catalysis-Hub; every value carries a source  |
+| Secrets                | environment variables only: `HF_TOKEN` for UMA weights, `MP_API_KEY`; never in PROJECT.md            |
+| Tests and CI           | `pytest`; `ci/github-workflow.yml` also renders the figures and checks the generated blocks; it moves to `.github/workflows/` with a token that has the workflow scope |
+| Packaging              | `pyproject.toml` with extras: structures, mlip, literature, dft, agents, figures, dev                 |
+| Licence                | open: team decision; constraints in the Licences line below                                          |
+
+Naming: `finalstate/tools/anomaly_filter.py` holds `anomaly_filter(...)`, tested through `tests/test_registry.py`. Names say what is computed in the field's words: `anomaly_filter`, the board's own term; `pair_enumeration`; `uncertainty_estimation`. Licences: ASE, ACAT and Sella are LGPL and may be imported; CatKit, Pynta, arkimede and CatMAP are GPL, copy their ideas only; TSAgent and Adsorb-Agent state no licence; UMA weights need a Hugging Face account and the FAIR Chemistry License.
 
 ## 8. Compute lanes
 
@@ -426,7 +616,7 @@ HPC is needed for DFT and nothing else, and DFT is an extension: the laptop and 
 |--------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
 | Laptop | 1 lock from the supplied settings; 2 to 4; 5; 6; 8; 3.5; 3.2; 5; 14 | Unchanged                                                                                  |
 | GPU    | 1\* benchmark; 7 committee; 3.3 force calls and relaxations; 6 MLIP energies; ML frequencies | Unchanged; one workstation or cloud GPU                          |
-| HPC, extensions only | Settings sweep when no relaxed inputs exist; DFT calibration labels for 7; DFT single points of 3.11; DFT frequencies | Not needed: OC20's RPBE and PAW values as the settings record; OC20NEB's released DFT bands as labels and ground truth; one DFT check run beforehand and recorded, if available |
+| HPC, extensions only | Settings sweep when no relaxed inputs exist; DFT calibration labels for 7; DFT single points of dft_single_points; DFT frequencies | Not needed: OC20's RPBE and PAW values as the settings record; OC20NEB's released DFT bands as labels and ground truth; one DFT check run beforehand and recorded, if available |
 
 ## 9. Benchmark and measurables
 
@@ -450,30 +640,30 @@ Two numbers are measured on an OC20NEB subset, starting with \*OH → \*O + \*H 
 
 ## 10. Build order
 
-Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Task IDs D, T, P, M and R are the build plan's.
+Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Task IDs D, T, P, M and R are the build plan's. Every tool exists as a typed stub that raises NotImplementedError; a task is done when its stub is filled and its test passes.
 
 Critical path:
 
 - [ ] 1 · D1 System and product: AB\*, surface, A\* + B\*; first case \*OH → \*O + \*H on Pt(111). Human decision.
-- [ ] 2 · T1 `dft_settings_lock`, 3.1. Needs D1, D3.
-- [ ] 3 · T2 `site_enumeration`, 3.2. Needs T1.
-- [ ] 4 · T4 `validity_gate`, 3.4. Needs T3.
-- [ ] 5 · T6 `mlip_choice`, 3.6. Needs D2.
-- [ ] 6 · P1 `dissociation_final_state`, 3.8. Needs T2, T4, T6, D5.
+- [ ] 2 · T1 `structure_retrieval` and `calculation_protocol`. Needs D1, D3.
+- [ ] 3 · T2 `site_enumeration`. Needs T1.
+- [ ] 4 · T4 `anomaly_filter`. Needs T3.
+- [ ] 5 · T6 `mlip_selection`. Needs D2.
+- [ ] 6 · P1 `pair_enumeration`, `pull_force_screen`, `relaxation`, `soap_clustering`, with `minima_hopping` as the baseline. Needs T2, T4, T6, D5.
 - [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
-- [ ] 8 · R1 Release: SKILL.md files, MCP tools beside AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
+- [ ] 8 · R1 Release: the skills, the MCP server beside AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
 Off-path tasks, built when the path needs them:
 
 | Group               | Task                                                                                       | Needs          |
 |---------------------|--------------------------------------------------------------------------------------------|----------------|
 | Decide first        | D2 compute and codes; D3 benchmark and pass criterion; D4 headline claim; D5 final-state rules | Humans      |
-| Foundations         | T3 `adsorbate_placement`, 3.3; T5 `descriptor_card`, 3.5                                    | T2; T4         |
-| ML trust            | T7 `mlip_doubt`, 3.7; T8 rank and human checkpoint with the lessons log, 3.10               | T6, T4; T5, T7 |
-| Final state         | P5 `final_state_report`, 3.9                                                               | P1, T7         |
-| Measure             | M1 H on Pt(111) end to end; M4 Ni(111) doubt demo; M3 the three later numbers              | T1 to T8; T7, T8; P1, P3, D2 |
-| LLM and human layer, last | SKILL.md files; interview and PROJECT.md template; `lessons.md` seeded; `final-state-planner` that calls tools by name and stops at checkpoints; `geometry-critic` at 3.5 and 3.2; hooks | The tools |
-| Extensions, later   | T9 `dft_single_points`, 3.11, DFT on the chosen five; T10 active-learning loop; M5 agentic uncertainty, N planner runs; `geometry-critic` on gate cards at 5; coverage scan at 3.2; one-hop target at 6; settings sweep and AB\* enumeration when no relaxed inputs exist | T8, D2; T7, D2; T8, P5 |
+| Foundations         | T0 `literature_lookup`; T3 `adsorbate_placement`; T5 `descriptor_card`                      | D1; T2; T4     |
+| ML trust            | T7 `uncertainty_estimation`; T8 `ranking` and the checkpoint record with the case bank       | T6, T4; T5, T7 |
+| Final state         | P5 `reference_energies` and `report`                                                       | P1, T7         |
+| Measure             | M1 H on Pt(111) end to end; M4 Ni(111) doubt demo; M3 the two numbers and the policy comparison | T1 to T8; T7, T8; P1, P5 |
+| LLM and human layer, last | the skill files; the interview in PROJECT.md; `lessons.md` seeded; the agents of section 6; the hooks | The tools |
+| Extensions, later   | T9 `dft_single_points`; T10 `active_learning`; M5 agentic uncertainty, N planner runs; the critic on gate cards at 5; coverage scan at 3.2; one-hop target at 6 | T8, D2; T7, D2; T8, P5 |
 
 ## 11. Open decisions that block coding
 

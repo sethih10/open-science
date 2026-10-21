@@ -4,7 +4,7 @@ every human checkpoint. All text from _board.py."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from _style import *
-from _board import STEPS, BY_KEY, BOARD_DATE, code_order_note
+from _board import STEPS, BY_KEY, BOARD_DATE, PLANNER, code_order_note
 from matplotlib.patches import FancyBboxPatch
 
 GREY_F, GREY_E = FLOW["grey"]; CORAL_F, CORAL_E = FLOW["coral"]
@@ -14,7 +14,7 @@ ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("
 fig.text(0.5, 0.982, "The pipeline we will implement: the board's steps, each with its tool call and its open decision", ha="center", va="top", fontsize=12, fontweight="bold")
 fig.text(0.5, 0.966, f"board of {BOARD_DATE} · grey: computation · coral: step 3, the stated problem · purple: our agents, dashed is an extension\namber: open decision · pink {PAUSE}: a checkpoint where the agent waits",
          ha="center", va="top", fontsize=7.6, color="#555555", linespacing=1.3)
-fig.text(0.5, 0.944, f"final-state-planner calls every tool by name, reads cards, never writes coordinates, stops at every {PAUSE}",
+fig.text(0.5, 0.944, f"{PLANNER} calls every tool by name, reads cards, never writes coordinates, stops at every {PAUSE}",
          ha="center", va="top", fontsize=7.6, color=PUR_T, style="italic")
 
 SX, SW = 0.02, 0.245          # side boxes
@@ -100,13 +100,13 @@ for key in ("4", "5", "6", "7", "8", "solution"):
     y -= H + G
 
 # ---- side boxes: our agents at the steps where the board drew an input, dashed where they are extensions
-side_box(centre["prompt"], "dft-settings-interviewer", "runs the Formulate interview, writes PROJECT.md", board=BY_KEY["prompt"].board_input)
+side_box(centre["prompt"], " · ".join(n for n, _ in BY_KEY["prompt"].agents), "; ".join(r for _, r in BY_KEY["prompt"].agents), board=BY_KEY["prompt"].board_input)
 side_box(centre["1*"], "active-learning loop", BY_KEY["1*"].ext, dashed=True)
-side_box(centre["3.1"], "geometry-critic", "point 3.4: proposes a site type per fragment, orders the list; never overrides", board="Critic, knowledge")
+side_box(centre["3.1"], BY_KEY["3.4"].agents[0][0], "point 3.4: " + BY_KEY["3.4"].agents[0][1], board="Critic, knowledge")
 side_box(centre["3.3"], "vision model", BY_KEY["3.4"].ext, dashed=True, board="Vision model (?)")
-side_box(centre["5"], "geometry-critic", BY_KEY["5"].ext, dashed=True, board=BY_KEY["5"].board_input)
+side_box(centre["5"], BY_KEY["3.4"].agents[0][0], BY_KEY["5"].ext, dashed=True, board=BY_KEY["5"].board_input)
 side_box(centre["7"], "agentic uncertainty, DFT", BY_KEY["7"].ext, dashed=True, board=BY_KEY["7"].board_input)
-side_box(centre["8"], "final-state-planner", BY_KEY["8"].agent[1], board=BY_KEY["8"].board_input)
+side_box(centre["8"], BY_KEY["8"].agents[0][0], BY_KEY["8"].agents[0][1], board=BY_KEY["8"].board_input)
 ax.text(0.5, 0.012, "Side boxes: where the board drew an agent input, the agent that takes it; amber tags: the one open decision per step, agent.md section 11 has the full list.",
         ha="center", va="bottom", fontsize=6.8, style="italic", color="#444444")
 finish(fig, os.path.join(os.path.dirname(__file__), "..", "30-board-flowchart.png"), copy_to="pipeline")
