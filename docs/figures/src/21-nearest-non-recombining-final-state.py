@@ -90,20 +90,20 @@ fig.text(0.25, 0.41, "Nearest valid state: one saddle, a short band, fewer faile
 
 # ---------- bottom right: recipe
 ax = fig.add_axes([0.50, 0.05, 0.48, 0.37]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-fig.text(0.74, 0.41, "The recipe: CatTSunami's AutoFrameDissociation, and what we add (blue)", ha="center", fontsize=8.8, fontweight="bold")
-steps = [("1  Place A, the fragment that keeps the binding atom", "CatTSunami: 5 lowest-energy placements within 2 Å of the old binding site",
+fig.text(0.74, 0.41, "The recipe: what CatTSunami and NEBscape do at each step, and what we add (blue)", ha="center", fontsize=8.8, fontweight="bold")
+steps = [("1  Place A, the fragment that keeps the binding atom", "CatTSunami: 5 lowest-energy placements within 2 Å of the old site · NEBscape: minima hopping from symmetry-inequivalent sites",
           "ours: all symmetry-distinct placements, counted"),
-         ("2  Place B in a shell around A", "CatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs in all",
-          "ours: all symmetry-distinct pairs by site-graph distance"),
-         ("3  Relax each pair with the MLIP, then gate", "CatTSunami: discard frames 'where the products react' or show an anomaly",
-          "ours: same gate as the initial state; bond re-formed, desorbed, moved, surface changed"),
-         ("4  Choose", "CatTSunami: one surviving frame picked at random",
+         ("2  Place B around A", "CatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs · NEBscape: combinatorial on unique sites, separations above 4.5 Å excluded",
+          "ours: all symmetry-distinct pairs by site-graph distance, nearest first"),
+         ("3  Relax each pair with the MLIP, then gate", "CatTSunami: discard frames 'where the products react' · NEBscape: Hookean constraints keep fragments intact; graph checks",
+          "ours: one gate after relaxation with a logged reason: bond re-formed, desorbed, moved, surface changed"),
+         ("4  Choose", "CatTSunami: one survivor at random · NEBscape: within 1.2 eV, the first two energy–distance Pareto fronts",
           "ours: nearest surviving pair first, then energy; keep several; report rejected pairs and E(FS near) − E(FS ∞)")]
 y = 0.93; h = 0.19
 for t, cat, ours in steps:
     box(ax, 0.01, y - h, 0.98, h, t, fs=7.9)
     ax.texts[-1].set_position((0.5, y - 0.012)); ax.texts[-1].set_va("top")
-    ax.text(0.5, y - h + 0.062, cat, ha="center", va="bottom", fontsize=6.9, zorder=3)
+    ax.text(0.5, y - h + 0.062, cat, ha="center", va="bottom", fontsize=6.4, zorder=3)
     ax.text(0.5, y - h + 0.018, ours, ha="center", va="bottom", fontsize=6.9, color=HI_EDGE, zorder=3)
     y -= h + 0.03
 ax.text(0.5, 0.0, "E(FS ∞) = E(A*) + E(B*) − E(slab) from separate cells; the difference to E(FS near) is the lateral interaction",

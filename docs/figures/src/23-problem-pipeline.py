@@ -36,7 +36,7 @@ ax.text(0.7565, 0.875, "the final state with B* as close to A* as possible and n
 ax.add_patch(FancyBboxPatch((0.04, 0.838), 0.953, 0.026, boxstyle="round,pad=0.003,rounding_size=0.01", fc="white", ec=HI_EDGE, lw=1.2, zorder=2))
 ax.text(0.5165, 0.851, "Why nearest: a band from AB* to a far product holds the bond-breaking saddle plus diffusion saddles, needs more images and iterations, and may not converge "
         "or may converge to the wrong maximum.\nThe nearest validated product gives one saddle and a short band. Even with heuristic endpoints, CatTSunami's ML bands converge only "
-        "81 to 82 % of the time for dissociations and 68 to 72 % for transfers.",
+        "81 to 82 % of the time for dissociations and 68 to 72 % for transfers; NEBscape, with a 4.5 Å separation cut-off and Pareto-selected endpoints, converges 94 %.",
         ha="center", va="center", fontsize=7.2, color="#1e3a8a", zorder=3, linespacing=1.25)
 
 # ---- legend
@@ -110,24 +110,24 @@ rows = [
   "choice and reason to the lessons log,\nthen into the skill",
   ("EXTENSION · attaches to 8", "+DFT single points on the five before\nany path; agentic uncertainty (attaches\nto 7 and 8): N runs, variance of choices")),
  ("(9a) Place A, the binding fragment", "the fragment that keeps the binding atom,\nnear the initial-state binding site",
-  ("CatTSunami AutoFrameDissociation", "5 lowest-energy placements within 2 Å of the\nreactant's binding site"),
-  ("exists", "Not unique", "this is CatTSunami's step, open source in\nfairchem; whether A stays at its IS site or is\nenumerated is a team decision"),
+  ("NEBscape · CatTSunami", "NEBscape: minima hopping from symmetry-inequivalent\nspglib sites, random orientations; CatTSunami: 5 lowest-\nenergy placements within 2 Å of the reactant's site"),
+  ("exists", "Not unique", "both do it, both open source (MIT); whether A\nstays at its IS site or is enumerated is a\nteam decision"),
   None, None),
  ("(9b) Enumerate B sites around A", "ordered by site-graph distance from A",
-  ("CatTSunami · classical DFT practice", "5 placements in a 1 to 3 Å shell, 25 pairs in all;\nby hand: fragments at nearest or next-nearest\nhollows, chosen by the author"),
-  ("missing", "Missing", "an explicit minimum-distance objective; the rule\nis site-graph distance with in-plane distance as\ntiebreaker, in-plane alone still open"),
-  "all symmetry-distinct pairs, nearest first;\nthe count of pairs reported",
+  ("NEBscape · CatTSunami", "NEBscape: two adsorbates arranged combinatorially on\nunique sites, separations above 4.5 Å excluded;\nCatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs"),
+  ("missing", "Missing", "a nearest-first objective: NEBscape keeps a cut-off\nand an energy–distance Pareto front, CatTSunami\nsamples; the metric: site graph, in-plane tiebreak"),
+  "all symmetry-distinct pairs, nearest first and\ncounted; the policy compared with NEBscape's\nPareto choice on the same reactions",
   ("EXTENSION · attaches to 9b", "coverage scan: the same pair in\nseveral cell sizes to measure the\nlateral interaction directly")),
  ("(9c) Relax each A* + B* pair", "same potential and settings as the initial state;\nrandom displacement first (symmetry trap)",
   ("CatTSunami", "product frames relaxed with the MLIP\nbefore any check"),
   ("exists", "Not unique", "standard"),
   None, None),
  ("(9d) Gate the pair: still dissociated?", "no A–B bond; nothing desorbed, moved or\nsubsurface; surface intact; no imaginary mode",
-  ("CatTSunami", "discard frames 'where the products react or some\nother anomaly occurs'"),
+  ("NEBscape · CatTSunami", "NEBscape: Hookean constraints keep fragments intact\nduring sampling, graph isomorphism checks after;\nCatTSunami: discard frames 'where the products react'"),
   ("missing", "Missing", "the bond-re-formed check as code with a\nthreshold on the A–B distance; the\nimaginary-mode check on the pair"),
-  "the same gate as the initial state; every\nrejection logged; a failing state is never paired", None),
+  "a test after relaxation with a logged reason, not\na constraint during sampling; same gate as the IS;\na failing state is never paired", None),
  ("(9e) Choose and report the final state", "nearest survivor first, then energy;\nkeep several, not one",
-  ("CatTSunami", "one surviving frame picked at random"),
+  ("NEBscape · CatTSunami", "NEBscape: within 1.2 eV of the minimum, the first two\nenergy–distance Pareto fronts, SOAP deduplication;\nCatTSunami: one survivor at random"),
   ("missing", "Missing", "E(FS near) and E(FS ∞) = E(A*) + E(B*) − E(slab)\nboth reported; adjacent fragments can repel, so\nthe nearest is not always the lowest in energy"),
   "the recombination rate of nearest pairs:\na measurable none of the papers above report",
   ("EXTENSION · attaches to 9e", "alternative target: lowest energy\nwithin one site hop (team decision)")),
@@ -140,7 +140,7 @@ rows = [
   ("exists", "Not unique", "every TS agent does this; TSAgent reaches 83 %\non an OC20NEB subset. A wrapped tool,\nnot the claim"),
   None, None),
  ("(12) Validate saddle and band", "one imaginary mode; the band ends at this\nIS and this FS",
-  ("CatTSunami band checks · TSBench · CatDT · Pynta", "breaking bond stretched 1.25 to 1.63× in some\nframe, connectivity constant elsewhere; diagnosis-driven\nrevision (50 → 67 %); propose–validate gate; IRC on every saddle"),
+  ("NEBscape · CatTSunami · TSBench · Pynta", "NEBscape: one maximum, no local minima, barrier at the\nbond event (9 % multi-step versus 17 %); CatTSunami: bond\nstretched 1.25 to 1.63×; revision 50 → 67 %; IRC"),
   ("missing", "Missing", "these checks as code in one tool; TSAgent checks\nthe imaginary mode but runs no IRC; CatDT unpublished"),
   "validation is code; endpoint → barrier\npropagation measured (figure 18)", None),
  ("(13) DFT refinement", "single points on IS, TS and FS; then relax",
@@ -181,12 +181,12 @@ for lab, a, b, col in phases:
 yb, hb = 0.066, 0.080
 ax.text(0.04, yb + hb + 0.012, "Verdict on uniqueness for this problem", ha="left", va="bottom", fontsize=9.2, fontweight="bold", color="#333333")
 bw = 0.305
-verd = [("exists", "Already taken: the final state by sampling, and the band",
-         "The dissociation final state by sampling: CatTSunami's\nAutoFrameDissociation, open source in fairchem. ML bands:\nCatTSunami. LLM barrier agents: TSAgent, CatDT, CopyCAT,\nEl Agente Potente. Rates with IRC validation: Pynta. Endpoints\nby global optimisation: NEBscape. The adsorption workflow of\nsteps 2 to 8 as such: every adsorption agent."),
+verd = [("exists", "Already taken: NEBscape is the closest prior work, not an LLM agent",
+         "NEBscape (MIT, no LLM): symmetry-inequivalent sites, two adsorbates\nplaced combinatorially, separations above 4.5 Å excluded, Hookean\nfragment integrity, energy–distance Pareto selection, graph checks\nalong the band; 304 OC20NEB reactions, 94 % converged. CatTSunami\nsamples the same final state. LLM barrier agents: TSAgent, CatDT,\nCopyCAT, El Agente Potente. Steps 2 to 8: every adsorption agent."),
         ("missing", "Still missing before any claim can be measured",
          "A* + B* as structures and one set of gas references; the\ndistance metric; a bond-re-formed threshold; the pass\ncriterion for a final state; an OC20NEB subset whose\nproduct frames we compare against; a single-placement\nbaseline; whether any DFT single point runs."),
         ("ours", "Ours, measurable in hackathon time",
-         "1. an explicit minimum-distance objective over symmetry-complete\n    pairs, instead of lowest energy in a shell then a random pick\n2. one code gate on both endpoints, every rejection logged\n3. two numbers now: nearest-pair recombination rate, and\n    E(FS near) − E(FS ∞); later: barrier shift and band cost\n4. calibrated ML doubt; open skill + tools scored against\n    OC20NEB product frames (agentic uncertainty: extension)")]
+         "1. a nearest-first objective over symmetry-complete, counted pairs,\n    instead of NEBscape's cut-off and Pareto front or CatTSunami's sampling\n2. one code gate on both endpoints, every rejection logged\n3. two numbers now: nearest-pair recombination rate, E(FS near) − E(FS ∞);\n    and the three final-state policies compared on the same dissociations\n4. calibrated ML doubt; open skill + tools scored against\n    OC20NEB product frames (agentic uncertainty: extension)")]
 for j, (k, h, b) in enumerate(verd):
     x0 = 0.04 + j * (bw + 0.019)
     ax.add_patch(FancyBboxPatch((x0, yb), bw, hb, boxstyle="round,pad=0.003,rounding_size=0.01", zorder=2, **KIND[k]))
