@@ -54,7 +54,9 @@ def snake(y_from, y_to):
     ax.plot([0.015, 0.015], [ym, y_to + 0.13], color=GREY, lw=1.1, zorder=0)
     arrow(ax, (0.015, y_to + 0.13), (xl - 0.09, y_to + 0.094), lw=1.1, con="arc3,rad=-0.3")
 snake(y1, y2)
-arrow(ax, (cols[3] + W / 2, y2 - 0.034), (cols[1] + W / 2 + 0.05, y3 + 0.094), lw=1.1, con="arc3,rad=0.25")
+xr7 = cols[3] + W / 2; ym = y2 - 0.046; x8 = cols[1] + W / 2
+ax.plot([xr7, xr7, x8], [y2 - 0.036, ym, ym], color=GREY, lw=1.1, zorder=0)
+arrow(ax, (x8, ym), (x8, y3 + 0.094), lw=1.1)
 
 # ---- the six points of step 3, mapped to 9a to 9e
 grp = FancyBboxPatch((0.03, 0.108), 0.955, 0.205, boxstyle="round,pad=0.004,rounding_size=0.02",
