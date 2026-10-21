@@ -239,7 +239,7 @@ CatTSunami's AutoFrameDissociation with four changes: complete enumeration, a ne
 | Outputs | Mapped IS–FS pairs ready for interpolation; pairs tried and rejected, with reasons                          |
 | Checks  | The atom map keeps every atom and element; unwrap by depth-first search from the binding atom, the unbroken part moved as one moiety; symmetry alignment of the endpoints; mirror-equivalent pairs computed once |
 | Intended reaction | The bond graphs of IS and FS differ only by the A–B bond. This reading is derived from CatTSunami's band check; confirm it: open: team decision |
-| Wraps   | CatTSunami unwrap_atoms and traverse_adsorbate_dissociation; NEBscape atommapper, minimize_rmsd and resolve_pbc (MIT)   |
+| Wraps   | NEBscape atommapper, minimize_rmsd and resolve_pbc (MIT); CatTSunami unwrap_atoms and traverse_adsorbate_dissociation   |
 | Logs    | Every pair tried, kept or rejected, with the reason                                                          |
 | Open    | Bond cutoffs for the connectivity graph; how many pairs per reaction                                        |
 
@@ -337,15 +337,18 @@ The docs list fields but fix no file format or schema for the five records below
 
 Pair fields, such as A–B and site-graph distance: open: team decision.
 
-### 4.3 Lessons-log entry
+### 4.3 Lessons-log entry: a raw case bank
+
+The log stores raw cases, not distilled lessons: CatDT's ablation gives none 49 %, distilled knowledge or skill banks 52 to 54 %, a raw case bank 68 %, the full stack 84 %, and SkillsBench finds self-written skills lose 8 to 12 points. The planner retrieves cases by system and failure; only a human promotes a case into a skill line, a check or a prior.
 
 | Field      | Basis in the docs                                                         |
 |------------|---------------------------------------------------------------------------|
+| Structure  | The descriptor card of the structure concerned, as the planner saw it     |
 | System     | "Ni(111)"                                                                 |
 | Correction | "set initial magnetic moments"                                            |
 | Reason     | "or SCF fails"; the log holds corrections with reasons                    |
 | Source     | The checkpoint where it was made: flagged-case review or the pick of initial states |
-| Becomes    | A skill line, a check or a prior, once it recurs                          |
+| Becomes    | A skill line, a check or a prior, once it recurs and a human promotes it  |
 
 Recurrences before promotion: open: team decision.
 
