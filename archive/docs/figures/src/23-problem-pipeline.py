@@ -112,7 +112,7 @@ rows = [
  ("(9a) Place A, the binding fragment", "the fragment that keeps the binding atom,\nnear the initial-state binding site",
   ("NEBscape · CatTSunami", "NEBscape: minima hopping from symmetry-inequivalent\nspglib sites, random orientations; CatTSunami: 5 lowest-\nenergy placements within 2 Å of the reactant's site"),
   ("exists", "Not unique", "both do it, both open source (MIT); whether A\nstays at its IS site or is enumerated is a\nteam decision"),
-  None, ("EXTENSION · attaches to 9a and 9b", "geometry-critic proposes a site type\nper fragment from the card, AdsMind\nstyle, to order the list; never removes")),
+  "the geometry-critic orders the list by a site\ntype per fragment, the board's point 4, AdsMind\nstyle; it never removes a pair", None),
  ("(9b) Enumerate B sites around A", "ordered by site-graph distance from A, within\nthe board's window [1.5 d, 5] Å, d the bond to break",
   ("NEBscape · CatTSunami", "NEBscape: two adsorbates arranged combinatorially on\nunique sites, separations above 4.5 Å excluded;\nCatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs"),
   ("missing", "Missing", "a nearest-first objective: NEBscape keeps a cut-off\nand an energy–distance Pareto front, CatTSunami\nsamples; the metric: site graph, in-plane tiebreak"),
