@@ -200,18 +200,20 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 |----------------------------------------|-------------------------------------------------|-----------------------------------------------------------|
 | Literature check                       | Rule: mandatory literature review               | Reuse; add our DFT-pitfall list                           |
 | Approve settings and network           | Plan reviewed before execution                  | Reuse; add PROJECT.md lock                                |
-| Build bulk and slab                    | mat-db-mp, mat-htvs-cutcleansurface             | Reuse if public                                           |
-| Enumerate sites and pairs              | mat-htvs-addadsorbate                           | New skill: symmetry-complete; theirs becomes the baseline |
-| ML pre-screen                          | mat-htvs-mlip-relax; FairChem, MACE servers     | Reuse                                                     |
-| Flag ML doubt and escalate             | ml-mlip-benchmark, ml-mace-finetune             | New skill that triggers these                             |
-| DFT relaxation                         | mat-htvs-vasp; Atomate2 MCP                     | Reuse                                                     |
+| Build bulk and slab                    | mat-db-mp; ASE build                            | Reuse; mat-htvs-cutcleansurface is not public             |
+| Enumerate sites and pairs              | mat-surface-adsorption (MatCalc AdsorptionCalc on pymatgen AdsorbateSiteFinder; no fcc or hcp labels) | New skill: symmetry-complete on ACAT and spglib; theirs is the baseline |
+| ML pre-screen                          | FairChem, MACE, MatGL MCP servers               | Reuse; mat-htvs-mlip-relax is not public                  |
+| Flag ML doubt and escalate             | ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune | New skill that triggers these; calibration is ours |
+| DFT relaxation                         | Atomate2 MCP server                             | Reuse; mat-htvs-vasp is not public                        |
 | Converge numerical settings            | (not described)                                 | New tool                                                  |
 | Validity checks                        | (none)                                          | New MCP tool server                                       |
-| Transition-state search and validation | (not described)                                 | New skills                                                |
-| Free-energy diagram                    | mat-htvs-catalysis-activity-analysis            | Reuse for electrochemistry; extend for thermal catalysis  |
+| Transition-state search and validation | chem-neb-barrier (no frequency or connectivity check); chem-ts-optimization, chem-irc-verification (Sella, molecules only) | New: periodic saddle validation |
+| Free-energy diagram                    | chem-thermochemistry; catalysis-activity skill not public | Build for thermal catalysis                      |
 | Microkinetic model                     | Thermodynamics and kinetics skills (unspecified)| Check coverage                                            |
 | Benchmark comparison                   | (none)                                          | New; main contribution                                    |
 | Open release                           | Hyperparameter logging                          | Reuse; add provenance and Zenodo export                   |
+
+Verified 21 October 2026 (docs/repo-survey.md): 133 public skills, MIT; none of the paper's mat-htvs catalysis skills; the substrate stands and the catalysis layer is ours.
 
 ## 14. Pathway extension: rules that change the adsorption stage
 
@@ -271,8 +273,8 @@ Build order (critical path, figure 22 of the human document): 1 decide system an
 - [ ] Assemble the benchmark subset (OC20-Dense, hard set, controls)
 - [ ] Build the Ni(111) failure-detection demo
 - [ ] Package tools as an MCP server; plan the Zenodo release
-- [ ] Check the AtomisticSkills repository: public catalysis skills, licence, how addadsorbate handles symmetry
-- [ ] Run its addadsorbate placement as the baseline
+- [x] Check the AtomisticSkills repository: no catalysis skill public; MIT; baseline is mat-surface-adsorption on pymatgen's site finder (docs/repo-survey.md)
+- [ ] Run its mat-surface-adsorption placement as the baseline
 - [ ] Prototype the ML-doubt loop with ml-mlip-benchmark and ml-mace-finetune on Ni(111)
 - [ ] Build the convergence tool (cutoff, k-mesh, smearing, layers on E_ads of H on Pt(111)); have it write PROJECT.md
 - [ ] Write the Formulate interview questions into SKILL.md; test on one experienced researcher
@@ -357,7 +359,7 @@ Questions for the team: OC20NEB subset as ground truth (our settings must then m
 
 Problem: given AB* on the surface and the product A* + B*, choose the final state with B* as close to A* as possible while the two stay dissociated after relaxation.
 
-Rule: over all symmetry-distinct site pairs (s_A, s_B), minimise the site-graph distance between A* and B* (in-plane distance as tiebreaker), subject to: product connectivity after relaxation (no A–B bond); neither fragment desorbed, moved site or subsurface; surface unchanged; zero imaginary modes; cell wide enough that the pair does not interact with its periodic images. Keep the first few survivors in that order.
+Rule: over all symmetry-distinct site pairs (s_A, s_B), minimise the site-graph distance between A* and B* (in-plane distance as tiebreaker), subject to: product connectivity after relaxation (no A–B bond); neither fragment desorbed, moved site or subsurface; surface unchanged; zero imaginary modes; cell wide enough that the pair does not interact with its periodic images; the desorbed check per fragment, because fairchem's DetectTrajAnomaly treats A* + B* as one adsorbate. Keep the first few survivors in that order.
 
 Why: a band from AB* to a far product contains the bond-breaking saddle plus diffusion saddles; the nearest valid product gives one saddle. The nearest product is not always the lowest in energy (adjacent fragments can repel). Report E(FS near) and E(FS ∞) = E(A*) + E(B*) − E(slab) from separate cells; the difference is the lateral interaction.
 

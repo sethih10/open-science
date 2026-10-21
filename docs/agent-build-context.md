@@ -117,9 +117,9 @@ The next steps name H on Pt(111) as the first sweep. The test adsorbate for the 
 | Outputs    | Sites with label, site group, coordination and atom beneath; orientations inequivalent under the site's stabiliser group; pairs with site-graph distance and in-plane distance; the count N |
 | Checks     | Sites are the inequivalent high-symmetry Wyckoff positions of the slab's layer group; fcc and hcp hollows told apart by the atom beneath; N = (1/\|G\|) Σ \|X^g\| checked against the explicit list |
 | Unit tests | Two identical adsorbates on the corners of a square cell under C4v give N = 2; the site table of `agent-context.md` section 3 |
-| Wraps      | spglib, CatKit, pymatgen; ACAT for metals and alloys only                                                |
+| Wraps      | spglib; ACAT SlabAdsorptionSites for labelled sites, get_graph and get_neighbor_site_list for the site-graph distance, SystematicPatternGenerator for unique pairs; CatKit as a pattern only (GPL); pymatgen as the baseline |
 | Logs       | Symmetry group; every site, orientation and pair; N and its check                                         |
-| Baseline   | AtomisticSkills mat-htvs-addadsorbate placement                                                           |
+| Baseline   | AtomisticSkills mat-surface-adsorption: MatCalc AdsorptionCalc on pymatgen's AdsorbateSiteFinder, now in pymatgen.core.adsorption; the mat-htvs skills of the paper are not public |
 | Open       | Definition of the site graph; site-graph or in-plane distance alone: D5                                  |
 
 ### 3.3 Placement: T3, steps 3, 9a, 9b
@@ -143,12 +143,12 @@ The next steps name H on Pt(111) as the first sweep. The test adsorbate for the 
 | Call    | `check(structure)`                                                                                          |
 | Inputs  | Relaxed structure; its start structure and enumerated site; clean slab; settings record; E_ads prior; vibrational frequencies |
 | Outputs | Pass or fail per check, with the measured value and the reason, written into the descriptor card            |
-| Wraps   | fairchem anomaly detection, which holds AdsorbML's four checks; ASE vibrations                              |
+| Wraps   | fairchem DetectTrajAnomaly for AdsorbML's four checks; ASE vibrations; ACAT SlabAdsorbateCoverage for the moved-site check. DetectTrajAnomaly treats A* + B* as one adsorbate, so check 1 runs per fragment |
 | Logs    | Every verdict with its measured value; every rejection with its reason                                      |
 
 | #  | Check                  | Fails when                                                        | Threshold in the docs                          |
 |----|------------------------|-------------------------------------------------------------------|------------------------------------------------|
-| 1  | Desorbed               | Adsorbate centre too far above the surface plane                  | > 3 Å; surface-plane definition open           |
+| 1  | Desorbed               | Adsorbate centre too far above the surface plane; per fragment for a pair | > 3 Å; surface-plane definition open    |
 | 2  | Migrated               | Adsorbate ends on another site than the one enumerated            | Site label differs; distance open              |
 | 3  | Dissociated            | An intramolecular bond stretched beyond its breaking threshold    | Open: team decision                            |
 | 4  | Reconstructed          | Surface atoms displaced from their clean-slab positions           | Open: team decision                            |
@@ -183,7 +183,7 @@ The gate has nine checks on every structure, checks 1 to 9, as in section 6 of `
 | Inputs  | System class; two or three candidate potentials; a few DFT labels                                           |
 | Outputs | Chosen potential and reason; a doubt flag per structure with its evidence; escalation to a checkpoint      |
 | Loop    | Sample a few configurations; label them with DFT; measure the error with ml-mlip-benchmark; fine-tune with ml-mace-finetune if needed; continue. If repair fails, stop at a checkpoint with the evidence |
-| Wraps   | AtomisticSkills ml-mlip-benchmark, ml-mace-finetune, mat-htvs-mlip-relax; FairChem UMA, MACE and MatGL servers; EquiformerV2 as in CatTSunami; CHGNet as in CatDT |
+| Wraps   | AtomisticSkills ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune; FairChem UMA, MACE and MatGL servers; MACE committees for variance; uncertainty-toolbox for calibration; CatBench for the choice; CHGNet as a cross-family check on E_ads |
 | Logs    | Benchmark results; choice and reason; labels used; disagreement against DFT error; every flag and escalation |
 | Context | No potential is best everywhere; best adsorption MAE on CatBench is about 0.2 eV; universal MLIPs fail badly on magnetic Co and Ni |
 
@@ -245,7 +245,7 @@ The tool is CatTSunami's AutoFrameDissociation with four changes: complete enume
 | Outputs | Mapped IS–FS pairs ready for interpolation; pairs tried and rejected, with reasons                          |
 | Checks  | The atom map keeps every atom and element; unwrap by depth-first search from the binding atom, the unbroken part moved as one moiety; symmetry alignment of the endpoints; mirror-equivalent pairs computed once |
 | Intended reaction | The bond graphs of IS and FS differ only by the A–B bond. This reading is derived from CatTSunami's band check; confirm it: open: team decision |
-| Wraps   | CatTSunami interpolation and unwrapping; the NEBscape mapping and alignment idea                             |
+| Wraps   | CatTSunami unwrap_atoms and traverse_adsorbate_dissociation; NEBscape atommapper, minimize_rmsd and resolve_pbc (MIT)   |
 | Logs    | Every pair tried, kept or rejected, with the reason                                                          |
 | Open    | Bond cutoffs for the connectivity graph; how many pairs per reaction                                        |
 
@@ -257,7 +257,7 @@ The tool is CatTSunami's AutoFrameDissociation with four changes: complete enume
 | Inputs  | Mapped pair; the chosen potential; locked settings                                                      |
 | Outputs | Converged band; climbing-image saddle; energy per image; force calls                                    |
 | Checks  | fmax < 0.05 eV/Å within the step limit; break the symmetry of the starting band; several pairs per reaction, lowest valid barrier kept; climbing image or dimer refinement |
-| Wraps   | fairchem CatTSunami ML NEB; ASE NEB                                                                      |
+| Wraps   | ASE DyNEB with the fairchem FAIRChemCalculator and UMA, as the current CatTSunami tutorial does; the old OCPNEB class is gone in fairchem v2 |
 | Logs    | Images, iterations, force calls, convergence                                                             |
 | Context | CatTSunami: within 0.1 eV of DFT 91 % of the time, 28× faster; ML bands converged 81–82 % for dissociations |
 | Open    | Number of images; step limit; interpolation; symmetry-breaking amplitude; a TSAgent-style replan loop or not |
@@ -283,7 +283,7 @@ On failure the LLM diagnoses with the Skill procedure and revises once; TSBench 
 | Inputs  | Validated IS, TS and FS; PROJECT.md                                                                     |
 | Outputs | DFT single points on IS, TS and FS; then relaxed endpoints and saddle; force calls; failures            |
 | Checks  | Settings-mismatch check against the endpoints; fmax < 0.05 eV/Å for a band; 0.02–0.03 eV/Å for relaxations; failed jobs go to the LLM to diagnose, adjust and resubmit |
-| Wraps   | ASE calculators; AiiDA; Atomate2 MCP; AtomisticSkills mat-htvs-vasp; VASP or Quantum ESPRESSO           |
+| Wraps   | ASE calculators; AiiDA; the AtomisticSkills atomate2 MCP server; custodian handlers before any LLM diagnosis; VASP or Quantum ESPRESSO |
 | Logs    | DFT force calls and failure rate, gated versus naive endpoints; every diagnosis and resubmission        |
 | Context | CatTSunami: 3 DFT single points per reaction; in its case study 102 bands converged, 8 failed, 14 % of converged bands were wrong |
 | Open    | DFT code and compute; whether any DFT band runs or ML with OC20NEB labels stands in: D2                 |
@@ -483,8 +483,8 @@ The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs 
 - Also in the docs' next steps, outside the plan's boxes
   - [ ] Write model-facing documentation for the geometry tools.
   - [ ] Add twenty geometry editing tasks to the benchmark.
-  - [ ] Check the AtomisticSkills repository: public catalysis skills, licence, how addadsorbate handles symmetry.
-  - [ ] Run AtomisticSkills addadsorbate placement as the baseline.
+  - [x] Check the AtomisticSkills repository: done in `repo-survey.md`; no catalysis skill is public.
+  - [ ] Run AtomisticSkills mat-surface-adsorption placement as the baseline.
 
 ## 8. Open decisions that block coding
 
@@ -512,7 +512,6 @@ Each question below blocks the step or task named beside it. Do not code around 
 | Tolerance for an IRC reaching IS and FS; elongation factor per bond; minimum frame count                  | P4                             |
 | Autonomy level; which checkpoints Balanced skips; recurrences before a lesson is promoted                 | T8, planner                    |
 | Source of the BEP fit                                                                                     | Report                         |
-| Which AtomisticSkills catalysis skills are public, and under what licence?                                | Reuse in T2 baseline, T6, P5   |
 | Adsorbate class and size beyond the first case                                                            | T3, T6                         |
 | Headline claim                                                                                            | D4; report and demo, not code  |
 

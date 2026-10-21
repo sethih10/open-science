@@ -140,7 +140,7 @@ rows = [
   None, None),
  ("(12) Validate the saddle and the band", "one imaginary mode; the band ends at this\nIS and this FS",
   ("CatTSunami band checks · TSBench · CatDT · Pynta", "breaking bond stretched 1.25 to 1.63× in some\nframe, connectivity constant elsewhere; diagnosis-driven\nrevision (50 → 67 %); propose–validate gate; IRC on every saddle"),
-  ("missing", "Missing", "these checks as code in one tool; TSAgent's\nabstract reports none; CatDT is unpublished"),
+  ("missing", "Missing", "these checks as code in one tool; TSAgent checks\nthe imaginary mode but runs no IRC; CatDT unpublished"),
   "validation is code; endpoint → barrier\npropagation measured (figure 18)", None),
  ("(13) DFT refinement", "single points on IS, TS and FS; then relax",
   ("CatTSunami: ML + 3 DFT single points", "score the ML saddle with DFT; fmax < 0.05 eV/Å;\nin its case study 102 DFT bands converged and\n8 failed; 14 % of converged bands were wrong"),
