@@ -9,9 +9,9 @@ This document records the reasoning behind that direction, so that a colleague o
 
 **The position in one paragraph.** A generic "agent that computes adsorption energies" already exists several times over (Adsorb-Agent, AdsMind, DREAMS, CatMaster, Catalyst-Agent, AutoDFT). Our contribution is therefore not the workflow itself but its trustworthiness: symmetry-complete site enumeration, explicit validity checks, detection of machine-learning failures (notably on magnetic Ni and Co), designed human checkpoints, a measured failure rate against a baseline, and an open, reusable release.
 
-**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 and 9 explain what scientific intuition the agent needs, where it comes from, and what others have done to give agents such intuition. Section 10 places our work on AtomisticSkills. Sections 11 and 12 extend the workflow to reaction pathways. Sections 13 and 14 give strategy, decisions and open questions.
+**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Sections 14 and 15 give strategy, decisions and open questions.
 
-**Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 12 carries its own key.
+**Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 13 carries its own key.
 
 ## Scientific background
 
@@ -317,6 +317,44 @@ Reading the figure: the left column lists where expert knowledge is already writ
 
 **What the evidence says about skills as the carrier.** [SkillsBench](https://www.emergentmind.com/papers/2602.12670) (2026) found that curated, human-written skills raised agent success by 16.2 percentage points across 84 tasks, while skills the agent wrote for itself gave no gain or a loss. [Demystifying Agent Skills](https://arxiv.org/pdf/2608.14036) (2026) found that skills help mainly as procedural anchors (65.7% of cases) rather than by injecting facts (4.5%), and that selection precision falls from 29.6% to 3.3% as a pool grows from 5 to 100 skills. Hence: few skills, written by people, procedural, verified on a test case, and the facts (ranges, thresholds) kept in code and project memory rather than in prose.
 
+## Geometry stays in code: what the LLM may touch
+
+Current language models cannot be trusted with three-dimensional geometry, and our agent never asks them to handle it. Geometry is where most of an adsorption calculation can go quietly wrong: which hollow (fcc or hcp differ only by the atom beneath), which orientation, what height, whether the adsorbate migrated, desorbed or dissociated during relaxation, whether the slab was cut on the right termination, which layers are fixed, and whether a relaxed structure sits on a saddle because of the symmetry trap. Every one of these is a geometric question with a deterministic answer, so every one is answered by code and shown to the LLM as text.
+
+**What the benchmarks found.** [AtomWorld](https://arxiv.org/html/2510.04704) (2025) gave frontier models crystal structures as CIF and asked for ten kinds of edit: simple ones (add, remove, change, swap an atom) succeed 60 to 95% of the time, moving an atom 20 to 80%, and rotating a group below 12%; giving the model pymatgen as a tool brought limited gains on the hard actions, and the authors conclude that models suit a copilot role, not unsupervised structure modelling. Adsorb-Agent, which let the LLM propose adsorption configurations from its own chemical reasoning, reached a mean absolute error of 1.84 eV against DFT with a maximum above 3.5 eV, and its worst failures were sign errors on molecular adsorbates with complex binding geometry (reported in the [AdsMind](https://arxiv.org/pdf/2606.19152) paper). On the other side, [LLMConfBench](https://arxiv.org/html/2609.20666) (2026) found that the newest frontier models can rank conformers of a small molecule from raw XYZ coordinates better than a classical force field, with a Kendall τ of about 0.6 against 0.2 for UFF; but they do well on hydrogen-bonded cases and badly on ring strain, and the ability tracks general reasoning scores rather than any geometric training. [MiSI-Bench](https://arxiv.org/html/2512.10867v1) (2025) showed that a fine-tuned 7-billion-parameter vision model can beat human experts on molecular spatial transformations from images. The picture is therefore: improving, uneven, and impossible to verify case by case. A capability that cannot be verified for the case at hand is not used for a decision.
+
+![Geometry stays in code: the LLM reads descriptor cards and verdicts, never coordinates](figures/17-geometry-stays-in-code.png)
+
+*Figure: geometry flow through the agent · evidence and design, schematic*
+
+Reading the figure: the top row summarises the four benchmarks above. The bottom row is the flow we build: a structure goes into deterministic geometry tools, which produce the highlighted descriptor card (and a rendered image); the LLM reads the card, decides, and acts only through named tool calls such as "place adsorbate at fcc hollow, orientation 2" or "displace by 0.05 Å"; the resulting structure is relaxed and passed to the validity checks, whose verdict comes back into the card as text (dashed arrow). The red dotted path, the LLM writing or editing coordinates itself, is the one thing the design forbids.
+
+**Design rules.**
+
+| Geometric question                       | Who answers                                   | What the LLM sees                                            |
+|------------------------------------------|-----------------------------------------------|--------------------------------------------------------------|
+| Which sites exist and their symmetry     | spglib, CatKit or ACAT (Tool)                 | "fcc hollow, C3v, coordination 3; hcp hollow, C3v, atom beneath" |
+| Which orientations are inequivalent      | Stabiliser-group enumeration (Tool)           | A numbered list of orientations                              |
+| Where to put the adsorbate               | Tool call `place(site, orientation, height)`  | The descriptor card of the result                            |
+| Did it stay where it was put             | Validity check (Tool)                         | "migrated: fcc hollow to bridge, 1.4 Å"                      |
+| Is it a minimum                          | Frequency calculation (Tool)                  | "one imaginary mode, 120i cm⁻¹"                              |
+| Is the slab built correctly              | Checks on layers, vacuum, termination (Tool)  | Numbers with pass or fail                                    |
+| What does it look like                   | ASE render to PNG (Tool)                      | An image for a second look, never the basis of a decision    |
+
+**The descriptor card.** A tool writes one text block per structure: composition and cell; facet, number of layers, vacuum, fixed layers; adsorbate site label and its point group; coordination number; height above the surface plane; nearest-neighbour distances; tilt angle; displacement from the starting position; total magnetic moment; and the verdicts of the validity checks. This is the same idea as [Robocrystallographer](https://www.cambridge.org/core/journals/mrs-communications/article/robocrystallographer-automated-crystal-structure-text-descriptions-and-analysis/3C201F132450877464B2D0B1B8C4ED01), which turns a CIF into the description a crystallographer would write; language models given such descriptions predicted crystal properties better than graph neural networks given the structure itself ([LLM-Prop](https://www.nature.com/articles/s41524-025-01536-2), [LLM4Mat-Bench](https://arxiv.org/pdf/2411.00177)). Text that names the chemistry is what the model reasons over well; columns of coordinates are not.
+
+**How to inform the agent.** Four things, in order of value.
+
+1. A geometry section in the skill: the site table of section 2, the orientation rule, the symmetry trap, the descriptor-card format, and the rule that the LLM never emits coordinates.
+
+2. Documentation of the geometry tools written for the model. [MatTools](https://arxiv.org/html/2505.10852v2) (2025) found that GPT-4o solved 18% of real pymatgen tasks alone, 40% with retrieved documentation that an LLM had written, and 55% with self-reflection on top; documentation written for models retrieved better than the official docs.
+
+3. A rendered image beside the card for a multimodal second look. AtomWorld recommends structural visualisations as the more natural representation, and MiSI-Bench shows vision models can be trained to read them. We treat the image as a check, not a decision input, until our own benchmark shows otherwise.
+
+4. A geometry test in our benchmark: twenty AtomWorld-style editing tasks (place, rotate, build a supercell, cut a facet) on our surfaces, scored on whether the agent, using the tools, produces the right structure. The target is near 100% with tools; the value of the test is catching the cases where the agent bypasses them.
+
+**Rejected.** Letting the LLM write or edit coordinates, or choose configurations from its own chemical reasoning without enumeration (Adsorb-Agent style). The evidence above is the reason, and symmetry-complete enumeration makes it unnecessary.
+
 ## Prior work on giving agents scientific intuition
 
 Nobody has solved the transfer of researchers' tacit knowledge into agents; the approaches split by where the knowledge ends up (weights, context, or code) and by who checks it. As far as we found, Anthropic has not published research on this specific problem; its contributions are the skill format and science-specific skill sets, listed first.
@@ -326,7 +364,7 @@ Nobody has solved the transfer of researchers' tacit knowledge into agents; the 
 | [Agent Skills](https://www.anthropic.com/news/skills) (Anthropic, 2025)                                                                                                                   | Folders of instructions, scripts and resources an agent loads when a task matches            | Context            | The format we write our skill in                                                             |
 | [Claude for Life Sciences](https://www.anthropic.com/news/claude-for-life-sciences) and [Claude Science](https://www.anthropic.com/news/claude-science-ai-workbench) (Anthropic, 2025–26) | Curated science skills (60+), coordinating agent, reviewer agent that checks citations and calculations, auditable artifacts | Context + tools    | Reviewer-agent and audit-trail patterns; no surface-chemistry or DFT-settings skill          |
 | [Scientific Agent Skills](https://github.com/k-dense-ai/scientific-agent-skills) (K-Dense, 2025–26)                                                                                       | 146+ open skills over databases and packages                                                 | Context            | Breadth; nothing on DFT trust                                                                |
-| [AtomisticSkills](https://arxiv.org/abs/2605.24002) (MIT, 2026)                                                                                                                           | 100+ skills, 50+ MCP tools, rules; skills validated against literature values                 | Context + tools    | Our substrate (section 10)                                                                   |
+| [AtomisticSkills](https://arxiv.org/abs/2605.24002) (MIT, 2026)                                                                                                                           | 100+ skills, 50+ MCP tools, rules; skills validated against literature values                 | Context + tools    | Our substrate (section 11)                                                                   |
 | [Get Physics Done](https://github.com/psi-oss/get-physics-done)                                                                                                                           | Formulate interview, locked conventions, verify stage                                        | Context            | The interview pattern                                                                        |
 | [SkillsBench](https://www.emergentmind.com/papers/2602.12670) and [Demystifying Agent Skills](https://arxiv.org/pdf/2608.14036) (2026)                                                      | Measure when skills help and why                                                             | —                  | Human-written, procedural, few                                                               |
 | [ether0](https://www.futurehouse.org/news/ether0-a-scientific-reasoning-model-for-chemistry) (FutureHouse, 2025)                                                                           | 24B model trained by reinforcement learning on 640,730 verifiable chemistry tasks            | Weights            | Intuition can be trained where a verifier exists; DFT is such a verifier, but out of hackathon scope |
@@ -513,6 +551,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Skills are few, human-written and procedural; facts and ranges live in code and PROJECT.md.
 
+- The LLM never writes or edits coordinates. Geometry is enumerated, placed and checked by code and shown to the LLM as a descriptor card; the LLM acts through named tool calls.
+
 **Open questions.**
 
 - Which hackathon, with what rubric and build period?
@@ -530,6 +570,8 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - How many lessons-log entries does it take before the Ni(111) failure is caught without a human, and can we show that curve in the demo?
 
 - Can the Formulate interview be run by an interview agent (as in the tacit-knowledge papers) without losing what a human interviewer would catch?
+
+- Does a rendered image beside the descriptor card help the agent catch geometry errors, or add noise? Decide from the geometry test in the benchmark.
 
 **Next steps.**
 
@@ -564,6 +606,12 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - [ ] Start the lessons log with the known pitfalls (CO on Pt, Ni and Co magnetism, symmetry trap) as its first entries
 
 - [ ] Redraw figure 12 with the "Converge numerical settings" step; its source script is not in the repository, so it must be recreated under docs/figures/src/
+
+- [ ] Build the descriptor-card tool (structure in, text card and PNG out) and make every other tool return its output through it
+
+- [ ] Write model-facing documentation for the geometry tools (place, enumerate, check), following the MatTools finding
+
+- [ ] Add twenty geometry editing tasks to the benchmark and record the agent's success with and without tools
 
 ## Sources
 
@@ -638,5 +686,7 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - Tacit knowledge and agents: [LLMs for tacit knowledge discovery](https://arxiv.org/pdf/2507.03811), [KUPAS MASTER](https://arxiv.org/abs/2609.37673), [Tacit Fragments](https://www.alphaxiv.org/abs/2609.operationalising-tacit-knowledge-agentic-ai)
 
 - [OpenAI FrontierScience](https://openai.com/index/frontierscience)
+
+- Geometry: [AtomWorld](https://arxiv.org/html/2510.04704), [LLMConfBench: molecular geometry understanding has unintendedly emerged in frontier LLMs](https://arxiv.org/html/2609.20666), [MiSI-Bench](https://arxiv.org/html/2512.10867v1), [Robocrystallographer](https://www.cambridge.org/core/journals/mrs-communications/article/robocrystallographer-automated-crystal-structure-text-descriptions-and-analysis/3C201F132450877464B2D0B1B8C4ED01), [LLM-Prop](https://www.nature.com/articles/s41524-025-01536-2), [LLM4Mat-Bench](https://arxiv.org/pdf/2411.00177), [MatTools](https://arxiv.org/html/2505.10852v2), [LLaMP](https://arxiv.org/pdf/2401.17244)
 
 From memory, not looked up here: Sholl and Steckel, *Density Functional Theory: A Practical Introduction*, Wiley, 2009; Nørskov, Studt, Abild-Pedersen and Bligaard, *Fundamental Concepts in Heterogeneous Catalysis*, Wiley, 2014; Wellendorff et al., "A benchmark database for adsorption bond energies to transition metal surfaces" (CE27), Surface Science, 2015.

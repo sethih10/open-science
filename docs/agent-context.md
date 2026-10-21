@@ -239,6 +239,7 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - Numerical settings from a verified protocol or a convergence sweep on E_ads, never from the LLM's memory; the LLM picks the protocol and explains the choice.
 - Four kinds of intuition into four channels; corrections into the lessons log, promoted to the skill when they recur.
 - Skills few, human-written, procedural; facts and ranges in code and PROJECT.md.
+- The LLM never writes or edits coordinates; geometry is enumerated, placed and checked by code and shown as a descriptor card (section 20).
 
 ## 17. Open questions
 
@@ -250,6 +251,7 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - Convergence target for E_ads: 10 meV or 25 meV?
 - How many lessons-log entries before Ni(111) is caught without a human; can that curve be shown?
 - Can an interview agent run the Formulate interview without losing what a human interviewer catches?
+- Does a rendered image beside the descriptor card help catch geometry errors, or add noise?
 
 ## 18. Next steps
 
@@ -267,6 +269,21 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - [ ] Write the Formulate interview questions into SKILL.md; test on one experienced researcher
 - [ ] Seed the lessons log with the known pitfalls (CO on Pt, Ni and Co magnetism, symmetry trap)
 - [ ] Redraw figure 12 of the human document with the "Converge numerical settings" step
+- [ ] Build the descriptor-card tool; route every structure-producing tool through it
+- [ ] Write model-facing documentation for the geometry tools
+- [ ] Add twenty geometry editing tasks to the benchmark
+
+## 20. Geometry rules: the LLM never touches coordinates
+
+Evidence: AtomWorld (2025): frontier models editing CIF structures succeed 60–95% on add/remove/change/swap, 20–80% on moving an atom, below 12% on rotation; pymatgen as a tool gave limited gains on hard actions. Adsorb-Agent (LLM-proposed configurations): MAE 1.84 eV vs DFT, maximum above 3.5 eV, sign errors on molecular adsorbates. LLMConfBench (2026): newest frontier models rank small-molecule conformers from XYZ with Kendall τ about 0.6 (UFF 0.2) but fail on ring strain; uneven and tied to general reasoning. MiSI-Bench (2025): a fine-tuned 7B vision model beats human experts on molecular spatial transformations. Conclusion: not verifiable case by case, so never used for a decision.
+
+Rules:
+- The LLM never writes, edits or reasons from raw coordinates. It reads descriptor cards and validity verdicts, and acts through named tool calls: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)`, `render(structure)`.
+- Every tool that produces a structure returns a descriptor card: composition and cell; facet, layers, vacuum, fixed layers; site label and point group; coordination number; height above the surface plane; nearest-neighbour distances; tilt angle; displacement from start; total magnetic moment; validity verdicts. Modelled on Robocrystallographer; text that names the chemistry is what the model reasons over well.
+- A rendered PNG accompanies the card for a second look; it is never the basis of a decision until the benchmark shows it helps.
+- Tool documentation is written for the model (MatTools: pymatgen task success 18% alone, 40% with LLM-written docs retrieved, 55% with self-reflection).
+- The benchmark includes twenty geometry editing tasks (place, rotate, supercell, cut facet); target near 100% with tools; the test exists to catch the agent bypassing them.
+- Rejected: choosing configurations from the LLM's own chemical reasoning without enumeration (Adsorb-Agent style).
 
 ## 19. Sources
 
