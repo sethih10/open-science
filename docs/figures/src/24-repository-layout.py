@@ -32,20 +32,20 @@ tree = [
  (1, "docs", "docs/", "design doc, agent context, build context, survey, figures"),
  (1, "root", ".claude-plugin/plugin.json", "declares skills, agents, hooks and the MCP server"),
  (1, "skill", "skills/", "few, human-written, one folder each"),
- (2, "skill", "adsorption-trust · ml-doubt · final-state", "settings and checkpoints · calibration · 9a to 9e"),
- (2, "skill", "saddle-diagnosis · report · hpc-jobs", "failed bands · format · only with HPC"),
+ (2, "skill", "dft-settings-protocol · mlip-doubt-calibration", "the settings lock · doubt against DFT labels"),
+ (2, "skill", "dissociation-final-state · final-state-report · hpc-dft-jobs", "9a to 9e · the report · only with HPC"),
  (1, "agent", "agents/", "one markdown file per role, one page each"),
- (2, "agent", "planner.md · interviewer.md", "next tool call and when to stop · the interview, once"),
- (2, "agent", "critic.md · steward.md", "extension: card versus verdicts · only with HPC: failed jobs"),
+ (2, "agent", "final-state-planner.md · dft-settings-interviewer.md", "next tool call, when to stop · the interview, once"),
+ (2, "agent", "geometry-critic.md · dft-job-steward.md", "extension: card versus verdicts · only with HPC"),
  (1, "root", "hooks/hooks.json", "blocks coordinate edits; pauses at human checkpoints"),
  (1, "tool", "mcp/", "one server, typed tools, one file per tool"),
  (2, "tool", "server.py", "registers the tools below"),
- (2, "tool", "tools/settings_lock.py · enumerate.py · place.py", "T1 · T2 · T3"),
- (2, "tool", "tools/gate.py · card.py · mlip.py", "T4 · T5 · T6 and T7"),
- (2, "tool", "tools/final_state.py · pairing.py · band.py", "P1 (9a to 9e) · P2 · P3"),
- (2, "tool", "tools/validate_saddle.py · dft.py · report.py", "P4 · P5 · 14"),
- (1, "lib", "trust/", "pure Python, no LLM, no MCP: the logic the tools wrap"),
- (2, "lib", "symmetry.py · checks.py · cards.py · ...", "one module per tool, same name as the tool"),
+ (2, "tool", "tools/dft_settings_lock.py · site_enumeration.py", "T1 · T2"),
+ (2, "tool", "tools/adsorbate_placement.py · validity_gate.py · descriptor_card.py", "T3 · T4 · T5"),
+ (2, "tool", "tools/mlip_choice.py · mlip_doubt.py · dissociation_final_state.py", "T6 · T7 · P1, 9a to 9e"),
+ (2, "tool", "tools/dft_single_points.py · final_state_report.py", "P5 · 14; later: endpoint_pairing, neb_band, saddle_validation"),
+ (1, "lib", "finalstate/", "pure Python, no LLM, no MCP: the logic the tools wrap"),
+ (2, "lib", "site_enumeration.py · validity_gate.py · ...", "one module per tool, same name as the tool"),
  (1, "test", "tests/", "one test file per tool; Burnside on C4v; the gate on known failures"),
  (1, "data", "benchmark/", "OC20NEB subset, baselines, scoring, results"),
  (1, "data", "runs/<campaign>/", "PROJECT.md copy, trace.jsonl, cards/, structures/, report.md"),
@@ -80,7 +80,7 @@ col(X0 + 0.175, "An agent", [("CLAUDE.md", "root"), ("docs/agent-context.md", "d
 # ---- right bottom: the one-way call rule
 ax.text(X0 + 0.165, 0.455, "The one-way rule: calls go down, never up or sideways", ha="center", va="center", fontsize=9.4, fontweight="bold")
 chain = [("agents/", "agent", "decide what to do next; no logic"), ("skills/", "skill", "say how, step by step; no logic"),
-         ("mcp/tools/", "tool", "typed entry points; no logic"), ("trust/", "lib", "all the logic; tested"), ("runs/", "data", "every call and verdict logged")]
+         ("mcp/tools/", "tool", "typed entry points; no logic"), ("finalstate/", "lib", "all the logic; tested"), ("runs/", "data", "every call and verdict logged")]
 yy = 0.415
 for name, k, note in chain:
     ax.add_patch(FancyBboxPatch((X0 + 0.02, yy - 0.05), 0.13, 0.05, boxstyle="round,pad=0.003,rounding_size=0.01", lw=1.2, zorder=2, **KIND[k]))
@@ -88,7 +88,7 @@ for name, k, note in chain:
     ax.text(X0 + 0.165, yy - 0.025, note, ha="left", va="center", fontsize=7.4, color="#444444", zorder=3)
     if name != "runs/": arrow(ax, (X0 + 0.085, yy - 0.052), (X0 + 0.085, yy - 0.071), lw=1.2, ms=9)
     yy -= 0.073
-ax.text(X0 + 0.165, 0.035, "tests/ sits beside trust/ and never beside an agent: if a check\nis wrong, the test fails, not the conversation", ha="center", va="bottom",
+ax.text(X0 + 0.165, 0.035, "tests/ sits beside finalstate/ and never beside an agent: if a check\nis wrong, the test fails, not the conversation", ha="center", va="bottom",
         fontsize=7.2, style="italic", color="#444444")
 ax.text(0.03, 0.02, "Readability rules: every file has one kind; a skill is under 200 lines and names tools, never code; an agent file is one page; "
                     "a tool is one file that wraps one library module of the same name.", ha="left", va="bottom", fontsize=7.2, style="italic", color="#444444")

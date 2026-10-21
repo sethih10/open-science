@@ -10,7 +10,7 @@ Conventions:
 
 ## 1. Purpose and problem
 
-The software finds the closest final state in which the two fragments of a dissociated adsorbate do not bond back. It then computes the barrier from the initial state to that final state. A validated nearest final state gives a short band with one saddle. The DFT nudged-elastic-band calculation then needs fewer force calls and fails less often.
+The software finds the closest final state in which the two fragments of a dissociated adsorbate do not bond back. That is the whole scope for now, fixed on 21 October 2026: not catalysis, not kinetics, and not yet the barrier. The barrier from the initial state to that final state is the reason the state is chosen this way, because a validated nearest final state gives a short band with one saddle that needs fewer DFT force calls and fails less often, but computing it is a later phase. Tools 3.9 to 3.11 and the band rows of the build order are kept for that phase and are not built now.
 
 The problem in the team's words:
 
@@ -21,9 +21,9 @@ In the docs' notation the adsorbate is AB\*. Adsorbate #1 is A, the fragment tha
 | Item          | Content                                                                                                         |
 |---------------|-----------------------------------------------------------------------------------------------------------------|
 | Input         | Slab with AB\*; product named as A\* + B\*; both fragments stay adsorbed                                        |
-| Output, first | Several nearest non-recombining final states in order; rejected pairs with reasons; recombination rate of nearest pairs |
-| Output, then  | Barrier from AB\* to each kept final state; validated path; ML and agentic uncertainty; decision trace; DFT band cost |
-| First case    | \*OH → \*O + \*H on Pt(111), against the OC20NEB DFT band                                                       |
+| Output, now   | Several nearest non-recombining final states in order; E(FS near) and E(FS ∞); rejected pairs with reasons; recombination rate of nearest pairs; ML uncertainty; decision trace |
+| Later phase   | Barrier from AB\* to each kept final state; validated path; DFT band cost                                        |
+| First case    | \*OH → \*O + \*H on Pt(111), our final state against the product frame of the OC20NEB band                     |
 
 Quantities the code computes:
 
@@ -77,7 +77,7 @@ Tools do every deterministic step. The LLM chooses with a stated reason, diagnos
 
 ## 3. Tools to implement
 
-Every tool returns each structure it produces through the descriptor card of section 3.5. Every tool logs every parameter beside its outputs, as AtomisticSkills does. The docs name five calls: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)` and `render(structure)`. The docs do not name the other calls; the headings below are working labels, open: team decision. Write each tool's documentation for the model, following the MatTools finding.
+Every tool returns each structure it produces through the descriptor card of section 3.5. Every tool logs every parameter beside its outputs, as AtomisticSkills does. The docs name five calls: `enumerate_sites(slab)`, `place(site, orientation, height)`, `displace(amplitude)`, `check(structure)` and `render(structure)`. The tool names are fixed in section 9; the headings below use the build-plan labels. Write each tool's documentation for the model, following the MatTools finding.
 
 ### 3.1 Settings lock and convergence: T1, step 1
 
@@ -405,13 +405,14 @@ The LLM plans, chooses with a reason, diagnoses and drafts; code decides every g
 
 ## 6. Benchmark and measurables
 
-The claim is measured by three numbers, gated against naive endpoints, on an OC20NEB subset that starts with \*OH → \*O + \*H on Pt(111).
+The claim is measured now by two numbers on an OC20NEB subset that starts with \*OH → \*O + \*H on Pt(111); the third, the barrier shift and band cost, belongs to the later phase.
 
 | Number             | Definition                                                                          | Compared                                    |
 |--------------------|-------------------------------------------------------------------------------------|---------------------------------------------|
-| Barrier shift      | Barrier from naive endpoints minus barrier from gated endpoints, in eV and as `exp(δ / k_B T)` | Single placement versus enumeration plus checks |
-| Recombination rate | How often the nearest pair bonds back after relaxation                              | Per reaction                                |
-| DFT band cost      | DFT force calls and failure rate of the bands                                       | Gated versus naive endpoints                |
+| Recombination rate | How often the nearest pair bonds back after relaxation                              | Per system and per distance shell           |
+| Lateral interaction | E(FS near) − E(FS ∞), with E(FS ∞) from separate cells                             | Per system; sign and size                   |
+| Final state versus OC20NEB | Our nearest validated final state against the product frame of the released band: A–B distance, energy, validity | Per reaction in the subset |
+| Later phase        | Barrier shift from naive versus gated endpoints; DFT band force calls and failure rate | Not now                                   |
 
 | Item                      | What the docs say                                                                  | Open                                  |
 |---------------------------|------------------------------------------------------------------------------------|---------------------------------------|
@@ -419,7 +420,7 @@ The claim is measured by three numbers, gated against naive endpoints, on an OC2
 | Settings                  | OC20 used RPBE and PAW; our lock must match if OC20NEB is ground truth             | Accept it as ground truth: D3         |
 | First case                | \*OH → \*O + \*H on Pt(111): simplest in OC20NEB's list, with DFT bands to compare | Confirm: D1                           |
 | Single-placement baseline | Endpoints from single placement, as in the propagation experiment; adsorption baselines are a plain AdsorbML-style run and AtomisticSkills addadsorbate | Exact definition for the path benchmark |
-| Pass criterion            | Our endpoints and band against the released DFT band; barrier within tolerance     | The tolerance                         |
+| Pass criterion            | Our final state is a validated minimum with no A–B bond, at least as near as the OC20NEB product frame, within an energy tolerance of it | The tolerance and the distance rule   |
 | Reference points          | TSAgent 83 % on a 100-example OC20NEB subset; CatTSunami within 0.1 eV 91 %; 0.1 eV ≈ 10× in rate at 500 K; activity trends need about 50 meV | None is stated as the criterion |
 | DFT check                 | One DFT check of the propagation experiment                                        | Compute: D2                           |
 
@@ -432,7 +433,7 @@ The claim is measured by three numbers, gated against naive endpoints, on an OC2
 
 ## 7. Build order
 
-Build the ten numbered tasks first; they are the shortest route to one measured barrier. Each lists what it needs and what it reuses, as in the figure 22 script.
+Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Each lists what it needs and what it reuses, as in the figure 22 script. The path tasks are listed under the later phase and are not built now.
 
 Critical path:
 
@@ -442,12 +443,10 @@ Critical path:
 - [ ] 4 · T4 Validity gate, section 3.4. Needs T3. Reuses fairchem anomaly detection.
 - [ ] 5 · T6 MLIP choice, section 3.6. Needs D2. Reuses AtomisticSkills ml-mlip-benchmark.
 - [ ] 6 · P1 Nearest non-recombining final state, section 3.8. Needs T2, T4, T6, D5. Reuses fairchem AutoFrameDissociation.
-- [ ] 7 · P3 ML NEB and climbing image, section 3.10. Needs P2. Reuses fairchem CatTSunami, ASE NEB.
-- [ ] 8 · P4 Saddle validation, section 3.11. Needs P3. Reuses ASE vibrations, Sella, CatTSunami band checks.
-- [ ] 9 · M2 \*OH → \*O + \*H against OC20NEB. Needs P1 to P5, D3.
-- [ ] 10 · R1 Release: SKILL.md, MCP tools on AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
+- [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
+- [ ] 8 · R1 Release: SKILL.md, MCP tools on AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
-The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs D5, P3 needs P2, M2 needs P2 and P5, R1 needs M1. Build each when the path reaches it.
+The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs D5, M2 needs P5, R1 needs M1. Build each when the path reaches it.
 
 - Column 0, decide first
   - [ ] D2 Compute and codes: DFT code and budget; GPU for MLIPs; any DFT NEB at all, or ML only?
@@ -460,13 +459,17 @@ The path pulls in tasks off it: T1 needs D3, T4 needs T3, T6 needs D2, P1 needs 
 - Column 2, ML relaxation and trust
   - [ ] T7 Calibrated doubt, section 3.6. Needs T6, T4. Reuses UMA, MACE, EquiformerV2.
   - [ ] T8 Rank and human checkpoint, section 3.7. Needs T5, T7. Reuses nothing: ours.
-- Column 3, path steps
-  - [ ] P2 Pairing and connectivity, section 3.9. Needs P1. Reuses CatTSunami interpolation, the NEBscape idea.
-  - [ ] P5 DFT refinement and report, sections 3.12 and 3.13. Needs P4, T7, D2. Reuses ASE calculators, AiiDA.
+- Column 3, final state
+  - [ ] P5 DFT check and report: DFT single points on the chosen final states, E(FS near), E(FS ∞), rejections, trace; sections 3.12 and 3.13 without the band parts. Needs P1, T7, D2. Reuses ASE calculators, AiiDA.
 - Column 4, measure
   - [ ] M1 H on Pt(111) end to end. Needs T1 to T8.
   - [ ] M3 Three numbers nobody reports. Needs P1, P3, D2.
   - [ ] M4 Ni(111) doubt demo. Needs T7, T8.
+- Later phase: the path, not built now
+  - [ ] P2 Pairing and connectivity, section 3.9.
+  - [ ] P3 ML NEB and climbing image, section 3.10.
+  - [ ] P4 Saddle validation, section 3.11.
+  - [ ] The barrier shift and band-cost measurements, and the barrier parts of the report.
 - Extension layer, later
   - [ ] T9 DFT single points on the chosen five before any path search. Needs T8, D2.
   - [ ] T10 Active-learning loop: high doubt, a few DFT labels, fine-tune, re-run steps 6 to 8. Needs T7, D2. Reuses ml-mace-finetune.
@@ -528,23 +531,25 @@ open-science-hackathon/
 ├── docs/                         design document, agent context, build context, survey, figures
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
 ├── skills/                       few, human-written, one folder each, under 200 lines each
-│   ├── adsorption-trust/SKILL.md the settings protocol and the checkpoints
-│   ├── ml-doubt/SKILL.md         calibration against DFT labels and the escalation rule
-│   ├── final-state/SKILL.md      the 9a to 9e procedure and the pairing
-│   ├── saddle-diagnosis/SKILL.md what to do when a band or a saddle fails validation
-│   ├── report/SKILL.md           the report format and the BEP check
-│   └── hpc-jobs/SKILL.md         only with HPC: submission, what custodian handles, what to escalate
+│   ├── dft-settings-protocol/SKILL.md    pseudopotentials, cutoff, k-mesh, smearing, layers; the lock
+│   ├── mlip-doubt-calibration/SKILL.md   committee disagreement against DFT labels; when to escalate
+│   ├── dissociation-final-state/SKILL.md the 9a to 9e procedure
+│   ├── final-state-report/SKILL.md       the report: E(FS near), E(FS ∞), rejections, trace
+│   ├── hpc-dft-jobs/SKILL.md             only with HPC: submission, what custodian handles, what to escalate
+│   └── neb-saddle-diagnosis/SKILL.md     later phase: what to do when a band or saddle fails validation
 ├── agents/                       one markdown file per role, one page each
-│   ├── planner.md                decides the next tool call and when to stop
-│   ├── interviewer.md            runs the Formulate interview; writes PROJECT.md; before the run
-│   ├── critic.md                 extension: whether a card and its verdicts disagree; never overrides
-│   └── steward.md                only with HPC: resubmit, adjust or escalate a failed DFT job
+│   ├── final-state-planner.md    decides the next tool call and when to stop; holds the checkpoint list
+│   ├── dft-settings-interviewer.md runs the Formulate interview; writes PROJECT.md; before the run
+│   ├── geometry-critic.md        extension: whether a descriptor card and its verdicts disagree; never overrides
+│   └── dft-job-steward.md        only with HPC: resubmit, adjust or escalate a failed DFT job
 ├── hooks/hooks.json              blocks coordinate edits; pauses at human checkpoints
 ├── mcp/                          one server, typed tools, one file per tool
 │   ├── server.py                 registers the tools
-│   └── tools/                    settings_lock, enumerate, place, gate, card, mlip,
-│                                 final_state, pairing, band, validate_saddle, dft, report
-├── trust/                        pure Python, no LLM, no MCP: the logic every tool wraps;
+│   └── tools/                    dft_settings_lock, site_enumeration, adsorbate_placement,
+│                                 validity_gate, descriptor_card, mlip_choice, mlip_doubt,
+│                                 dissociation_final_state, dft_single_points, final_state_report;
+│                                 later phase: endpoint_pairing, neb_band, saddle_validation
+├── finalstate/                   pure Python, no LLM, no MCP: the logic every tool wraps;
 │                                 one module per tool, with the same name
 ├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
 ├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results
@@ -557,7 +562,7 @@ open-science-hackathon/
 | Agent   | `agents/`         | A one-page role: what to do next and when to stop | Skills, tools    | No          |
 | Skill   | `skills/<name>/`  | A procedure, step by step, naming tools        | Tools              | No          |
 | Tool    | `mcp/tools/`      | One typed entry point, one file                | One library module | No          |
-| Library | `trust/`          | One module per tool, same name                 | Other modules      | Yes, tested |
+| Library | `finalstate/`     | One module per tool, same name                 | Other modules      | Yes, tested |
 | Test    | `tests/`          | One file per tool                              | The library        |             |
 | Data    | `runs/`, `benchmark/`, `lessons.md` | Outputs, never code          |                    |             |
 | Docs    | `docs/`           | What and why; never how to call               |                    |             |
@@ -587,31 +592,32 @@ Tools do the work. A role is added only when a human can say in one sentence wha
 
 | Agent       | Decides                                                       | Status                         |
 |-------------|---------------------------------------------------------------|--------------------------------|
-| planner     | The next tool call, and when to stop                          | Core                           |
-| interviewer | What the Formulate interview locks into PROJECT.md            | Core, runs once before the run |
-| critic      | Whether a card and its verdicts disagree; never overrides     | Extension                      |
-| steward     | Resubmit, adjust or escalate a failed DFT job                 | Only with HPC                  |
-| reviewer    | Whether the report would pass peer review                     | Reuse general-peer-review; not a new role |
+| final-state-planner      | The next tool call, and when to stop; holds the checkpoint list | Core                           |
+| dft-settings-interviewer | What the Formulate interview locks into PROJECT.md            | Core, runs once before the run |
+| geometry-critic          | Whether a descriptor card and its verdicts disagree; never overrides | Extension                |
+| dft-job-steward          | Resubmit, adjust or escalate a failed DFT job                 | Only with HPC                  |
+| general-peer-review      | Whether the report would pass peer review                     | Reused AtomisticSkills skill; not a new role |
 
-The critic and the interviewer are separate roles for one reason each: the critic must not see the planner's reasoning, or its check is anchored; the interviewer holds a fixed question list that the planner must not rewrite.
+The geometry critic and the settings interviewer are separate roles for one reason each: the critic must not see the planner's reasoning, or its check is anchored; the interviewer holds a fixed question list that the planner must not rewrite.
 
 | Skill, ours      | Procedure                                                      | Status         |
 |------------------|----------------------------------------------------------------|----------------|
-| adsorption-trust | Settings protocol; the checkpoints and what to show at each   | Core           |
-| ml-doubt         | Calibration against DFT labels; when to escalate               | Core           |
-| final-state      | 9a to 9e; pairing; what to report                              | Core           |
-| saddle-diagnosis | What to do when a band or saddle fails validation; revise once | Core           |
-| report           | Report format; BEP check                                       | Core           |
-| hpc-jobs         | Submission; what custodian handles; what to escalate           | Only with HPC  |
+| dft-settings-protocol    | Pseudopotentials, cutoff, k-mesh, smearing, layers; the lock   | Core           |
+| mlip-doubt-calibration   | Committee disagreement against DFT labels; when to escalate    | Core           |
+| dissociation-final-state | 9a to 9e; what to report                                       | Core           |
+| final-state-report       | Report format: both energies, rejections, trace                | Core           |
+| hpc-dft-jobs             | Submission; what custodian handles; what to escalate           | Only with HPC  |
+| neb-saddle-diagnosis     | What to do when a band or saddle fails validation; revise once | Later phase    |
 
 Reused from AtomisticSkills: ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune, chem-neb-barrier, chem-thermochemistry, general-peer-review. Twelve skills in all stays well inside the range where selection precision holds.
 
 Rules that keep it readable:
 
-- One kind per file. A skill never contains code; an agent file never contains a procedure; a tool never contains logic. If a reader finds logic outside `trust/`, that is a bug.
-- One tool, one file, one library module, one test, all with the same name. `mcp/tools/gate.py` wraps `trust/checks.py` is the one allowed exception, because the gate has nine checks; name the test `tests/test_gate.py`.
-- Few agents. The planner and the human do the work; the interviewer runs once; the critic is an extension; the steward exists only with HPC.
-- Few skills. Five of ours to start, six with HPC, each under 200 lines, each naming the tools it calls. Facts and ranges live in `trust/` and `PROJECT.md`, not in skills.
+- One kind per file. A skill never contains code; an agent file never contains a procedure; a tool never contains logic. If a reader finds logic outside `finalstate/`, that is a bug.
+- One tool, one file, one library module, one test, all with the same name: `mcp/tools/validity_gate.py` wraps `finalstate/validity_gate.py` and is tested by `tests/test_validity_gate.py`.
+- Names say what the thing computes, in the words of the field: `dissociation_final_state`, not `final_state`; `dft_settings_lock`, not `settings`; `geometry-critic`, not `critic`. A name a surface scientist cannot read without the docs is wrong.
+- Few agents. The final-state planner and the human do the work; the settings interviewer runs once; the geometry critic is an extension; the DFT job steward exists only with HPC.
+- Few skills. Four of ours now, five with HPC, the saddle diagnosis in the later phase, each under 200 lines, each naming the tools it calls. Facts and ranges live in `finalstate/` and `PROJECT.md`, not in skills.
 - Logs live in `runs/`, never in the repository root; `lessons.md` is the one log a human edits.
 - Hooks enforce what prose cannot: the hook that blocks coordinate edits and the hook that pauses at a checkpoint sit in `hooks/hooks.json`, so the rules of section 5 do not depend on the model reading them.
 - The plugin manifest is the only place that lists skills, agents and the server, so adding one is one line there and one folder.

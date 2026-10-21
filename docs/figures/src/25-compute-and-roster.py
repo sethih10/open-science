@@ -42,11 +42,11 @@ ax.text(LX, 0.08, "Cost, from experience and not measured here: an ML relaxation
 # ---------- right: roster
 RX = 0.63
 ax.text(RX + 0.175, 0.80, "Agents: one sentence each on what it decides", ha="center", va="center", fontsize=9, fontweight="bold")
-agents = [("planner", "the next tool call, and when to stop", "core", HI_FACE, HI_EDGE),
-          ("interviewer", "what the Formulate interview locks into PROJECT.md", "core, before the run", HI_FACE, HI_EDGE),
-          ("critic", "whether a card and its verdicts disagree; never overrides", "extension", "#f3e8ff", "#7e22ce"),
-          ("job steward", "resubmit, adjust or escalate a failed DFT job", "only with HPC", "#fee2e2", "#b91c1c"),
-          ("reviewer", "whether the report would pass peer review", "reused skill, not a new role", "#dcfce7", "#15803d")]
+agents = [("final-state-planner", "the next tool call, and when to stop", "core", HI_FACE, HI_EDGE),
+          ("dft-settings-interviewer", "what the Formulate interview locks into PROJECT.md", "core, before the run", HI_FACE, HI_EDGE),
+          ("geometry-critic", "whether a card and its verdicts disagree; never overrides", "extension", "#f3e8ff", "#7e22ce"),
+          ("dft-job-steward", "resubmit, adjust or escalate a failed DFT job", "only with HPC", "#fee2e2", "#b91c1c"),
+          ("general-peer-review", "whether the report would pass peer review", "reused skill, not a new role", "#dcfce7", "#15803d")]
 y = 0.765
 for n, d, tag, fc, ec in agents:
     ax.add_patch(FancyBboxPatch((RX, y - 0.052), 0.35, 0.052, boxstyle="round,pad=0.003,rounding_size=0.01", fc=fc, ec=ec, lw=1.1, zorder=2))
@@ -56,8 +56,8 @@ for n, d, tag, fc, ec in agents:
     y -= 0.06
 
 ax.text(RX + 0.175, 0.445, "Skills: ours in green, reused from AtomisticSkills in grey", ha="center", va="center", fontsize=9, fontweight="bold")
-ours = ["adsorption-trust: settings protocol, checkpoints", "ml-doubt: calibration and escalation", "final-state: 9a to 9e, pairing",
-        "saddle-diagnosis: what to do when a band fails", "report: format, BEP check", "hpc-jobs: only with HPC"]
+ours = ["dft-settings-protocol: the settings lock", "mlip-doubt-calibration: doubt versus DFT labels", "dissociation-final-state: 9a to 9e",
+        "final-state-report: format, both energies", "hpc-dft-jobs: only with HPC", "neb-saddle-diagnosis: later phase"]
 reused = ["ml-committee-uncertainty", "ml-mlip-benchmark", "ml-mace-finetune", "chem-neb-barrier", "chem-thermochemistry", "general-peer-review"]
 y = 0.415
 for i in range(6):

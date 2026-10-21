@@ -12,14 +12,15 @@ KIND = {"step":    dict(fc="white",   ec=EDGE,      lw=1.0, ls="-"),
         "exists":  dict(fc="#fee2e2", ec="#b91c1c", lw=1.1, ls="-"),
         "ours":    dict(fc=HI_FACE,   ec=HI_EDGE,   lw=1.4, ls="-"),
         "ext":     dict(fc="#f3e8ff", ec="#7e22ce", lw=1.2, ls="--"),
+        "later":   dict(fc="white",   ec="#9a9a9a", lw=1.0, ls="--"),
         "input":   dict(fc="#f3f4f6", ec="#6b7280", lw=1.2, ls="-")}
 OWNER_COL = {"TOOL": "#374151", "LLM": "#0e7490", "HUMAN": "#be185d", "SKILL": "#4d7c0f"}
-TITLE_COL = {"step": TEXT, "borrow": "#14532d", "missing": "#92400e", "exists": "#991b1b",
+TITLE_COL = {"later": "#777777", "step": TEXT, "borrow": "#14532d", "missing": "#92400e", "exists": "#991b1b",
              "ours": "#1e3a8a", "ext": "#581c87", "input": "#374151"}
 
 fig = plt.figure(figsize=(17, 22))
 ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
-title(fig, "The pipeline for the stated problem: surface + AB* in, the nearest non-recombining A* + B* first, then the barrier to it",
+title(fig, "The pipeline for the stated problem: surface + AB* in, the nearest non-recombining A* + B* out; the path to it is a later phase",
       "each row: the step, the refinement to borrow with its source, the gap, what is ours, the extension at its step · the whole figure is schematic")
 
 # ---- problem statement: input, output, and why "nearest"
@@ -30,7 +31,7 @@ ax.text(0.255, 0.875, "a surface slab with adsorbate AB* (for example *OH on Pt(
 arrow(ax, (0.472, 0.890), (0.518, 0.890), lw=1.6, ms=11)
 ax.add_patch(FancyBboxPatch((0.52, 0.872), 0.473, 0.036, boxstyle="round,pad=0.003,rounding_size=0.01", zorder=2, **KIND["ours"]))
 ax.text(0.7565, 0.903, "Output", ha="center", va="top", fontsize=8.4, fontweight="bold", color=TITLE_COL["ours"], zorder=3)
-ax.text(0.7565, 0.875, "first the final state with B* as close to A* as possible and not bonded back; then the barrier from AB* to it,\nboth uncertainties, the recombination rate of nearest pairs, and the cost of the DFT band",
+ax.text(0.7565, 0.875, "the final state with B* as close to A* as possible and not bonded back, with E(FS near), E(FS ∞), the pairs tried\nand rejected, the recombination rate and the uncertainty. Later phase, not now: the barrier from AB* to it",
         ha="center", va="bottom", fontsize=7.2, zorder=3, linespacing=1.2)
 ax.add_patch(FancyBboxPatch((0.04, 0.838), 0.953, 0.026, boxstyle="round,pad=0.003,rounding_size=0.01", fc="white", ec=HI_EDGE, lw=1.2, zorder=2))
 ax.text(0.5165, 0.851, "Why nearest: a band from AB* to a far product holds the bond-breaking saddle plus diffusion saddles, needs more images and iterations, and may not converge "
@@ -154,8 +155,9 @@ rows = [
 ]
 
 OWNERS = ['TOOL · HUMAN · SKILL', 'TOOL', 'TOOL', 'TOOL · LLM · SKILL', 'HUMAN · LLM', 'TOOL', 'TOOL', 'TOOL', 'TOOL', 'TOOL · LLM', 'TOOL', 'TOOL', 'TOOL · LLM · SKILL', 'TOOL', 'LLM · HUMAN · SKILL']
+LATER = {10, 11, 12, 13, 14}   # the path and the report: a later phase, not the goal now
 for i, (st, sb, (bh, bb), (gk, gh, gb), ours, ext) in enumerate(rows):
-    cell("step", "step", i, st, sb, hfs=7.9, bfs=6.6, owner=OWNERS[i])
+    cell("later" if i in LATER else "step", "step", i, ("later · " + st) if i in LATER else st, sb, hfs=7.9, bfs=6.6, owner=OWNERS[i])
     cell("borrow", "borrow", i, bh, bb)
     cell(gk, "gap", i, gh, gb)
     if ours: cell("ours", "ours", i, "Ours", ours)
@@ -168,7 +170,7 @@ for i in range(len(rows) - 1):
     arrow(ax, (sx, ytop(i) - H - 0.0008), (sx, ytop(i + 1) + 0.0008), lw=1.3, ms=8)
 
 phases = [("A · set up", 0, 0, GREY), ("B · initial state AB*", 1, 4, GREY),
-          ("C · the stated problem: the final state A* + B*", 5, 9, HI_EDGE), ("D · the path and the report", 10, 14, GREY)]
+          ("C · the stated problem: the final state A* + B*", 5, 9, HI_EDGE), ("D · later phase: the path and the report", 10, 14, "#9a9a9a")]
 for lab, a, b, col in phases:
     y0, y1 = ytop(b) - H, ytop(a)
     ax.plot([0.028, 0.028], [y0 + 0.003, y1 - 0.003], color=col, lw=2.2 if col == HI_EDGE else 1.6)
@@ -182,15 +184,15 @@ bw = 0.305
 verd = [("exists", "Already taken: the final state by sampling, and the band",
          "The dissociation final state by sampling: CatTSunami's\nAutoFrameDissociation, open source in fairchem. ML bands:\nCatTSunami. LLM barrier agents: TSAgent, CatDT, CopyCAT,\nEl Agente Potente. Rates with IRC validation: Pynta. Endpoints\nby global optimisation: NEBscape. The adsorption workflow of\nsteps 2 to 8 as such: every adsorption agent."),
         ("missing", "Still missing before any claim can be measured",
-         "A* + B* as structures and one set of gas references; the\ndistance metric; a bond-re-formed threshold; the intended-\nreaction check on IS–FS pairs; the validation tool; an\nOC20NEB subset with a single-placement baseline; the\ncompute budget for DFT bands."),
+         "A* + B* as structures and one set of gas references; the\ndistance metric; a bond-re-formed threshold; the pass\ncriterion for a final state; an OC20NEB subset whose\nproduct frames we compare against; a single-placement\nbaseline; whether any DFT single point runs."),
         ("ours", "Ours, measurable in hackathon time",
-         "1. an explicit minimum-distance objective over symmetry-complete\n    pairs, instead of lowest energy in a shell then a random pick\n2. one code gate on both endpoints, every rejection logged\n3. three numbers: barrier shift, nearest-pair recombination rate,\n    DFT force calls and failure rate, gated versus naive endpoints\n4. calibrated ML doubt; open skill + tools scored on OC20NEB\n    (agentic uncertainty only if time allows: extension layer)")]
+         "1. an explicit minimum-distance objective over symmetry-complete\n    pairs, instead of lowest energy in a shell then a random pick\n2. one code gate on both endpoints, every rejection logged\n3. two numbers now: nearest-pair recombination rate, and\n    E(FS near) − E(FS ∞); later: barrier shift and band cost\n4. calibrated ML doubt; open skill + tools scored against\n    OC20NEB product frames (agentic uncertainty: extension)")]
 for j, (k, h, b) in enumerate(verd):
     x0 = 0.04 + j * (bw + 0.019)
     ax.add_patch(FancyBboxPatch((x0, yb), bw, hb, boxstyle="round,pad=0.003,rounding_size=0.01", zorder=2, **KIND[k]))
     ax.text(x0 + bw / 2, yb + hb - 0.005, h, ha="center", va="top", fontsize=8.0, fontweight="bold", color=TITLE_COL[k], zorder=3)
     ax.text(x0 + 0.010, yb + (hb - 0.016) / 2, b, ha="left", va="center", fontsize=7.1, zorder=3, linespacing=1.26)
-ax.text(0.5, 0.040, "Numbers are the papers' own, as cited in the design document; the blue bracket marks the rows that are the stated problem; "
+ax.text(0.5, 0.040, "Numbers are the papers' own, as cited in the design document; the blue bracket marks the rows that are the stated problem; dashed grey rows are a later phase; "
                     "dashed purple boxes name the step they attach to; grey italics mark a column with nothing to add.",
         ha="center", va="bottom", fontsize=7.4, style="italic", color="#444444")
 finish(fig, os.path.join(os.path.dirname(__file__), "..", "23-problem-pipeline.png"))

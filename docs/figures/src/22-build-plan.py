@@ -14,8 +14,8 @@ KIND = {"decide": dict(fc="#f3f4f6", ec="#6b7280", lw=1.1, ls="-"),
 
 fig = plt.figure(figsize=(16, 11))
 ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
-title(fig, "What has to be built: five columns in order, the numbered blue path is the shortest route to one measured barrier",
-      "each box: the task, what it does, what it reuses (green), what it needs (grey) · dashed purple is the extension layer · schematic")
+title(fig, "What has to be built for the final state: five columns in order, the numbered blue path is the shortest route to one validated nearest final state",
+      "each box: the task, what it does, what it reuses (green), what it needs (grey) · dashed purple is the extension layer, including the path, which is a later phase · schematic")
 
 # legend
 leg = [("decide", "decide first (human)"), ("build", "build: a code tool"), ("measure", "measure: an experiment"),
@@ -30,7 +30,7 @@ ax.text(0.905, 0.889, "reuse: existing code", ha="left", va="center", fontsize=8
 
 COLW, GAP, X0 = 0.176, 0.020, 0.014
 def cx(i): return X0 + i * (COLW + GAP)
-heads = ["0 · Decide first", "1 · Foundations", "2 · ML relaxation and trust", "3 · Path steps", "4 · Measure, then release"]
+heads = ["0 · Decide first", "1 · Foundations", "2 · ML relaxation and trust", "3 · Final state; the path later", "4 · Measure, then release"]
 for i, h in enumerate(heads):
     ax.text(cx(i) + COLW / 2, 0.853, h, ha="center", va="center", fontsize=9.2, fontweight="bold", color="#333333")
 ax.plot([0.014, 0.982], [0.838, 0.838], color=EDGE, lw=0.8)
@@ -53,7 +53,7 @@ def task(col, row, key, kind, head, body, reuse=None, needs=None, badge=None, h=
 # ---- column 0: decide
 task(0, 0, "D1", "decide", "System and product", "adsorbate AB*, surface, product A* + B*;\nfirst case *OH → *O + *H on Pt(111)?", badge=1)
 task(0, 1, "D2", "decide", "Compute and codes", "DFT code and budget; GPU for MLIPs;\nany DFT NEB at all, or ML only?")
-task(0, 2, "D3", "decide", "Benchmark and pass criterion", "OC20NEB subset as ground truth?\nthen settings must match OC20's\nRPBE and PAW choices")
+task(0, 2, "D3", "decide", "Benchmark and pass criterion", "OC20NEB product frames as the comparison?\nthen settings match OC20's RPBE and PAW;\nwhat counts as a pass for a final state")
 task(0, 3, "D4", "decide", "Headline claim", "barrier-ready endpoints, or\n'knows when not to trust itself'")
 task(0, 4, "D5", "decide", "Final-state rules", "distance metric; binding fragment\nfixed or free; nearest survivor or\nlowest energy within one hop")
 
@@ -83,35 +83,35 @@ task(2, 4, "T10", "ext", "Active-learning loop", "high doubt → a few DFT label
 # ---- column 3: path
 task(3, 0, "P1", "build", "Nearest non-recombining FS", "enumerate pairs, relax, gate, rank by\nsite distance; keep several; report\nrejected pairs and E(FS near) − E(FS ∞)",
      reuse="fairchem AutoFrameDissociation", needs="T2, T4, T6, D5", badge=6)
-task(3, 1, "P2", "build", "Pairing and connectivity", "atom mapping and unwrapping across the\ncell; check the IS–FS pair is the\nintended reaction",
+task(3, 1, "P2", "ext", "Later: pairing and connectivity", "atom mapping and unwrapping across the\ncell; check the IS–FS pair is the\nintended reaction",
      reuse="CatTSunami interpolation, NEBscape idea", needs="P1")
-task(3, 2, "P3", "build", "ML NEB and climbing image", "band on the MLIP, climbing image or\ndimer refinement; several pairs per\nreaction, lowest valid kept",
-     reuse="fairchem CatTSunami, ASE NEB", needs="P2", badge=7)
-task(3, 3, "P4", "build", "Saddle validation", "one imaginary mode; path ends at this IS and\nFS; connectivity constant along the band except\nthe breaking bond; diagnose, revise once",
-     reuse="ASE vibrations, Sella, CatTSunami band checks", needs="P3", badge=8)
-task(3, 4, "P5", "build", "DFT refinement and report", "single points with the locked settings;\nbarrier, validated path, ML and agentic\nuncertainty, full decision trace",
-     reuse="ASE calculators, AiiDA", needs="P4, T7, D2")
+task(3, 2, "P3", "ext", "Later: ML band and climbing image", "band on the MLIP, climbing image or\ndimer refinement; several pairs per\nreaction, lowest valid kept",
+     reuse="ASE DyNEB with UMA", needs="P2")
+task(3, 3, "P4", "ext", "Later: saddle validation", "one imaginary mode; path ends at this IS and\nFS; connectivity constant along the band except\nthe breaking bond; diagnose, revise once",
+     reuse="ASE vibrations, Sella, CatTSunami band checks", needs="P3")
+task(3, 4, "P5", "build", "DFT check and report", "DFT single points on the chosen final states\nwith the locked settings; E(FS near), E(FS ∞),\nrejections, uncertainty, full decision trace",
+     reuse="ASE calculators, AiiDA", needs="P1, T7, D2")
 
 # ---- column 4: measure and release
 task(4, 0, "M1", "measure", "H on Pt(111) end to end", "steps 1 to 8 on the simplest system;\nE_ads against CE27 and OC20",
      needs="T1 to T8")
-task(4, 1, "M2", "measure", "*OH → *O + *H against OC20NEB", "our endpoints and band versus the\nreleased DFT band; barrier within\ntolerance is the pass criterion",
-     needs="P1 to P5, D3", badge=9)
-task(4, 2, "M3", "measure", "Three numbers nobody reports", "endpoint → barrier shift, naive versus gated\nendpoints, in eV and as a rate factor; how often\nthe nearest pair bonds back; DFT band force calls\nand failure rate, naive versus gated endpoints",
-     needs="P1, P3, D2")
+task(4, 1, "M2", "measure", "*OH → *O + *H final state against OC20NEB", "our nearest final state versus the product\nframe of the released band: distance, energy,\nvalidity; the pass criterion is D3",
+     needs="P1, P5, D3", badge=7)
+task(4, 2, "M3", "measure", "Two numbers nobody reports", "how often the nearest pair bonds back, per\nsystem and per shell; E(FS near) − E(FS ∞), the\nlateral interaction. Later: the barrier shift\nand the band cost from gated endpoints",
+     needs="P1, P5")
 task(4, 3, "M4", "measure", "Ni(111) doubt demo", "the agent flags ML disagreement and\nstops for review instead of guessing",
      needs="T7, T8")
 task(4, 4, "M5", "ext", "Agentic uncertainty", "run the planner N times on one input;\nreport how often its choices differ",
      needs="T8, P5")
 task(4, 5, "R1", "release", "Release", "SKILL.md, MCP tools on AtomisticSkills,\nbenchmark data and traces on Zenodo",
-     needs="M1, M2", badge=10, h=0.072)
+     needs="M1, M2", badge=8, h=0.072)
 
 # ---- critical path arrows
 def centre(k, side):
     x, y, w, h = pos[k]
     return {"r": (x + w, y + h / 2), "l": (x, y + h / 2), "t": (x + w / 2, y + h), "b": (x + w / 2, y)}[side]
 path = [("D1", "T1", "r", "l"), ("T1", "T2", "b", "t"), ("T2", "T4", "b", "t"), ("T4", "T6", "r", "l"),
-        ("T6", "P1", "r", "l"), ("P1", "P3", "b", "t"), ("P3", "P4", "b", "t"), ("P4", "M2", "r", "l"), ("M2", "R1", "r", "r")]
+        ("T6", "P1", "r", "l"), ("P1", "M2", "r", "l"), ("M2", "R1", "r", "r")]
 for a, b, sa, sb in path:
     p0, p1 = centre(a, sa), centre(b, sb)
     if (a, b) == ("T2", "T4"):
@@ -137,8 +137,8 @@ for a, b, sa, sb in path:
         ax.plot([pos["M2"][0] + pos["M2"][2], xr, xr], [p0[1] - 0.0, p0[1] - 0.0, pos["R1"][1] + pos["R1"][3] / 2], color=HI_EDGE, lw=2.2, zorder=1)
         arrow(ax, (xr, pos["R1"][1] + pos["R1"][3] / 2), (pos["R1"][0] + pos["R1"][2], pos["R1"][1] + pos["R1"][3] / 2), color=HI_EDGE, lw=2.2, ms=12)
         continue
-    if (a, b) == ("P4", "M2"):
-        xg = pos["P4"][0] + pos["P4"][2] + GAP / 2
+    if (a, b) == ("P1", "M2"):
+        xg = pos["P1"][0] + pos["P1"][2] + GAP / 2
         ax.plot([p0[0], xg, xg], [p0[1], p0[1], p1[1]], color=HI_EDGE, lw=2.2, zorder=1)
         arrow(ax, (xg, p1[1]), p1, color=HI_EDGE, lw=2.2, ms=12)
         continue
