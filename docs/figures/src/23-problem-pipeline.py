@@ -141,7 +141,7 @@ rows = [
   None, None),
  ("(12) Validate saddle and band", "one imaginary mode; the band ends at this\nIS and this FS",
   ("NEBscape · CatTSunami · TSBench · Pynta", "NEBscape: one maximum, no local minima, barrier at the\nbond event (9 % multi-step versus 17 %); CatTSunami: bond\nstretched 1.25 to 1.63×; revision 50 → 67 %; IRC"),
-  ("missing", "Missing", "these checks as code in one tool; TSAgent checks\nthe imaginary mode but runs no IRC; CatDT unpublished"),
+  ("missing", "Missing", "these checks as code in one tool; TSAgent checks\nthe imaginary mode but runs no IRC; CatDT gates\noverlaps and atom counts, not bonds or distance"),
   "validation is code; endpoint → barrier\npropagation measured (figure 18)", None),
  ("(13) DFT refinement", "single points on IS, TS and FS; then relax",
   ("CatTSunami: ML + 3 DFT single points", "score the ML saddle with DFT; fmax < 0.05 eV/Å;\nin its case study 102 DFT bands converged and\n8 failed; 14 % of converged bands were wrong"),
