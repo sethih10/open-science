@@ -27,6 +27,7 @@ Code blocks are for code only, never as a substitute for a diagram.
 
 - File: `docs/figures/NN-short-kebab-name.png`, numbered in reading order; keep the script that draws it as `docs/figures/src/NN-short-kebab-name.py`.
 - Look: white background, rounded boxes with thin grey outlines, grey arrows, sans-serif text. **One** highlighted box (light blue fill, blue outline) marks what is new or what we build. Bold title line stating the takeaway. Mark schematics as "schematic, not to scale".
+- Exception: when one figure must carry several kinds of idea at once (figure 20: current step, borrowed refinement, missing, already exists, ours, extension), use one colour per kind with a legend at the top, keep blue for what is ours, and draw extension-layer items dashed and labelled "EXTENSION" beside the step they attach to. Name the paper inside any box that borrows from it.
 - In the Markdown, always in this order:
 
 ```markdown

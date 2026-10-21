@@ -9,7 +9,7 @@ This document records the reasoning behind that direction, so that a colleague o
 
 **The position in one paragraph.** A generic "agent that computes adsorption energies" already exists several times over (Adsorb-Agent, AdsMind, DREAMS, CatMaster, Catalyst-Agent, AutoDFT). Our contribution is therefore not the workflow itself but its trustworthiness: symmetry-complete site enumeration, explicit validity checks, detection of machine-learning failures (notably on magnetic Ni and Co), designed human checkpoints, a measured failure rate against a baseline, and an open, reusable release.
 
-**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Section 14 records the whiteboard solution planner, its gaps and its extension layer. Sections 15 and 16 give strategy, decisions and open questions.
+**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Section 14 records the whiteboard solution planner, its gaps and its extension layer. Section 15 augments that pipeline with refinements from the transition-state papers, the gaps, and what is ours. Sections 16 and 17 give strategy, decisions and open questions.
 
 **Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 13 carries its own key.
 
@@ -540,6 +540,53 @@ Reading the figure: rows one and two are the eight whiteboard steps in grey, rea
 
 **Questions still open with the team.** The adsorbate class and size; whether the end product is the same molecule in a final geometry or a new molecule formed from two adsorbates; one elementary step or a short mechanism, and who supplies it; which DFT code, compute budget and MLIPs; and the pass criterion for the hackathon.
 
+## The augmented pipeline: what to borrow, what is missing, what is ours
+
+Measured step by step against the transition-state papers, the current pipeline is either borrowed or standard at every step, so the claim must come from four things that none of the papers report: validated endpoints with the endpoint-to-barrier propagation measured, calibrated ML doubt, agentic uncertainty, and an open release scored on a public benchmark.
+
+![Every step borrows from a named paper or is standard; the claim lives in the blue column](figures/20-augmented-pipeline.png)
+
+*Figure: augmented pipeline · 15 steps, 5 columns, one colour per kind of idea, schematic*
+
+Reading the figure: the legend at the top is the key. Each row is one step of the current pipeline, read left to right. The white box is the step as we have it, with the path steps 9 to 14 marked "to build". The green box is the refinement to borrow and names the paper it comes from. The amber box is something missing that we must add; the red box is something that already exists elsewhere, so it cannot carry the claim. The blue box is what would make that step ours. The dashed purple box is the extension layer, drawn beside the step it attaches to and labelled as an extension so it is never mistaken for the core. Grey italics mark a column with nothing to add. The three boxes at the bottom collect the verdict: what is already taken, what is still missing, and what is ours and measurable in hackathon time.
+
+**Refinements to borrow, each with its source.**
+
+1.  Numerical settings from a verified protocol or a sweep on E_ads, never from the LLM: [AiiDA common workflows](https://www.nature.com/articles/s41524-021-00594-6), [SSSP](https://arxiv.org/pdf/1806.05609), [Δ-test](https://archive.materialscloud.org/record/1874); AutoDFT rejected (section 4).
+
+2.  Heuristic plus random placement as the fallback when symmetry is unknown, and ML relaxation of many candidates followed by DFT on the top few: [AdsorbML](https://arxiv.org/pdf/2211.16486). Its four anomaly checks, desorbed, dissociated, intercalated and surface reconstructed, become our validity gate, plus the imaginary-mode check they lack.
+
+3.  Product states placed by the same enumeration as reactant states, several initial-to-final pairs per reaction, and the lowest valid barrier kept: [CatTSunami](https://arxiv.org/abs/2405.02078). Its released OC20NEB set of DFT nudged-elastic-band calculations is the natural benchmark for the path steps.
+
+4.  Atom mapping and symmetry alignment of the two endpoints before interpolation: [NEBscape](https://www.nature.com/articles/s41524-026-02298-1).
+
+5.  Fine-tuning the potential at the saddle with fewer than ten DFT single points: [fine-tuned MLIP transition-state search](https://arxiv.org/pdf/2603.24482). This is the active-learning extension at step 5, with AtomisticSkills' ml-mace-finetune as the tool.
+
+6.  A propose-then-validate gate on endpoints that iterates before any barrier run: [CatDT](https://urop.hkust.edu.hk/node/40500), unpublished; and a diagnosis-driven revision loop when validation fails, which lifts success from 50 % to 67 % in [TSBench](https://arxiv.org/abs/2609.08503).
+
+7.  The Brønsted–Evans–Polanyi relation as a sanity check on each barrier, which [TSAgent](https://arxiv.org/abs/2605.14154) reproduces for NH₃ dissociation; the energetic span (Kozuch and Shaik, from memory, not looked up here) in place of a single saddle when the mechanism has more than one step.
+
+8.  Placement stays a script because LLM coordinate edits fail: [AtomWorld](https://arxiv.org/html/2510.04704) and the TSBench failure analysis (section 9).
+
+**Where the pipeline is not unique, and what would make it ours.**
+
+| Step                        | Already exists in                                         | What makes it ours                                                                 |
+|-----------------------------|-----------------------------------------------------------|------------------------------------------------------------------------------------|
+| (2) Sites                   | pymatgen site finder in Adsorb-Agent, AdsMind, AtomisticSkills | Symmetry-complete and counted; the count checked                                 |
+| (3) Placement               | Every agent scripts it; CopyCAT bets on LLM reasoning to 3D | The LLM never touches coordinates; descriptor card and named tools                |
+| (4.1), (6) Validity checks  | AdsorbML's four checks                                     | One gate in code on both endpoints before any path: barrier-ready                 |
+| (8) Top-k then DFT          | AdsorbML                                                   | The human picks on cards with uncertainty; choice and reason logged               |
+| (9) Final-state enumeration | CatTSunami, NEBscape                                       | The same gate on the final state; a failing state is never paired                 |
+| (11) Path search            | CatTSunami, TSAgent, CatDT, NEBscape                       | Nothing; a wrapped tool                                                            |
+| (12) Saddle validation      | Partly: TSBench revision, CatDT gate                       | Imaginary mode and endpoint connectivity as code; propagation measured            |
+| (13) DFT refinement         | Standard                                                   | Same locked settings as the endpoints                                              |
+
+**What is still missing before any claim can be measured.** The product given as a structure rather than a name, with one set of gas-phase references for reactants and product; pair enumeration for A\* + B\* when the product forms from two adsorbates; a connectivity check that an initial–final pair is the intended reaction, since TSBench's main failure is a saddle that connects the wrong pair; imaginary-mode and endpoint validation as code, which TSAgent's abstract does not report and CatDT has not published; calibration of ML disagreement against a few DFT labels; and an OC20NEB benchmark subset with a single-placement baseline.
+
+**Verdict.** A plain transition-state agent is not a novel claim: ML NEB on surfaces exists in CatTSunami, LLM agents for barriers in TSAgent, CatDT and CopyCAT, automated endpoints in NEBscape, validity checks and top-k DFT in AdsorbML. What is ours and measurable in hackathon time is four things: barrier-ready endpoints, meaning one gate on both endpoints with the endpoint-to-barrier propagation reported in eV and as a rate factor; calibrated ML doubt that escalates instead of guessing; agentic uncertainty, the variance of the planner's own choices over repeated runs; and an open skill with MCP tools on AtomisticSkills, scored on an OC20NEB subset.
+
+**Questions this raises for the team.** Whether an OC20NEB subset is acceptable as ground truth, since it fixes the DFT settings to OC20's RPBE and PAW choices and our locked settings must then match them; which of the four claims is the headline of the three-minute demo; whether the product forms from two adsorbates, which moves pair enumeration into the core; and whether any DFT nudged-elastic-band compute exists for the propagation experiment, or whether it runs on ML with OC20NEB labels as the reference.
+
 ## Positioning and hackathon strategy
 
 Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an agent that computes adsorption energies" to "an agent that knows when not to trust itself".
@@ -622,6 +669,10 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Does a rendered image beside the descriptor card help the agent catch geometry errors, or add noise? Decide from the geometry test in the benchmark.
 
+- Is an OC20NEB subset acceptable as ground truth for the path steps, given that it fixes the DFT settings to OC20's RPBE and PAW choices, so our locked settings must match them?
+
+- Does any DFT nudged-elastic-band compute exist for the propagation experiment, or does it run on ML with OC20NEB labels as the reference?
+
 - Should the headline claim move from "knows when not to trust itself" to "barrier-ready endpoints": every adsorption energy validated as an initial or final state for a transition-state search, with the endpoint-to-barrier error propagation measured? TSAgent and CatDT make a plain transition-state agent a crowded claim; the endpoint claim is not yet taken.
 
 **Next steps.**
@@ -667,6 +718,12 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - [ ] Propagation experiment: run the same ML NEB (CatTSunami style) for one step on Pt(111) from endpoints found by single placement and from endpoints found by enumeration plus checks; report the barrier difference in eV and as a rate factor; check one case with DFT
 
 - [ ] Read the TSAgent and TSBench papers in full and fill the gaps in the table (endpoint choice, saddle validation)
+
+- [ ] Define the product as a structure with one set of gas-phase references, and add pair enumeration for A* + B* if the product forms from two adsorbates
+
+- [ ] Write the initial–final connectivity check (same reaction, atom mapping as in NEBscape) and the saddle validation tool (one imaginary mode, path ends at both endpoints)
+
+- [ ] Select an OC20NEB subset and the single-placement baseline for the path benchmark
 
 ## Sources
 
@@ -746,4 +803,4 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Geometry: [AtomWorld](https://arxiv.org/html/2510.04704), [LLMConfBench: molecular geometry understanding has unintendedly emerged in frontier LLMs](https://arxiv.org/html/2609.20666), [MiSI-Bench](https://arxiv.org/html/2512.10867v1), [Robocrystallographer](https://www.cambridge.org/core/journals/mrs-communications/article/robocrystallographer-automated-crystal-structure-text-descriptions-and-analysis/3C201F132450877464B2D0B1B8C4ED01), [LLM-Prop](https://www.nature.com/articles/s41524-025-01536-2), [LLM4Mat-Bench](https://arxiv.org/pdf/2411.00177), [MatTools](https://arxiv.org/html/2505.10852v2), [LLaMP](https://arxiv.org/pdf/2401.17244)
 
-From memory, not looked up here: Sholl and Steckel, *Density Functional Theory: A Practical Introduction*, Wiley, 2009; Nørskov, Studt, Abild-Pedersen and Bligaard, *Fundamental Concepts in Heterogeneous Catalysis*, Wiley, 2014; Wellendorff et al., "A benchmark database for adsorption bond energies to transition metal surfaces" (CE27), Surface Science, 2015.
+From memory, not looked up here: Kozuch and Shaik, "How to conceptualize catalytic cycles? The energetic span model", Accounts of Chemical Research, 2011; Sholl and Steckel, *Density Functional Theory: A Practical Introduction*, Wiley, 2009; Nørskov, Studt, Abild-Pedersen and Bligaard, *Fundamental Concepts in Heterogeneous Catalysis*, Wiley, 2014; Wellendorff et al., "A benchmark database for adsorption bond energies to transition metal surfaces" (CE27), Surface Science, 2015.

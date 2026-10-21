@@ -254,6 +254,8 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - How many lessons-log entries before Ni(111) is caught without a human; can that curve be shown?
 - Can an interview agent run the Formulate interview without losing what a human interviewer catches?
 - Does a rendered image beside the descriptor card help catch geometry errors, or add noise?
+- Is an OC20NEB subset acceptable as ground truth for the path steps, given it fixes the DFT settings to OC20's RPBE and PAW choices, so our locked settings must match them?
+- Does any DFT nudged-elastic-band compute exist for the propagation experiment, or does it run on ML with OC20NEB labels as the reference?
 - Move the headline claim to "barrier-ready endpoints" with measured endpoint-to-barrier error propagation? TSAgent and CatDT crowd the plain TS-agent claim.
 
 ## 18. Next steps
@@ -277,6 +279,9 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 - [ ] Add twenty geometry editing tasks to the benchmark
 - [ ] Propagation experiment: same ML NEB on Pt(111) from naive endpoints vs enumerated-and-checked endpoints; barrier difference in eV and rate factor; one DFT check
 - [ ] Read TSAgent and TSBench in full; fill the endpoint-choice and saddle-validation gaps in the prior-work table
+- [ ] Define the product as a structure with one set of gas-phase references; add pair enumeration for A* + B* if the product forms from two adsorbates
+- [ ] Write the initial–final connectivity check and the saddle validation tool (one imaginary mode, path ends at both endpoints)
+- [ ] Select an OC20NEB subset and the single-placement baseline for the path benchmark
 
 ## 20. Geometry rules: the LLM never touches coordinates
 
@@ -316,6 +321,32 @@ Path steps to add after 8 (the part to build):
 Extension layer (question marks; not in the core): agentic uncertainty (run the planner N times, report decision variance; attaches to 7 and 8); active-learning loop (uncertainty → DFT labels → fine-tune → re-run 6–8; attaches to 5); LLM critic on descriptor cards that never overrides a code check (attaches to 4.1 and 6); DFT on the chosen five before any path search (attaches to 8); multi-step mechanism with energetic span, catalysis later (attaches to 14).
 
 Open with the team: adsorbate class and size; same molecule in a final geometry or a new molecule from two adsorbates; one step or a short mechanism and who supplies it; DFT code, compute, MLIPs; hackathon pass criterion.
+
+## 22. Augmented pipeline: borrow, gaps, ours (figure 20 as a table)
+
+Rule: every step of the current pipeline is borrowed or standard; the claim rests on four things no paper reports (validated endpoints with measured propagation, calibrated ML doubt, agentic uncertainty, open release scored on OC20NEB).
+
+| Step | Borrow, from | Gap | Ours | Extension (later) |
+|---|---|---|---|---|
+| 1 Structure retriever | Settings from AiiDA common workflows, SSSP, Δ-test; never the LLM | Missing: product as a structure; one set of gas references | Locked, converged settings file | none |
+| 2 Sites | CatKit symmetry; AdsorbML heuristic + random | Exists: pymatgen site finder in Adsorb-Agent, AdsMind, AtomisticSkills | Symmetry-complete and counted | none |
+| 3 Placement | TSBench, AtomWorld: LLM edits fail, keep a script | Exists: scripted placement; CopyCAT bets the other way | LLM never touches coordinates; descriptor card, named tools | none |
+| 4 Initial configurations | AdsorbML, CatTSunami: many candidates then ML relax | Missing: co-adsorbed pairs A* + B*; conformers in vacuum first | Pair enumeration by symmetry with the count | none |
+| 4.1 Physics filter | AdsorbML checks: desorbed, dissociated, intercalated, reconstructed | Exists; lacks the imaginary-mode check | One gate in code on both endpoints before any path | LLM critic on cards, never overrides a check (attaches to 4.1 and 6) |
+| 5 MLIP selection | CatTSunami EquiformerV2; fine-tuned MLIP TS (< 10 DFT points); CatDT UMA/CHGNet; ml-mlip-benchmark | Missing: decision rule by system class; organometallics outside OC20 | Benchmark, choose, record why; flag doubt | Active-learning loop: uncertainty → DFT labels → fine-tune → re-run 6 to 8 (attaches to 5) |
+| 6 Anomaly filter | AdsorbML | Exists: same code as 4.1 | Verdict into the descriptor card | none |
+| 7 Uncertainty | 80-MLIP survey: no potential best everywhere, so ensemble | Missing: calibration against DFT labels | Calibrated ML doubt that escalates | Agentic uncertainty: run planner N times, report decision variance (attaches to 7 and 8) |
+| 8 Rank, human picks ≤ 5 | AdsorbML top-k then DFT | Exists: top-k then DFT | Human picks on cards with uncertainty; choice and reason logged | +DFT single points on the five before any path (attaches to 8) |
+| 9 Final-state enumeration | CatTSunami product placement; NEBscape global optimisation | Exists | Same gate on the final state; failing state never paired | none |
+| 10 Atom mapping, pairing | NEBscape mapping + symmetry alignment; CatTSunami several pairs, lowest valid kept | Missing: connectivity check that the pair is the intended reaction (TSBench main failure) | Pairs kept with a reason; rejected pairs reported | none |
+| 11 Path search | CatTSunami ML NEB (91 % within 0.1 eV, 28×); fine-tuned MLIP; TSAgent replan loop | Exists everywhere; TSAgent 83 % on an OC20NEB subset | None: a wrapped tool | none |
+| 12 Saddle validation | TSBench revision loop (50 → 67 %); CatDT propose–validate gate (unpublished) | Missing: imaginary-mode count and endpoint connectivity as code | Validation is code; endpoint → barrier propagation measured | none |
+| 13 DFT refinement | CatTSunami single points on the ML saddle; few points feed fine-tuning | Exists; cost open | Same locked settings as endpoints | none |
+| 14 Report | TSAgent BEP check; energetic span for multi-step | Missing: OC20NEB benchmark subset with single-placement baseline; decision trace | Barrier + validated path + both uncertainties + trace; open skill and MCP tools | Multi-step mechanism by energetic span; catalysis later (attaches to 14) |
+
+Verdict: already taken: ML NEB (CatTSunami), LLM barrier agents (TSAgent, CatDT, CopyCAT), automated endpoints (NEBscape), validity checks and top-k DFT (AdsorbML). Still missing: product as structure and gas references; pair enumeration; connectivity check; validation code; calibration; OC20NEB subset. Ours: barrier-ready endpoints with measured propagation; calibrated ML doubt; agentic uncertainty; open skill and tools scored on OC20NEB.
+
+Questions for the team: OC20NEB subset as ground truth (our settings must then match OC20's RPBE and PAW choices); which of the four claims is the demo headline; product from two adsorbates or one molecule; any DFT NEB compute for the propagation experiment.
 
 ## 19. Sources
 
