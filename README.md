@@ -155,13 +155,7 @@ Nothing runs yet; the first run waits on the settings lock and the site enumerat
 
 ## Repository layout
 
-A Claude Code plugin beside AtomisticSkills, with three rules: one kind per file and one folder per kind; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent.
-
-![One folder per kind, one file per tool, and calls go one way: agents to skills to tools to the library](figures/repository-layout.png)
-
-*Figure: repository layout · tree, reading orders, the one-way rule, schematic*
-
-Reading the figure: one folder per kind, arrows run one way from agents to skills to tools to the library, and the two reading orders, one for a human and one for an agent, are listed at the side.
+A Claude Code plugin beside AtomisticSkills, with three rules: one kind per file and one folder per kind; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent. The drawing of it is archive/docs/figures/24-repository-layout.png.
 
 ```
 open-science-hackathon/
@@ -169,7 +163,7 @@ open-science-hackathon/
 ├── agent.md                      what a coding agent needs: the exact pipeline, tools, repositories, rules
 ├── CLAUDE.md                     agent instructions: read agent.md first
 ├── archive/                      theory, design history, reviews, figure scripts; not needed to code
-├── figures/                      the five figures of this page
+├── figures/                      the four figures of this page
 ├── PROJECT.md                    the locked settings and decisions of the current campaign
 ├── pyproject.toml                one package: the library, the server and the tests
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
