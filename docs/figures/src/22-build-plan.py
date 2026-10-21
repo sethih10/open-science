@@ -95,7 +95,7 @@ task(3, 4, "P5", "build", "DFT check and report", "DFT single points on the chos
 # ---- column 4: measure and release
 task(4, 0, "M1", "measure", "H on Pt(111) end to end", "steps 1 to 8 on the simplest system;\nE_ads against CE27 and OC20",
      needs="T1 to T8")
-task(4, 1, "M2", "measure", "*OH → *O + *H final state against OC20NEB", "our nearest final state versus the product\nframe of the released band: distance, energy,\nvalidity; the pass criterion is D3",
+task(4, 1, "M2", "measure", "*OH final state against OC20NEB", "our nearest final state versus the product\nframe of the released band: distance, energy,\nvalidity; the pass criterion is D3",
      needs="P1, P5, D3", badge=7)
 task(4, 2, "M3", "measure", "Two numbers nobody reports", "how often the nearest pair bonds back, per\nsystem and per shell; E(FS near) − E(FS ∞), the\nlateral interaction. Later: the barrier shift\nand the band cost from gated endpoints",
      needs="P1, P5")
