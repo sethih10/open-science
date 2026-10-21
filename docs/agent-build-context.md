@@ -210,7 +210,7 @@ Checks 1 to 9 run on every structure, `agent-context.md` section 6; the final-st
 
 ### 3.8 Nearest non-recombining final state: P1, sub-steps 9a to 9e
 
-CatTSunami's AutoFrameDissociation with four changes: complete enumeration, a nearest-first objective, the full gate, a report of rejections.
+NEBscape's endpoint generator (MIT) with fairchem's helpers, and four changes: complete, counted enumeration instead of minima hopping; a nearest-first objective instead of the 4.5 Å cut-off and the energy–distance Pareto front; the full gate as a test after relaxation instead of Hookean constraints during sampling; a report of every rejection.
 
 | Sub-step | Does                                                    | CatTSunami does                                  | We do                                                                 | Output                                   |
 |----------|---------------------------------------------------------|--------------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
@@ -409,6 +409,7 @@ Two numbers are measured now on an OC20NEB subset starting with \*OH → \*O + \
 | Recombination rate | How often the nearest pair bonds back after relaxation                              | Per system and per distance shell           |
 | Lateral interaction | E(FS near) − E(FS ∞), with E(FS ∞) from separate cells                             | Per system; sign and size                   |
 | Final state versus OC20NEB | Our nearest validated final state against the product frame of the released band: A–B distance, energy, validity | Per reaction in the subset |
+| Three policies | Nearest-first (ours), energy–distance Pareto (NEBscape), shell sampling (CatTSunami) on the same dissociations: distance, energy, validity, recombination | Per reaction; NEBscape converged 94 % of 304 |
 | Later phase        | Barrier shift from naive versus gated endpoints; DFT band force calls and failure rate | Not now                                   |
 
 | Item                      | What the docs say                                                                  | Open                                  |
