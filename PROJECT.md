@@ -1,6 +1,6 @@
 # PROJECT
 
-The locked settings and decisions of the current campaign. Written by `calculation_protocol`, locked at the approve-settings checkpoint; every tool reads it and none changes a locked value. The fields are `finalstate.records.Settings`; the human answers of the Formulate interview sit under *Interview*. This is the template; `finalstate init <campaign>` copies it into `runs/<campaign>/`.
+The locked settings and decisions of the current campaign. Written by `calculation_protocol`, locked at the approve-settings checkpoint; every tool reads it and none changes a locked value. The fields are `fragplace.schemas.records.Settings`; the human answers of the Formulate interview sit under *Interview*. This is the template; `fragplace init <campaign>` copies it into `runs/<campaign>/`.
 
 settings hash: `not locked`
 

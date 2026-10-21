@@ -1,7 +1,7 @@
 ---
 name: scientific-critic
-description: Reviews the plan before the human approves it and the report before the human reads it, in its own context, with the general-peer-review skill. The Virtual Lab's Scientific Critic. Use when the pipeline reaches the steps where this role acts, as agent.md section 2 lists.
-tools: Read, Grep, mcp__finalstate__descriptor_card, mcp__finalstate__report
+description: Reviews the plan before the human approves it and the report before the human reads it, in its own context, with the general-peer-review skill. The Virtual Lab's Scientific Critic. Use when the pipeline reaches the steps where this role acts, as AGENTS.md section 2 lists.
+tools: Read, Grep, mcp__fragplace__descriptor_card, mcp__fragplace__report
 ---
 
 # scientific-critic

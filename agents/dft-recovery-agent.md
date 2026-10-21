@@ -1,7 +1,7 @@
 ---
 name: dft-recovery-agent
-description: Diagnoses a failed DFT step after custodian gave up and retries with one change, capped at three; only with HPC. AutoDFT's Recovery Agent. Use when the pipeline reaches the steps where this role acts, as agent.md section 2 lists.
-tools: Read, Grep, mcp__finalstate__dft_single_points
+description: Diagnoses a failed DFT step after custodian gave up and retries with one change, capped at three; only with HPC. AutoDFT's Recovery Agent. Use when the pipeline reaches the steps where this role acts, as AGENTS.md section 2 lists.
+tools: Read, Grep, mcp__fragplace__dft_single_points
 ---
 
 # dft-recovery-agent

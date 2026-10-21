@@ -3,11 +3,11 @@
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
-        "hooks": [{"type": "command", "command": "python -m finalstate.hooks block-coordinate-edits"}]
+        "hooks": [{"type": "command", "command": "python -m fragplace.runtime.policy block-coordinate-edits"}]
       },
       {
-        "matcher": "mcp__finalstate__.*",
-        "hooks": [{"type": "command", "command": "python -m finalstate.hooks require-checkpoint"}]
+        "matcher": "mcp__fragplace__.*",
+        "hooks": [{"type": "command", "command": "python -m fragplace.runtime.policy require-checkpoint"}]
       }
     ]
   }

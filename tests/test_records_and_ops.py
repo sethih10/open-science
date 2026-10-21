@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from finalstate import checkpoints, config
-from finalstate.cache import Cache
-from finalstate.casebank import SEED, CaseBank
-from finalstate.errors import CheckpointPending, SettingsNotLocked
-from finalstate.provenance import Run, content_hash, set_run, traced
-from finalstate.records import CheckVerdict, DescriptorCard, HumanChoice, Settings
+from fragplace.runtime import checkpoints, project as config
+from fragplace.runtime.cache import Cache
+from fragplace.memory.casebank import SEED, CaseBank
+from fragplace.errors import CheckpointPending, SettingsNotLocked
+from fragplace.runtime.journal import Run, content_hash, set_run, traced
+from fragplace.schemas.records import CheckVerdict, DescriptorCard, HumanChoice, Settings
 
 
 def settings():

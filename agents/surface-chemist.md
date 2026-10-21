@@ -1,7 +1,7 @@
 ---
 name: surface-chemist
-description: Proposes, from the chemistry of the broken bond, which site type and orientation to try for each fragment and in what order; reads cards only. A discipline agent in the Virtual Lab's style; Adsorb-Agent's Critic in function. Use when the pipeline reaches the steps where this role acts, as agent.md section 2 lists.
-tools: Read, Grep, mcp__finalstate__descriptor_card
+description: Proposes, from the chemistry of the broken bond, which site type and orientation to try for each fragment and in what order; reads cards only. A discipline agent in the Virtual Lab's style; Adsorb-Agent's Critic in function. Use when the pipeline reaches the steps where this role acts, as AGENTS.md section 2 lists.
+tools: Read, Grep, mcp__fragplace__descriptor_card
 ---
 
 # surface-chemist

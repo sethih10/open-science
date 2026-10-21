@@ -1,7 +1,7 @@
 ---
 name: literature-reader
-description: Fetches published E_ads values with functional and site, and the bond length d, each with its source, for the human to verify. ChemAgents' Literature Reader; FutureHouse's Crow. Use when the pipeline reaches the steps where this role acts, as agent.md section 2 lists.
-tools: Read, Grep, mcp__finalstate__literature_lookup
+description: Fetches published E_ads values with functional and site, and the bond length d, each with its source, for the human to verify. ChemAgents' Literature Reader; FutureHouse's Crow. Use when the pipeline reaches the steps where this role acts, as AGENTS.md section 2 lists.
+tools: Read, Grep, mcp__fragplace__literature_lookup
 ---
 
 # literature-reader

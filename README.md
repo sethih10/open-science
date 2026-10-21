@@ -2,7 +2,7 @@
 
 ## The problem
 
-Given a surface with the adsorbate AB\* and the desired product A\* + B\*, both fragments adsorbed, find the final state in which B\* sits as close to A\* as it can while the two stay fully dissociated and do not bond back. That is the whole scope, fixed by the team. Not catalysis, not kinetics, not yet the barrier: those are a later phase and no core task or measurable depends on them. The plan follows the shape of NEBscape, the closest prior work; CatTSunami is secondary. Everything a coding agent needs is in `agent.md`; the theory and the design history are in `archive/`.
+Given a surface with the adsorbate AB\* and the desired product A\* + B\*, both fragments adsorbed, find the final state in which B\* sits as close to A\* as it can while the two stay fully dissociated and do not bond back. That is the whole scope, fixed by the team. Not catalysis, not kinetics, not yet the barrier: those are a later phase and no core task or measurable depends on them. The plan follows the shape of NEBscape, the closest prior work; CatTSunami is secondary. Everything a coding agent needs is in `AGENTS.md`; the theory and the design history are in `docs/`.
 
 ## Inputs and output
 
@@ -40,7 +40,7 @@ Reading the figure: grey boxes are computation, each with its tool name and acti
 | 5 Most favourable configuration for both components | 3.4, 3.6, 6, 7, 8 |
 | 2 Output: dissociated final state | Solution |
 
-Each step is one or two tools, defined once in `finalstate/registry.py` and implemented one per file under `finalstate/tools/`; this table is generated from the registry.
+Each step is one or two tools, defined once in `src/fragplace/registry/tools.py` and implemented in category modules under `src/fragplace/tools/`; this table is generated from the registry.
 
 <!-- registry:modules -->
 | Phase | Board step | Tool | Takes | Returns | Status |
@@ -103,7 +103,7 @@ Reading the figure: the left column quotes the board, with the owner line under 
 | Solution | final output, with uncertainty and issues alongside | OC20NEB · AtomisticSkills: OC20NEB product frames as the comparison; every parameter logged beside its output; general-peer-review reads the report | the nearest non-recombining final state with E(FS near), E(FS ∞), rejections, recombination rate, trace; two numbers and two comparisons | Open: the pass criterion against the OC20NEB product frame |
 <!-- /board:evolution -->
 
-The board's own open questions, answered as far as we can: step 3 applies to dissociative adsorption only, which is the fixed scope; the models of step 7 are the candidates benchmarked at 1\*; "phys. int." at step 8 is read as the physical issues shown on each card; the vision model feeds step 3 and is an extension. The path from AB\* to the final state and its barrier are out of scope and live in the archive, `archive/docs/adsorption-agent-workflow.md`, sections 12 and 15.
+The board's own open questions, answered as far as we can: step 3 applies to dissociative adsorption only, which is the fixed scope; the models of step 7 are the candidates benchmarked at 1\*; "phys. int." at step 8 is read as the physical issues shown on each card; the vision model feeds step 3 and is an extension. The path from AB\* to the final state and its barrier are out of scope and live in `docs/design/adsorption-agent-workflow.md`, sections 12 and 15.
 
 ## What is ours and what is not
 
@@ -141,7 +141,7 @@ Tools do every deterministic step; the LLM reads cards, chooses with a stated re
 
 *Figure: who does what · 16 cards, 3 phases, 5 checkpoints, schematic*
 
-Reading the figure: three phases left to right, cards top to bottom in the board's order; inside each card a chip per actor with its concrete name, H human, L LLM agent, S skill, T tool; the chip with the thick edge does the work, the thin ones feed it, dashed chips are extensions, and the pause sign marks a checkpoint where the agent waits. The solution-planner runs every card: it calls each tool by name, reads cards, never writes coordinates, and the hooks enforce that. The six other roles, named as the literature names them, are in `agent.md` section 6.
+Reading the figure: three phases left to right, cards top to bottom in the board's order; inside each card a chip per actor with its concrete name, H human, L LLM agent, S skill, T tool; the chip with the thick edge does the work, the thin ones feed it, dashed chips are extensions, and the pause sign marks a checkpoint where the agent waits. The solution-planner runs every card: it calls each tool by name, reads cards, never writes coordinates, and the hooks enforce that. The six other roles, named as the literature names them, are in `AGENTS.md` section 6.
 
 <!-- board:who -->
 | Step | Human | LLM agent | Skill | Tool | Checkpoint |
@@ -189,7 +189,7 @@ The shortest route to one validated nearest final state runs through eight numbe
 
 Off-path tasks the path needs, built when it needs them: T0 `literature_lookup`, needs D1; T3 `adsorbate_placement`, needs T2; T5 `descriptor_card`, needs T4; T7 `uncertainty_estimation`, needs T6 and T4; T8 `ranking` with the checkpoint record, needs T5 and T7; P5 `reference_energies` and `report`, needs P1 and T7; M1 H on Pt(111) end to end, needs T1 to T8. T9 `dft_single_points` and T10 `active_learning` are extensions that need D2.
 
-Decisions D2 compute and codes, D3 benchmark and pass criterion, D4 headline claim and D5 final-state rules are open: team decision. The LLM and human layer, the skills, the Formulate interview run by the computational-chemist, the case bank and the agents of `agent.md` section 6, is written last because it only calls the tools.
+Decisions D2 compute and codes, D3 benchmark and pass criterion, D4 headline claim and D5 final-state rules are open: team decision. The LLM and human layer, the skills, the Formulate interview run by the computational-chemist, the case bank and the agents of `AGENTS.md` section 6, is written last because it only calls the tools.
 
 ## Running the first case
 
@@ -197,36 +197,82 @@ Nothing computes yet: every tool is a typed stub that raises NotImplementedError
 
 ```bash
 pip install -e ".[dev,figures]"
-finalstate registry        # every tool with its steps and status
-finalstate check           # figures, README, agent.md and the registry agree; tests pass
-finalstate init pt111-oh   # runs/pt111-oh/ with a copy of PROJECT.md
+fragplace registry        # every tool with its steps and status
+fragplace check           # figures, README, AGENTS.md and the registry agree; tests pass
+fragplace init pt111-oh   # runs/pt111-oh/ with a copy of PROJECT.md
 ```
 
 The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decision. Before the first calculation the interview in `PROJECT.md` is answered and the human locks it at the approve-settings checkpoint, and D2 and D3 are decided.
 
 ## Repository layout
 
-One Python package, `finalstate`, that a Claude Code plugin wraps. Three rules: one kind per file and one folder per kind; calls go one way, agents to skills to tools to the library, never up or sideways; one reading order for a human and one for an agent. The full tree, the operational modules and the naming rules are in `agent.md` section 7.
+The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise: the plugin side as Claude Code documents it, with `agents/`, `skills/`, `hooks/` and `.mcp.json`; the package side as ChemCrow, Biomni and ChemGraph lay out theirs, with a registry, tools by category, schemas, a runtime and an evaluation harness. Every tool, skill and agent in the tree is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
 
 ```
-open-science-hackathon/
-├── README.md, CLAUDE.md, agent.md   the entry points; agent.md is what a coding agent reads
-├── PROJECT.md, lessons.md           the settings template; the case bank
-├── finalstate/                      the package: registry.py defines every tool, records.py every record,
-│   ├── tools/<name>.py              one function per tool
-│   ├── config, provenance, cache, checkpoints, casebank, errors, hooks, cli
-│   ├── calculators/, compute/, literature/
-├── finalstate/server.py             one MCP tool per registry entry; finalstate-server
-├── agents/, skills/, hooks/         the roles, the procedures, the two enforced rules
-├── tests/, ci/                      the consistency tests and the CI workflow that runs them
-├── benchmark/, runs/                the OC20NEB subset and baselines; one directory per campaign
-├── figures/                         the five figures of this page, PNG and SVG
-└── archive/docs/                    the design history; figures/src/_board.py is the data module behind the figures and the generated tables
+open-science-hackathon/                 the FragPlace plugin, laid out as Claude Code lays out a plugin
+├── README.md, CLAUDE.md, AGENTS.md     the entry points; CLAUDE.md points a coding agent to AGENTS.md
+├── PROJECT.md, lessons.md              the settings template; the case bank
+├── pyproject.toml                      package `fragplace`, commands `fragplace` and `fragplace-server`, one extra per lane
+├── .claude-plugin/plugin.json          declares skills/, agents/, hooks/hooks.json and .mcp.json
+├── .mcp.json                           the MCP server: fragplace-server, one tool per registry entry, prefix mcp__fragplace__
+├── hooks/hooks.json                    PreToolUse: block coordinate edits; require the checkpoint before a gated tool
+├── agents/                             the seven agents of section 6, one page each, tools in the frontmatter
+│   ├── solution-planner.md        the next tool call and when to stop
+│   ├── literature-reader.md       which published values and sources to put before the human: E_ads with functional and site
+│   ├── computational-chemist.md   which protocol and settings to propose for the lock
+│   ├── surface-chemist.md         which site types and orderings to try per fragment
+│   ├── mlip-specialist.md         which potential to use
+│   ├── scientific-critic.md       whether the plan and the report hold up
+│   ├── dft-recovery-agent.md      how to retry a failed DFT step; only with HPC
+├── skills/                             the five skills of section 6; five more are reused from AtomisticSkills
+│   ├── dft-settings-protocol/SKILL.md
+│   ├── mlip-doubt-calibration/SKILL.md
+│   ├── dissociation-final-state/SKILL.md
+│   ├── final-state-report/SKILL.md   
+│   ├── hpc-dft-jobs/SKILL.md         
+├── src/fragplace/                      the package, in the layout of ChemCrow, Biomni and ChemGraph
+│   ├── registry/tools.py               ToolSpec and REGISTRY: the 19 tools of section 3, defined once; CATEGORY maps each to its module
+│   ├── registry/agents.py              the roster, the checkpoints, the skill names; the figures import it
+│   ├── tools/                          one module per category, as ChemCrow groups its tools; a function per tool, parameters as in the registry
+│   │   ├── literature.py    literature_lookup
+│   │   ├── structure.py     structure_retrieval, calculation_protocol
+│   │   ├── uncertainty.py   mlip_selection, uncertainty_estimation, active_learning
+│   │   ├── sites.py         site_enumeration, pair_enumeration
+│   │   ├── placement.py     adsorbate_placement, minima_hopping
+│   │   ├── screening.py     pull_force_screen
+│   │   ├── relaxation.py    relaxation, reference_energies
+│   │   ├── filtering.py     anomaly_filter, descriptor_card
+│   │   ├── clustering.py    soap_clustering, ranking
+│   │   ├── report.py        report
+│   │   ├── dft.py           dft_single_points
+│   ├── schemas/records.py              the records of section 4
+│   ├── runtime/project.py              PROJECT.md: read, write, lock, require_locked, settings_hash
+│   ├── runtime/journal.py              Run, trace.jsonl, the @traced decorator
+│   ├── runtime/cache.py                content-addressed results of relaxations and force calls
+│   ├── runtime/checkpoints.py          the five checkpoints: require, record
+│   ├── runtime/state.py                the resumable run state
+│   ├── runtime/policy.py               the two hook commands
+│   ├── memory/casebank.py              lessons.md as records; retrieve by system and failure
+│   ├── calculators/                    one interface; uma, mace with committees, chgnet
+│   ├── execution/                      Job and Backend; local, slurm with custodian in the job script; the tracker with its retry cap
+│   ├── agent/                          roles.py, the roster as code; prompts.py loads agents/<name>.md
+│   ├── mcp/server.py                   builds the MCP tool list from the registry
+│   ├── eval/harness.py                 the campaign with and without each skill and agent, on the OC20NEB subset
+│   ├── cli/main.py                     fragplace registry | check | init
+│   └── errors.py                       SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
+├── tests/                              registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs
+├── ci/github-workflow.yml              ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
+├── runs/<campaign>/                    PROJECT.md copy, trace.jsonl, checkpoints.json, state.json, cards/, structures/, cache/, report.md
+├── figures/                            the README figures, PNG and SVG
+└── docs/                               README.md indexes it
+    ├── design/                         the design history and the three reviews
+    ├── figures/src/_board.py           the data module the figures 29 to 32 and the generated blocks come from
+    └── benchmark/                      the OC20NEB subset, baselines, scoring: planned
 ```
 
 ## Where everything else is
 
-`agent.md` holds what a coding agent needs: the exact pipeline with inputs, outputs, checks and thresholds per tool, the repositories to wrap with their licences, the rules the LLM must obey and the decisions still open. `archive/README.md` indexes the theory and the design history in a table, one row per file: the design document with its figures, the agent context, the long build context, the repository survey, the review of chemistry agents and the writing style.
+`AGENTS.md` holds what a coding agent needs: the exact pipeline with inputs, outputs, checks and thresholds per tool, the repositories to wrap with their licences, the rules the LLM must obey and the decisions still open. `docs/README.md` indexes the theory and the design history in a table, one row per file: the design document with its figures, the agent context, the long build context, the repository survey, the review of chemistry agents and the writing style.
 
 ## Sources
 

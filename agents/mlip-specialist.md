@@ -1,7 +1,7 @@
 ---
 name: mlip-specialist
-description: Chooses the potential from a benchmark on the system class and decides, on the calibrated doubt, whether to trust, repair or escalate. The Virtual Lab's Machine Learning Specialist; AdsMind's Analyzer in function. Use when the pipeline reaches the steps where this role acts, as agent.md section 2 lists.
-tools: Read, Grep, mcp__finalstate__mlip_selection, mcp__finalstate__uncertainty_estimation, mcp__finalstate__active_learning
+description: Chooses the potential from a benchmark on the system class and decides, on the calibrated doubt, whether to trust, repair or escalate. The Virtual Lab's Machine Learning Specialist; AdsMind's Analyzer in function. Use when the pipeline reaches the steps where this role acts, as AGENTS.md section 2 lists.
+tools: Read, Grep, mcp__fragplace__mlip_selection, mcp__fragplace__uncertainty_estimation, mcp__fragplace__active_learning
 ---
 
 # mlip-specialist

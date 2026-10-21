@@ -10,14 +10,14 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - run: pip install -e ".[dev,figures,agents]"
-      - run: ruff check finalstate tests
+      - run: ruff check src tests docs/figures/src
       - run: pytest -q
       - name: the MCP server builds and lists its tools
         run: |
-          finalstate-server --list
-          python -c "from finalstate.server import build; s = build(); print(type(s).__name__)"
+          fragplace-server --list
+          python -c "from fragplace.mcp.server import build; s = build(); print(type(s).__name__)"
       - name: figures and documents agree with the data module
         run: |
-          for n in 29-board-evolution 30-board-flowchart 31-who-does-what 32-architecture; do python archive/docs/figures/src/$n.py; done
-          python archive/docs/figures/src/board_tables.py --check
-          python archive/docs/figures/src/board_check.py
+          for n in 29-board-evolution 30-board-flowchart 31-who-does-what 32-architecture; do python docs/figures/src/$n.py; done
+          python docs/figures/src/board_tables.py --check
+          python docs/figures/src/board_check.py

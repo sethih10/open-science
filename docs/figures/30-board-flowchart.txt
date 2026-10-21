@@ -1,0 +1,123 @@
+Input prompt
+literature_lookup: published E_ads and the bond length d, with source,
+for the human to verify
+(1) Structure retriever
+structure_retrieval and calculation_protocol: the three relaxed inputs, A
+and B by cleaving the named bond, the cell; settings locked in PROJECT.md
+❚❚ approve settings
+open: one set of gas references for
+AB, A and B
+(1*) MLIP selection, AL prospect
+mlip_selection: two or three candidates benchmarked on the system class;
+the chosen one relaxes, all form the committee of step 7
+❚❚ approve the plan
+(2) Adsorption sites with pymatgen
+site_enumeration: symmetry-inequivalent sites, fcc and hcp apart,
+counted; pymatgen as the baseline
+(3) Adsorbate placement, very important: the stated problem
+(3.1) Least distance before pull-back
+anomaly_filter, check 10: the A–B bond re-formed after relaxation;
+runs inside step 5
+open: the A–B distance threshold
+(3.2) Window [1.5 d, 5] Å
+pair_enumeration: every symmetry-distinct A–B pair in [1.5 d, 5] Å,
+nearest first by site-graph distance, counted; d from
+literature_lookup
+open: d from vacuum or from the
+adsorbed molecule; 5 Å or NEBscape's
+4.5 Å
+(3.3) Pull force with the MLIP
+pull_force_screen: one MLIP force call per pair; a pull towards the
+other fragment queues the pair last
+open: the force threshold
+(3.4) Agentic critique of the cleavage
+surface-chemist reads descriptor_card text, proposes a site type
+and orientation per fragment, reorders; never edits coordinates
+(3.5) Site and
+orientation, pymatgen
+adsorbate_placement: A at every
+symmetry-distinct site near its old
+site, counted; A fixed is the cheap
+baseline
+(3.6) Or minima hopping
+with the MLIP
+minima_hopping: NEBscape's endpoint
+generator with the chosen MLIP, the
+alternative and the baseline policy
+or
+open: the binding fragment fixed at
+its old site, or enumerated
+in code: 3.5, 3.2, 3.3, 3.4; 3.6 is the alternative; 3.1 runs inside step 5
+(4) Initial configurations
+relaxation: relax every pair with the chosen MLIP and the locked
+settings, random displacement first; Burnside-counted
+open: the displacement amplitude
+(5) Physics-based and anomaly filtering
+anomaly_filter: nine checks per fragment plus two final-state checks,
+before and after relaxation; verdict into the card; rejections logged
+(6) SOAP clustering
+soap_clustering: SOAP clusters of the survivors; the nearest and the
+lowest per cluster kept
+open: how many per cluster
+(7) Uncertainty estimation
+uncertainty_estimation: committee disagreement across the 1* candidates,
+calibrated on DFT or OC20NEB labels; doubt escalates
+❚❚ review flagged cases
+(8) Rank; user chooses up to 5
+ranking: nearest first, then energy; one descriptor_card per final state
+with doubt and verdicts; the human picks; choice and reason to lessons.md
+❚❚ pick up to five final states
+open: up to five, or fewer
+Solution
+reference_energies and report: E(FS near), E(FS ∞) from separate cells,
+rejections with reasons, recombination rate, decision trace
+❚❚ interpret results
+open: the pass criterion against the
+OC20NEB product frame
+computational-chemist ·
+literature-reader
+runs the Formulate interview, writes
+PROJECT.md; fetches E_ads and d with their
+sources for the human to verify
+board: Critic, knowledge prompts
+computational-chemist
+proposes the settings lock and states the
+protocol's reason
+mlip-specialist ·
+scientific-critic
+chooses the potential from the benchmark and
+records why; reviews the plan before the
+human approves it; extension:
+active_learning: doubt → a few DFT labels →
+fine-tune → re-run
+literature-reader
+supplies d, the length of the bond to break,
+with its source
+vision model
+a vision model to predict the sites, only
+after the geometry benchmark shows an image
+helps
+board: Vision model (?)
+surface-chemist
+proposes a site type per fragment from the
+chemistry of the cleavage, orders the list;
+never overrides a check
+board: Critic, knowledge
+surface-chemist
+an LLM critic reads the card and comments;
+it never overrides a check
+board: Reasoning questions
+mlip-specialist
+decides trust, repair or escalate from the
+calibrated doubt; extension: agentic
+uncertainty: N planner runs;
+dft_single_points if D2 allows DFT
+board: Agentic uncertainty (?), DFT (?)
+scientific-critic
+reviews the report in its own context before
+the human reads it
+Side boxes: where the board drew an agent input, the agent that takes it; amber tags: the one open decision per step, AGENTS.md section 11 has the full list.
+The pipeline we will implement: the board's steps, each with its tool call and its open decision
+board of 21 October 2026 · grey: computation · coral: step 3, the stated problem · purple: our agents, dashed is an extension
+amber: open decision · pink ❚❚: a checkpoint where the agent waits
+solution-planner calls every tool by name, reads cards, never writes coordinates, stops at every ❚❚

@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from finalstate import checkpoints, state
-from finalstate.compute import Job, JobHandle
-from finalstate.compute.tracker import RETRY_CAP, JobTracker
-from finalstate.errors import CheckpointPending
-from finalstate.records import HumanChoice
+from fragplace.runtime import checkpoints, state
+from fragplace.execution import Job, JobHandle
+from fragplace.execution.tracker import RETRY_CAP, JobTracker
+from fragplace.errors import CheckpointPending
+from fragplace.schemas.records import HumanChoice
 
 
 def test_state_advances_and_blocks_on_a_pending_checkpoint(tmp_path: Path):
