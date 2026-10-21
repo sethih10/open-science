@@ -654,6 +654,7 @@ Off-path tasks, built when the path needs them:
 |---------------------|--------------------------------------------------------------------------------------------|----------------|
 | Decide first        | D2 compute and codes; D3 benchmark and pass criterion; D4 headline claim; D5 final-state rules | Humans      |
 | Foundations         | T0 `literature_lookup`; T3 `adsorbate_placement`; T5 `descriptor_card`                      | D1; T2; T4     |
+| Tool layer, from the architecture review | typed input and output records per tool, so the server publishes an output schema and the registry test reads the signature instead of strings; a call-time check that every numeric argument comes from a traced record or an explicit human value; one golden example per tool run as a test | the stubs |
 | ML trust            | T7 `uncertainty_estimation`; T8 `ranking` and the checkpoint record with the case bank       | T6, T4; T5, T7 |
 | Final state         | P5 `reference_energies` and `report`                                                       | P1, T7         |
 | Measure             | M1 H on Pt(111) end to end; M4 Ni(111) doubt demo; M3 the two numbers and the policy comparison | T1 to T8; T7, T8; P1, P5 |
