@@ -81,7 +81,7 @@ task(2, 4, "T10", "ext", "Active-learning loop", "high doubt → a few DFT label
      reuse="AtomisticSkills ml-mace-finetune", needs="T7, D2")
 
 # ---- column 3: path
-task(3, 0, "P1", "build", "Nearest non-recombining FS", "enumerate pairs, relax, gate, rank by\nsite distance; keep several; report\nrejected pairs and E(FS near) − E(FS ∞)",
+task(3, 0, "P1", "build", "Nearest non-recombining FS", "pairs in [1.5 d, 5] Å, pull-force pre-filter,\nrelax, gate, SOAP-cluster, nearest first;\nreport rejections and E(FS near) − E(FS ∞)",
      reuse="NEBscape endpoint generator (MIT), fairchem helpers", needs="T2, T4, T6, D5", badge=6)
 task(3, 1, "P2", "ext", "Later: pairing and connectivity", "atom mapping and unwrapping across the\ncell; check the IS–FS pair is the\nintended reaction",
      reuse="CatTSunami interpolation, NEBscape idea", needs="P1")
@@ -95,7 +95,7 @@ task(3, 4, "P5", "build", "DFT check and report", "DFT single points on the chos
 # ---- column 4: measure and release
 task(4, 0, "M1", "measure", "H on Pt(111) end to end", "steps 1 to 8 on the simplest system;\nE_ads against CE27 and OC20",
      needs="T1 to T8")
-task(4, 1, "M2", "measure", "*OH final state: OC20NEB and NEBscape", "our nearest final state versus the OC20NEB\nproduct frame and NEBscape's Pareto choice:\ndistance, energy, validity; the pass criterion is D3",
+task(4, 1, "M2", "measure", "Final state vs OC20NEB and NEBscape", "our nearest final state versus the OC20NEB\nproduct frame and NEBscape's Pareto choice:\ndistance, energy, validity; the pass criterion is D3",
      needs="P1, P5, D3", badge=7)
 task(4, 2, "M3", "measure", "Two numbers and one comparison", "how often the nearest pair bonds back, per\nsystem and per shell; E(FS near) − E(FS ∞); the\nthree final-state policies, nearest-first, Pareto,\nsampled, on the same OC20NEB dissociations",
      needs="P1, P5")

@@ -560,10 +560,10 @@ Reading the figure: the output box lists the final state with E(FS near), E(FS �
 | Sub-step | Owner | Does | Output |
 |---|---|---|---|
 | 9a | Tool | Place A, the fragment keeping the binding atom, at symmetry-distinct sites near the IS site, or fixed at it | Placements of A\*, counted |
-| 9b | Tool | Enumerate B sites around each A by site-graph distance | Symmetry-distinct pairs, nearest first, counted |
-| 9c | Tool | Relax every pair with the potential and settings of the initial state | Relaxed pairs |
+| 9b | Tool | Enumerate B sites around each A by site-graph distance, within the board's window [1.5 d, 5] Å, d the length of the bond to break | Symmetry-distinct pairs, nearest first, counted |
+| 9c | Tool | Pre-filter by one MLIP force call per pair, a force on B towards A flagging likely recombination and sending the pair to the back of the queue; then relax every pair with the potential and settings of the initial state | Flagged pairs; relaxed pairs |
 | 9d | Tool | Gate: no A–B bond; nothing desorbed, moved or subsurface; surface intact; no imaginary mode | Survivors; every rejection with its reason |
-| 9e | Tool, LLM writes it up | Nearest survivor first, then energy; keep several | Final states, E(FS near), E(FS ∞), recombination rate |
+| 9e | Tool, LLM writes it up | Cluster survivors by SOAP as NEBscape does; nearest first, then energy; keep the nearest and the lowest per cluster | Final states, E(FS near), E(FS ∞), recombination rate |
 
 Open questions: section 18.
 
