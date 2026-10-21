@@ -2,6 +2,8 @@
 
 `docs/adsorption-agent-workflow.md` is the shared memory of this project. A colleague or another Claude instance must be able to pick up the work from it alone, without the conversation. So **update it as ideas form, not at the end.**
 
+`docs/agent-context.md` is the same content for agents: text only, no figures, each figure restated as a table, list or rule. Every change to the design doc is mirrored there in the same turn; the design doc is the source of truth when they differ.
+
 ## When to write
 
 Update the doc in the same turn as any of these happen:
@@ -15,39 +17,16 @@ Update the doc in the same turn as any of these happen:
 | A concrete task follows                   | *Next steps*, as `- [ ]`; tick it `- [x]` when done        |
 | A step, owner or tool changes             | The workflow tables **and** the figure that shows them     |
 | A top-level file or folder is added       | The *Layout* tree in the root `README.md`, one line each   |
+| Any of the above                          | The matching section of `docs/agent-context.md`, text only   |
 
 Edit in place; do not append a changelog. If new thinking contradicts the doc, fix the old text so the doc never says two things.
 
-## Show it, don't only tell it
+## How to write
 
-Every substantial idea should be readable at a glance. Pick the lightest form that carries it:
+Follow `docs/agent-writing-style.md`: prose rules, figure conventions, the text-only form for `agent-context.md`, and commit messages. The three agent files have one job each:
 
-1. **Table**: steps, owners, comparisons, mappings (see *The adsorption workflow*).
-2. **Equation** in `$$ … $$`: any quantity we compute.
-3. **Figure**: flows, layers, energy levels, geometry, anything with arrows or space.
-
-Code blocks are for code only, never as a substitute for a diagram.
-
-### Figure conventions (copy the existing ones)
-
-- File: `docs/figures/NN-short-kebab-name.png`, numbered in reading order; keep the script that draws it as `docs/figures/src/NN-short-kebab-name.py`.
-- Look: white background, rounded boxes with thin grey outlines, grey arrows, sans-serif text. **One** highlighted box (light blue fill, blue outline) marks what is new or what we build. Bold title line stating the takeaway. Mark schematics as "schematic, not to scale".
-- In the Markdown, always in this order:
-
-```markdown
-![<the takeaway as a sentence>](figures/NN-name.png)
-
-*Figure: <subject> · <qualifier, e.g. 4 levels, schematic>*
-
-Reading the figure: <walk the eye left-to-right or top-to-bottom; say what each
-colour, box and arrow means, and what the reader should conclude>.
-```
-
-- Add or update the figure count and list in `docs/README.md`.
-
-## Writing style
-
-- Lead each section with its conclusion in one sentence, then the reasons.
-- Short declarative sentences, British spelling, no hype.
-- Give every step a single owner: Tool, LLM, Human, or Literature.
-- Cite new sources in *Sources* with a link.
+| File                          | Job                                                             |
+|-------------------------------|-----------------------------------------------------------------|
+| `docs/agent-context.md`       | What the humans know: the design document without figures       |
+| `docs/agent-writing-style.md` | How to write and draw for this project                          |
+| `docs/CLAUDE.md` (this file)  | When to update which file                                       |

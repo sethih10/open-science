@@ -9,9 +9,9 @@ This document records the reasoning behind that direction, so that a colleague o
 
 **The position in one paragraph.** A generic "agent that computes adsorption energies" already exists several times over (Adsorb-Agent, AdsMind, DREAMS, CatMaster, Catalyst-Agent, AutoDFT). Our contribution is therefore not the workflow itself but its trustworthiness: symmetry-complete site enumeration, explicit validity checks, detection of machine-learning failures (notably on magnetic Ni and Co), designed human checkpoints, a measured failure rate against a baseline, and an open, reusable release.
 
-**How to read it.** Sections 2 to 4 give the science and the basic workflow. Sections 5 and 6 cover prior work and benchmarks. Section 7 explains how human insight enters the agent. Sections 8 and 9 extend the workflow to reaction pathways. Sections 10 and 11 give strategy, decisions and open questions.
+**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 and 9 explain what scientific intuition the agent needs, where it comes from, and what others have done to give agents such intuition. Section 10 places our work on AtomisticSkills. Sections 11 and 12 extend the workflow to reaction pathways. Sections 13 and 14 give strategy, decisions and open questions.
 
-**Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 9 carries its own key.
+**Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 12 carries its own key.
 
 ## Scientific background
 
@@ -112,6 +112,7 @@ Automate the deterministic middle; keep humans where a wrong choice silently cor
 | Step                             | Owner | What it does                                                    | Tools                             |
 |----------------------------------|-------|-----------------------------------------------------------------|-----------------------------------|
 | Choose system and settings       | Human | Metal, facet, adsorbate, functional, references                 | Literature, PROJECT.md            |
+| Converge numerical settings      | Tool  | Pseudopotential set, cutoff, k-mesh, smearing, layers, on E_ads | Convergence tool (ours), ASE      |
 | Bulk relaxation                  | Tool  | Lattice constant                                                | ASE, VASP or Quantum ESPRESSO     |
 | Slab construction                | Tool  | Facet, layers, vacuum, fixed bottom layers                      | ASE, pymatgen                     |
 | Site and orientation enumeration | Tool  | All symmetry-inequivalent sites and orientations                | spglib, pymatgen, CatKit, ACAT    |
@@ -127,6 +128,51 @@ Automate the deterministic middle; keep humans where a wrong choice silently cor
 The largest gains from automation are site enumeration (dozens of inequivalent configurations instead of three or four guesses), ML pre-screening (roughly an order of magnitude less DFT), job handling, and validity checks.
 
 A sensible build order is: enumeration plus validity checks first (no supercomputer time needed); then DFT job management on a known system such as H on Pt(111), reproducing a literature value; then ML pre-screening, checked against DFT before relying on it.
+
+## Choosing the DFT numerical setup
+
+Practitioners do not choose pseudopotentials, cutoffs and k-points by taste. They take a verified library and run convergence tests on the quantity they will report. The physics choices (functional, dispersion, spin, Hubbard U, gas-phase references, slab model) need judgement and literature; the numerical choices are tests that a tool can run unattended. The two kinds are kept apart because they fail differently: a wrong functional gives a plausible but biased number that no test reveals, while an unconverged cutoff gives noise that a sweep removes.
+
+![Physics choices need judgement; numerical choices are convergence tests the agent can run](figures/13-dft-setup-two-kinds-of-choice.png)
+
+*Figure: two kinds of DFT setting · schematic*
+
+Reading the figure: the left column lists the physics choices, each with where the answer comes from; a human makes them and they are locked in PROJECT.md at the Approve-settings checkpoint. The right column lists the numerical choices, each with the rule a practitioner applies; the highlighted box at the bottom is the convergence tool we build, which sweeps these settings on E_ads and writes the result into PROJECT.md. The grey arrow between the two bottom boxes carries the converged numbers into the locked project memory.
+
+**Pseudopotentials.** A plane-wave code never treats the core electrons explicitly; each atom's core is replaced by a pseudopotential or PAW dataset. Nobody generates these for a project; they come from a library. VASP ships one recommended PAW dataset per element, marked in its wiki; variants with the suffixes `_pv` and `_sv` put semicore p or s states into the valence and are the recommended choice for early transition metals and wherever semicore states matter. For Quantum ESPRESSO the [SSSP library](https://www.materialscloud.org/discover/sssp) picked, for each element, the best file from the public libraries by testing against all-electron equations of state, phonon frequencies, cohesive energy, pressure and band structure; it comes as an *efficiency* set for screening and a *precision* set for final numbers, each with a recommended cutoff per element. Both families were checked against all-electron codes in the [Δ-test](https://archive.materialscloud.org/record/1874) (Lejaeghere et al., Science 2016) and its successor ([Bosoni et al., Nature Reviews Physics 2024](https://archive.materialscloud.org/record/2023.81)), which found that modern PAW and pseudopotential codes agree with each other as closely as independent experiments do. The practical rules are: take the recommended set; never mix families or versions within a project; use the same dataset for an element in bulk, slab and gas phase; record the version (PBE 54 is the current default in the Materials Project and atomate2, OC20 used PAW with RPBE).
+
+**Plane-wave cutoff.** The cutoff sets the size of the basis. Each dataset states a minimum (ENMAX in a VASP POTCAR; the per-element table in SSSP). Start from the largest ENMAX of any element in the cell, times about 1.3 when the cell volume is relaxed (to avoid Pulay stress), then converge. OC20 used 350 eV; the Materials Project uses 520 eV because it compares total energies across many compounds. The point that matters for us is that one converges E_ads, not the total energy. The basis-set error of a metal atom is nearly the same in the clean slab and in the slab with adsorbate, so it cancels in the difference:
+
+$$
+\delta E_{\mathrm{ads}} = \delta E(\mathrm{slab}+A) - \delta E(\mathrm{slab}) - \delta E(A) \ll \delta E(\mathrm{slab}+A)
+$$
+
+E_ads therefore reaches ±10 meV at a cutoff where the total energy is still hundreds of meV from its limit. The same cancellation needs identical settings on both sides of the difference, which is why the convergence tool uses one mesh and one cutoff for slab and slab+A.
+
+![Converge the difference, not the total: errors cancel in E_ads](figures/14-convergence-error-cancellation.png)
+
+*Figure: convergence of E_ads against cutoff and k-points · schematic, not to scale*
+
+Reading the figure: on the left, the grey curve is the error in the total energy of slab+A as the cutoff rises, and the blue curve the error in E_ads; the blue band is the ±10 meV target. E_ads enters the band at the blue dashed line, near 1.3 times ENMAX, long before the total energy does at the grey dashed line. On the right, E_ads on a metal is plotted against the in-plane k-point mesh for two smearing widths: the sharp Fermi edge (grey) oscillates for longer than the broader Methfessel–Paxton smearing (blue), which enters the band at about a 7 × 7 × 1 mesh on a 2 × 2 cell.
+
+**k-points.** Converge likewise. Metals need denser meshes than insulators because the occupation drops sharply at the Fermi level; a smearing of the occupations (Methfessel–Paxton or Marzari–Vanderbilt, σ = 0.1 to 0.2 eV) damps the oscillation, and one reports the energy extrapolated to σ → 0. Use Γ-centred meshes on hexagonal cells, one k-point along the vacuum direction, a spacing of about 0.2 to 0.3 Å⁻¹ in-plane (OC20 derived its mesh from 40 divided by the in-plane cell lengths), and a cell-consistent density when comparing supercells of different size.
+
+**Slab thickness, vacuum and dipole correction** are convergence tests too: add layers until E_ads stops changing (four to five for close-packed metals), use at least 12 to 15 Å of vacuum, and switch on the dipole correction when only one face of the slab is covered.
+
+**Who does what in our agent.**
+
+| Setting                                 | How it is chosen                                   | Owner | Channel                              |
+|-----------------------------------------|----------------------------------------------------|-------|--------------------------------------|
+| Pseudopotential family and version      | Library recommendation, Δ-test verified            | Tool  | Lookup; recorded in PROJECT.md       |
+| Functional, dispersion, spin, Hubbard U | Literature and CE27; specific to the system        | Human | Checkpoint; locked in PROJECT.md     |
+| Gas-phase references and corrections    | Literature                                         | Human | Locked in PROJECT.md                 |
+| Cutoff, k-mesh, smearing                | Sweep on E_ads of a test adsorbate to ±10 meV       | Tool  | Convergence tool; result in PROJECT.md |
+| Layers, vacuum, dipole correction       | Sweep on E_ads                                     | Tool  | Convergence tool                     |
+| Force and SCF thresholds                | Convention: 0.02 to 0.03 eV Å⁻¹; 10⁻⁵ to 10⁻⁶ eV     | Skill | SKILL.md                             |
+
+Protocol libraries already encode this expertise without any language model: [AiiDA common workflows](https://aiida-common-workflows.readthedocs.io/) offer *fast*, *moderate* and *precise* protocols for eleven codes, each implementer's settings made available to non-experts; SSSP fixes the pseudopotential and cutoff per element; pymatgen input sets fix the Materials Project settings. The agent should call these and the convergence tool rather than invent settings.
+
+**Rejected.** Letting the LLM write cutoff and k-points from memory in one call, as [AutoDFT](https://arxiv.org/html/2605.26179v2) does. A number produced that way may be right for Pt and wrong for an oxide, and nothing in the run reveals which. The LLM may choose *which* protocol applies and explain the choice; the numbers come from the protocol or the sweep.
 
 ## Where the literature is needed
 
@@ -146,7 +192,7 @@ The calculation itself needs nothing from the literature: every term in E_ads is
 
 **In practice** this is a targeted lookup of minutes, not a formal review: one or two published E_ads values with their functional, the preferred site (computed and, if possible, measured), and any reported DFT failure. The agent may gather these, but a human must verify them, because language models can misquote values or invent citations.
 
-A separate, proper literature review (20 to 40 papers) is needed for the project itself, to show what the agent adds beyond existing work. That is section 5.
+A separate, proper literature review (20 to 40 papers) is needed for the project itself, to show what the agent adds beyond existing work. That is section 6.
 
 ## Prior work and its gaps
 
@@ -236,6 +282,68 @@ A skill is one of five channels, not the only one. Each kind of insight belongs 
 - Commands to defer a tangent or branch into an alternative hypothesis.
 
 We copy the pattern (Formulate interview, locked settings, discuss-then-execute, autonomy setting) and add what GPD lacks for our domain: an adsorption and transition-state skill with DFT pitfalls, and deterministic validity-check tools exposed as an MCP server.
+
+**Does the agent need chemistry and physics intuition?** Yes, but intuition is four different things, and only the last is hard to obtain.
+
+1. *Procedures*: how to do a step so that it comes out right (break symmetry before relaxing; converge E_ads, not the total energy; same settings on both sides of a difference). Written in textbooks and protocol libraries. Goes into the skill.
+
+2. *Priors and expected ranges*: what an answer should look like (H on Pt(111) near −0.5 eV; CO prefers the top site on Pt although GGA says hollow; universal ML potentials fail on magnetic Ni and Co). Written in benchmarks, datasets and reviews. Goes into the sanity checks and the ML-doubt detector as thresholds.
+
+3. *Sanity constraints*: what cannot be true (an adsorbate 3 Å above the surface has desorbed; a minimum has no imaginary modes; a magnetic moment does not vanish on adsorption). Physics, written once. Goes into code.
+
+4. *Judgement of when to stop*: recognising that the first three do not cover the case at hand (two ML potentials disagree; the chemistry is unseen; a value is outside the expected range). This is the part that lives in experienced researchers' heads. It enters through the Formulate interview before a run, through the review of flagged cases after it, and it is logged.
+
+The agent does not need to *have* intuition in its weights. It needs the first three kinds written where they are enforced, and a cheap path to a human for the fourth, with every correction recorded so that the fourth kind slowly turns into the first three.
+
+![Scientific intuition is written down in more places than it seems; the rest we elicit and log](figures/15-where-intuition-comes-from.png)
+
+*Figure: sources of intuition, kinds of intuition, enforcing channels · schematic*
+
+Reading the figure: the left column lists where expert knowledge is already written, from textbooks down to our own runs; the highlighted box is the experienced researcher, the only source for the fourth kind of intuition. The middle column groups the knowledge into the four kinds above. The right column is the channel from the table at the top of this section that enforces each kind. The grey arrows show knowledge flowing from sources into kinds and from kinds into channels. The dashed arrow is the learning loop: a correction made at a checkpoint becomes a line in the lessons log, and a recurring lesson becomes a line in the skill or a test in the code.
+
+**Where to get it, concretely.**
+
+| Source                                                                                                                               | What it gives                                   | How we extract it                                                |
+|--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|------------------------------------------------------------------|
+| Textbooks: Sholl and Steckel, *DFT: A Practical Introduction* (2009); Nørskov, Studt, Abild-Pedersen and Bligaard, *Fundamental Concepts in Heterogeneous Catalysis* (2014) | Procedures, pitfalls, reference states          | Read once; write into SKILL.md with the citation                  |
+| Protocol libraries: SSSP, AiiDA common workflows, pymatgen input sets                                                                | Numerical defaults, verified                    | Call them as tools                                               |
+| Published inputs and datasets: OC20 settings, NOMAD, Materials Cloud, Catalysis-Hub                                                  | Settings used in practice; values for priors    | Lookups that set expected ranges                                 |
+| Benchmarks: CE27, Δ-test, CatBench, the 80-MLIP survey                                                                               | Expected errors; list of known failures         | Thresholds in the sanity checks and the ML-doubt detector        |
+| Forums and group lore: VASP wiki and forum, Quantum ESPRESSO users list, lab wikis                                                   | Fixes for failures ("set initial moments on Ni") | Mine for the pitfall list; verify on a test case before adding   |
+| Experienced researcher                                                                                                               | Judgement; which defaults they do not trust     | Structured interview (below); review of flagged cases            |
+| Our own runs                                                                                                                         | Corrections with reasons                        | Lessons log, promoted into the skill when a lesson recurs        |
+
+**Interview questions for the Formulate stage.** These are the questions that pull tacit knowledge out of a researcher, adapted from cognitive task analysis: What do you check first when a number looks wrong? On which systems do you not trust the default settings, and what do you change? What do you do before you trust a machine-learned potential on a new metal? Which published values would you compare a first result against? What has silently gone wrong for you before? Each answer becomes a sanity check, a prior, or a skill line.
+
+**What the evidence says about skills as the carrier.** [SkillsBench](https://www.emergentmind.com/papers/2602.12670) (2026) found that curated, human-written skills raised agent success by 16.2 percentage points across 84 tasks, while skills the agent wrote for itself gave no gain or a loss. [Demystifying Agent Skills](https://arxiv.org/pdf/2608.14036) (2026) found that skills help mainly as procedural anchors (65.7% of cases) rather than by injecting facts (4.5%), and that selection precision falls from 29.6% to 3.3% as a pool grows from 5 to 100 skills. Hence: few skills, written by people, procedural, verified on a test case, and the facts (ranges, thresholds) kept in code and project memory rather than in prose.
+
+## Prior work on giving agents scientific intuition
+
+Nobody has solved the transfer of researchers' tacit knowledge into agents; the approaches split by where the knowledge ends up (weights, context, or code) and by who checks it. As far as we found, Anthropic has not published research on this specific problem; its contributions are the skill format and science-specific skill sets, listed first.
+
+| Work                                                                                                                                                                                      | Approach                                                                                     | Knowledge lives in | What it tells us                                                                             |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|--------------------|----------------------------------------------------------------------------------------------|
+| [Agent Skills](https://www.anthropic.com/news/skills) (Anthropic, 2025)                                                                                                                   | Folders of instructions, scripts and resources an agent loads when a task matches            | Context            | The format we write our skill in                                                             |
+| [Claude for Life Sciences](https://www.anthropic.com/news/claude-for-life-sciences) and [Claude Science](https://www.anthropic.com/news/claude-science-ai-workbench) (Anthropic, 2025–26) | Curated science skills (60+), coordinating agent, reviewer agent that checks citations and calculations, auditable artifacts | Context + tools    | Reviewer-agent and audit-trail patterns; no surface-chemistry or DFT-settings skill          |
+| [Scientific Agent Skills](https://github.com/k-dense-ai/scientific-agent-skills) (K-Dense, 2025–26)                                                                                       | 146+ open skills over databases and packages                                                 | Context            | Breadth; nothing on DFT trust                                                                |
+| [AtomisticSkills](https://arxiv.org/abs/2605.24002) (MIT, 2026)                                                                                                                           | 100+ skills, 50+ MCP tools, rules; skills validated against literature values                 | Context + tools    | Our substrate (section 10)                                                                   |
+| [Get Physics Done](https://github.com/psi-oss/get-physics-done)                                                                                                                           | Formulate interview, locked conventions, verify stage                                        | Context            | The interview pattern                                                                        |
+| [SkillsBench](https://www.emergentmind.com/papers/2602.12670) and [Demystifying Agent Skills](https://arxiv.org/pdf/2608.14036) (2026)                                                      | Measure when skills help and why                                                             | —                  | Human-written, procedural, few                                                               |
+| [ether0](https://www.futurehouse.org/news/ether0-a-scientific-reasoning-model-for-chemistry) (FutureHouse, 2025)                                                                           | 24B model trained by reinforcement learning on 640,730 verifiable chemistry tasks            | Weights            | Intuition can be trained where a verifier exists; DFT is such a verifier, but out of hackathon scope |
+| [ChemCrow](https://arxiv.org/abs/2304.05376) (2023), [Coscientist](https://www.cmu.edu/news/stories/archives/2023/december/cmu-designed-artificially-intelligent-coscientist-automates-scientific-discovery) (Nature 2023), [El Agente](https://arxiv.org/abs/2505.02484) (2025) | LLM plans; expert-designed tools execute; El Agente scores over 87% on course exercises        | Tools              | Expertise in the tool layer works; chemistry accuracy is not what their benchmarks score     |
+| [Virtual Lab](https://biohub.org/news/with-no-need-for-sleep-or-food-ai-built-scientists-get-the-job-done-quickly/) (Nature 2025), [AI co-scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/) (Google, 2025) | Multi-agent personas with a critic; the human wrote about 1% of the Virtual Lab's words        | Context (model's own) | The critic role is useful; the knowledge is still the model's own                           |
+| [Kosmos](https://arxiv.org/html/2511.02824v2) (2025)                                                                                                                                      | Structured world model shared across 200 rollouts; 79.4% of claims judged accurate            | Context (memory)   | A structured memory is our PROJECT.md plus lessons log                                       |
+| Tacit-knowledge elicitation: [LLMs for tacit knowledge discovery](https://arxiv.org/pdf/2507.03811) (2025), [KUPAS MASTER](https://arxiv.org/abs/2609.37673) and [Tacit Fragments](https://www.alphaxiv.org/abs/2609.operationalising-tacit-knowledge-agentic-ai) (2026) | Interview agents and governed memory that capture which cues matter and why a judgement holds | Context            | Formal versions of our interview and lessons log; none applied to physics yet                |
+| Protocol libraries: [SSSP](https://arxiv.org/pdf/1806.05609) (2018), [AiiDA common workflows](https://www.nature.com/articles/s41524-021-00594-6) (2021), pymatgen input sets               | Expert settings as code, Δ-test verified, no LLM                                              | Code               | The numerical layer should be these, not prose                                               |
+| Benchmarks of intuition: [FrontierScience](https://openai.com/index/frontierscience) (OpenAI, 2025), [K-Bench](https://arxiv.org/pdf/2608.21601) (2026), ChemBench, CURIE                   | Measure only; GPT-5.2 scores 77% on olympiad problems but 25% on research tasks; in K-Bench no model reached the level a domain scientist would accept, and over-claiming was the commonest failure | — | Weights alone are not enough; checks and humans stay in the loop                             |
+
+![Expert knowledge can live in model weights, in context, or in code; only code and benchmarks enforce it](figures/16-intuition-landscape.png)
+
+*Figure: landscape of prior work on scientific intuition in agents · schematic*
+
+Reading the figure: left to right, the knowledge sits in the model's weights, in its context (prompts, skills, memory) or in code and tools. Bottom to top, it is generated by the model itself, curated by experts, or verified against a benchmark. Pure multi-agent systems sit bottom-centre; skill libraries sit centre; verified protocol libraries sit top-right. The highlighted box is where this project sits: checks as code, one procedural skill, and a measured failure rate. The dashed arrow shows that our skill reuses the skill-library layer rather than replacing it. Benchmarks that only measure are listed at the bottom.
+
+**What this means for us.** Three conclusions. First, write the know-how, do not hope the model has it: the benchmarks show that frontier models over-claim on open research tasks. Second, put each kind of intuition in the channel that enforces it (section 8), and keep skills few and procedural. Third, the genuinely tacit part, judgement, is obtained by asking an experienced researcher structured questions before the run and logging their corrections after it; the tacit-knowledge papers above do this with interview agents, which we can adopt later.
 
 ## Building on AtomisticSkills
 
@@ -399,6 +507,12 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - Build on AtomisticSkills rather than a standalone agent; contribute the trust layer as its skills and tools.
 
+- Numerical settings (pseudopotential set, cutoff, k-mesh, smearing, layers) come from a verified protocol library or a convergence sweep on E_ads, never from the LLM's memory; the LLM picks the protocol and explains the choice.
+
+- Intuition enters in four kinds: procedures into the skill, priors into thresholds, constraints into code, judgement through the interview and flagged-case review; corrections go to the lessons log and are promoted to the skill when they recur.
+
+- Skills are few, human-written and procedural; facts and ranges live in code and PROJECT.md.
+
 **Open questions.**
 
 - Which hackathon, with what rubric and build period?
@@ -410,6 +524,12 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - How should the agent detect ML doubt: ensemble disagreement, geometric sanity, or both?
 
 - Does symmetry-complete enumeration find lower minima than OC20-Dense, and how often?
+
+- Which convergence target for E_ads (10 meV, 25 meV) is cheap enough for the hackathon and tight enough for the benchmark?
+
+- How many lessons-log entries does it take before the Ni(111) failure is caught without a human, and can we show that curve in the demo?
+
+- Can the Formulate interview be run by an interview agent (as in the tacit-knowledge papers) without losing what a human interviewer would catch?
 
 **Next steps.**
 
@@ -434,6 +554,16 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - [ ] Run its addadsorbate placement as the baseline in our benchmark
 
 - [ ] Prototype the ML-doubt loop with ml-mlip-benchmark and ml-mace-finetune on Ni(111)
+
+<!-- -->
+
+- [ ] Build the convergence tool (cutoff, k-mesh, smearing, layers on E_ads of H on Pt(111)) and have it write PROJECT.md
+
+- [ ] Write the Formulate interview questions into the SKILL.md and test them on one experienced researcher
+
+- [ ] Start the lessons log with the known pitfalls (CO on Pt, Ni and Co magnetism, symmetry trap) as its first entries
+
+- [ ] Redraw figure 12 with the "Converge numerical settings" step; its source script is not in the repository, so it must be recreated under docs/figures/src/
 
 ## Sources
 
@@ -479,4 +609,34 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 - [AtomisticSkills: harnessing agent skills for atomistic research](https://arxiv.org/abs/2605.24002) and its [code](https://github.com/learningmatter-mit/AtomisticSkills)
 
-From memory, not looked up here: Wellendorff et al., "A benchmark database for adsorption bond energies to transition metal surfaces" (CE27), Surface Science, 2015.
+<!-- -->
+
+- [SSSP: precision and efficiency in solid-state pseudopotential calculations](https://arxiv.org/pdf/1806.05609) and the [library](https://www.materialscloud.org/discover/sssp)
+
+- [Δ-test: reproducibility in DFT calculations of solids (Lejaeghere et al., Science 2016)](https://archive.materialscloud.org/record/1874) and [Bosoni et al. 2024, verifying DFT precision via reproducible workflows](https://archive.materialscloud.org/record/2023.81)
+
+- [AiiDA common workflows (Huber et al., npj Computational Materials 2021)](https://www.nature.com/articles/s41524-021-00594-6) and [documentation](https://aiida-common-workflows.readthedocs.io/)
+
+- [VASP wiki: choosing pseudopotentials](https://vasp.at/wiki/Choosing_pseudopotentials) and [energy cutoff and FFT mesh](https://vasp.at/wiki/Energy_cut_off_and_FFT_mesh)
+
+- [OC20 dataset paper, with the DFT settings](https://arxiv.org/pdf/2010.09990)
+
+- [Convergence and ML prediction of k-points and cutoff in high-throughput DFT](https://arxiv.org/pdf/1809.01753)
+
+- [Anthropic: Agent Skills](https://www.anthropic.com/news/skills), [Claude for Life Sciences](https://www.anthropic.com/news/claude-for-life-sciences), [Claude Science workbench](https://www.anthropic.com/news/claude-science-ai-workbench), [AI for Science program](https://support.claude.com/en/articles/11199177-anthropic-s-ai-for-science-program)
+
+- [Scientific Agent Skills (K-Dense)](https://github.com/k-dense-ai/scientific-agent-skills) and [K-Bench](https://arxiv.org/pdf/2608.21601)
+
+- [SkillsBench](https://www.emergentmind.com/papers/2602.12670) and [Demystifying Agent Skills](https://arxiv.org/pdf/2608.14036)
+
+- [ether0: a scientific reasoning model for chemistry](https://www.futurehouse.org/news/ether0-a-scientific-reasoning-model-for-chemistry) ([paper](https://arxiv.org/html/2506.17238v2))
+
+- [ChemCrow](https://arxiv.org/abs/2304.05376), [Coscientist](https://www.cmu.edu/news/stories/archives/2023/december/cmu-designed-artificially-intelligent-coscientist-automates-scientific-discovery), [El Agente](https://arxiv.org/abs/2505.02484)
+
+- [Virtual Lab (Nature 2025)](https://biohub.org/news/with-no-need-for-sleep-or-food-ai-built-scientists-get-the-job-done-quickly/), [Google AI co-scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/), [Kosmos](https://arxiv.org/html/2511.02824v2)
+
+- Tacit knowledge and agents: [LLMs for tacit knowledge discovery](https://arxiv.org/pdf/2507.03811), [KUPAS MASTER](https://arxiv.org/abs/2609.37673), [Tacit Fragments](https://www.alphaxiv.org/abs/2609.operationalising-tacit-knowledge-agentic-ai)
+
+- [OpenAI FrontierScience](https://openai.com/index/frontierscience)
+
+From memory, not looked up here: Sholl and Steckel, *Density Functional Theory: A Practical Introduction*, Wiley, 2009; Nørskov, Studt, Abild-Pedersen and Bligaard, *Fundamental Concepts in Heterogeneous Catalysis*, Wiley, 2014; Wellendorff et al., "A benchmark database for adsorption bond energies to transition metal surfaces" (CE27), Surface Science, 2015.
