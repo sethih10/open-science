@@ -6,7 +6,7 @@
 - `agent-build-context.md`: what to build, for a coding agent or developer: owners per step, every tool with inputs, outputs, checks and thresholds, data formats, rules for the LLM, the benchmark, the build order, and the open decisions that block coding.
 - `agent-writing-style.md`: how agents write and draw for this project.
 - `CLAUDE.md`: when agents update which file.
-- `figures/`: the 24 figures as PNG files, numbered in reading order.
-- `figures/src/`: the Python (matplotlib) scripts that draw figures 13 to 24, plus `_style.py` with the shared look. Scripts for figures 1 to 12 are not in the repository.
+- `figures/`: the 25 figures as PNG files, numbered in reading order.
+- `figures/src/`: the Python (matplotlib) scripts that draw figures 13 to 25, plus `_style.py` with the shared look. Scripts for figures 1 to 12 are not in the repository.
 
 Open the folder in any Markdown viewer (GitHub, VS Code, Obsidian, Typora) and the figures display inline. Equations use `$$ … $$` (LaTeX), which GitHub, VS Code and Obsidian render.

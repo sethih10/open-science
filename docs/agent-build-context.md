@@ -528,12 +528,17 @@ open-science-hackathon/
 ├── docs/                         design document, agent context, build context, survey, figures
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
 ├── skills/                       few, human-written, one folder each, under 200 lines each
-│   ├── adsorption-trust/SKILL.md the settings protocol, when to doubt, the checkpoints
-│   ├── final-state/SKILL.md      the 9a to 9e procedure; diagnosing a failed band
-│   └── report/SKILL.md           the report format and the BEP check
+│   ├── adsorption-trust/SKILL.md the settings protocol and the checkpoints
+│   ├── ml-doubt/SKILL.md         calibration against DFT labels and the escalation rule
+│   ├── final-state/SKILL.md      the 9a to 9e procedure and the pairing
+│   ├── saddle-diagnosis/SKILL.md what to do when a band or a saddle fails validation
+│   ├── report/SKILL.md           the report format and the BEP check
+│   └── hpc-jobs/SKILL.md         only with HPC: submission, what custodian handles, what to escalate
 ├── agents/                       one markdown file per role, one page each
-│   ├── planner.md                calls tools by name, reads cards, stops at checkpoints
-│   └── critic.md                 extension: comments on cards, never overrides a check
+│   ├── planner.md                decides the next tool call and when to stop
+│   ├── interviewer.md            runs the Formulate interview; writes PROJECT.md; before the run
+│   ├── critic.md                 extension: whether a card and its verdicts disagree; never overrides
+│   └── steward.md                only with HPC: resubmit, adjust or escalate a failed DFT job
 ├── hooks/hooks.json              blocks coordinate edits; pauses at human checkpoints
 ├── mcp/                          one server, typed tools, one file per tool
 │   ├── server.py                 registers the tools
@@ -564,12 +569,49 @@ Reading orders:
 | A human | `README.md`, the design document in `docs/`, `PROJECT.md`, the run's `report.md`, `lessons.md`      |
 | An agent | `CLAUDE.md`, `docs/agent-context.md`, this file, the skill it was given, the tool docstrings        |
 
+### Compute: what runs where
+
+HPC is needed for DFT and for nothing else. Every check, enumeration, mapping and report runs on a laptop; every machine-learned relaxation, band and frequency runs on one GPU; every DFT step runs on a cluster. Figure 25 of the design document draws the three lanes.
+
+| Lane   | Steps                                                                                              | Without HPC in the hackathon                                                                 |
+|--------|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| Laptop | 1 lock (reads the protocol), 2 to 4, 4.1, 6, 9a, 9b, 9d, 10, 12 checks, 14                         | Unchanged                                                                                    |
+| GPU    | 5, 7 committee, 9c, 11, 12 ML frequencies                                                          | Unchanged; one workstation or cloud GPU                                                      |
+| HPC    | 1 settings sweep, 7 calibration labels, 13, the benchmark DFT check, DFT frequencies (optional)    | Replaced, not skipped: OC20's RPBE and PAW values instead of the sweep; OC20NEB's released DFT bands as labels and ground truth; one DFT check of the propagation experiment run once beforehand and recorded |
+
+Cost, from experience and not measured here: an ML relaxation of a small Pt(111) cell takes seconds on one GPU and an ML band minutes; the same relaxation in DFT takes core-hours and a DFT band many core-hours. The decision is D2 in section 8.
+
+### Agents and skills: the roster and why it is short
+
+Tools do the work. A role is added only when a human can say in one sentence what it decides, and a skill only when it is a procedure a human has written and checked. The evidence in the design document, section 8: skill selection precision falls from 29.6 % with 5 skills to 3.3 % with 100, curated skills gain about 16 points and self-written skills about none, CatDT runs eight agents and has published no result, and in the Virtual Lab the human wrote about 1 % of the words and set every agenda.
+
+| Agent       | Decides                                                       | Status                         |
+|-------------|---------------------------------------------------------------|--------------------------------|
+| planner     | The next tool call, and when to stop                          | Core                           |
+| interviewer | What the Formulate interview locks into PROJECT.md            | Core, runs once before the run |
+| critic      | Whether a card and its verdicts disagree; never overrides     | Extension                      |
+| steward     | Resubmit, adjust or escalate a failed DFT job                 | Only with HPC                  |
+| reviewer    | Whether the report would pass peer review                     | Reuse general-peer-review; not a new role |
+
+The critic and the interviewer are separate roles for one reason each: the critic must not see the planner's reasoning, or its check is anchored; the interviewer holds a fixed question list that the planner must not rewrite.
+
+| Skill, ours      | Procedure                                                      | Status         |
+|------------------|----------------------------------------------------------------|----------------|
+| adsorption-trust | Settings protocol; the checkpoints and what to show at each   | Core           |
+| ml-doubt         | Calibration against DFT labels; when to escalate               | Core           |
+| final-state      | 9a to 9e; pairing; what to report                              | Core           |
+| saddle-diagnosis | What to do when a band or saddle fails validation; revise once | Core           |
+| report           | Report format; BEP check                                       | Core           |
+| hpc-jobs         | Submission; what custodian handles; what to escalate           | Only with HPC  |
+
+Reused from AtomisticSkills: ml-committee-uncertainty, ml-mlip-benchmark, ml-mace-finetune, chem-neb-barrier, chem-thermochemistry, general-peer-review. Twelve skills in all stays well inside the range where selection precision holds.
+
 Rules that keep it readable:
 
 - One kind per file. A skill never contains code; an agent file never contains a procedure; a tool never contains logic. If a reader finds logic outside `trust/`, that is a bug.
 - One tool, one file, one library module, one test, all with the same name. `mcp/tools/gate.py` wraps `trust/checks.py` is the one allowed exception, because the gate has nine checks; name the test `tests/test_gate.py`.
-- Few agents. The planner and the human do the work; the critic is an extension. Add a role only when a human can say in one sentence what it decides.
-- Few skills. Three to start, each under 200 lines, each naming the tools it calls. Facts and ranges live in `trust/` and `PROJECT.md`, not in skills.
+- Few agents. The planner and the human do the work; the interviewer runs once; the critic is an extension; the steward exists only with HPC.
+- Few skills. Five of ours to start, six with HPC, each under 200 lines, each naming the tools it calls. Facts and ranges live in `trust/` and `PROJECT.md`, not in skills.
 - Logs live in `runs/`, never in the repository root; `lessons.md` is the one log a human edits.
 - Hooks enforce what prose cannot: the hook that blocks coordinate edits and the hook that pauses at a checkpoint sit in `hooks/hooks.json`, so the rules of section 5 do not depend on the model reading them.
 - The plugin manifest is the only place that lists skills, agents and the server, so adding one is one line there and one folder.

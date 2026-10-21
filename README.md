@@ -17,5 +17,5 @@ An AI agent that computes adsorption energies on catalyst surfaces reliably, and
     ├── repo-survey.md                 repositories to wrap or copy, licences, recommended stack
     ├── agent-writing-style.md         how agents write and draw for this project
     └── figures/                       PNG figures for the design doc, numbered in reading order
-        └── src/                       matplotlib scripts for figures 13 to 24
+        └── src/                       matplotlib scripts for figures 13 to 25
 ```

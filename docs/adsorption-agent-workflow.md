@@ -780,6 +780,14 @@ Reading the figure: column 0 holds the decisions only the team can make, in grey
 
 Reading the figure: the tree on the left is coloured by kind: root files, documents, skills in green, agents in purple, MCP tools in blue, the library in white, runs and benchmark data in amber, tests outlined in pink. Each line carries a one-phrase note on what it holds. The top right gives the two reading orders, a human's from README to the design document to PROJECT.md to a run's report, and an agent's from CLAUDE.md to the agent context to the build context to the skill to the tool docstrings. The bottom right is the one-way rule: agents decide, skills say how, tools are typed entry points, the library holds every line of logic and every test, and runs hold every call and verdict. The rules under the tree keep it that way: one kind per file, skills under 200 lines that name tools and never contain code, one-page agents, and one tool per file wrapping one library module of the same name.
 
+**Compute, agents and skills.** HPC is needed for DFT and for nothing else, and the roster stays short because the tools do the work; the build context, section 9, gives the lanes and the roster.
+
+![HPC is needed for DFT and for nothing else; the roster is five roles and six skills at most](figures/25-compute-and-roster.png)
+
+*Figure: compute lanes and the roster · 3 lanes, 5 roles, 12 skills, schematic*
+
+Reading the figure: on the left, each pipeline step sits in the lane that runs it. Grey is the laptop, every check, enumeration, mapping and report. Blue is one GPU, every machine-learned relaxation, band and frequency. Red is HPC, every DFT step: the settings sweep, calibration labels, refinement, the benchmark check. The dashed red box says what replaces the HPC lane in a hackathon without a cluster: OC20's settings instead of a sweep, OC20NEB's released DFT bands as labels and ground truth, and one DFT check run beforehand. On the right, the agents are listed with the one sentence each decides and its status: planner and interviewer in the core, critic as an extension, steward only with HPC, and the reviewer as a reused skill rather than a role. Below them the six skills of ours in green and the six reused from AtomisticSkills in grey. The box at the bottom gives the evidence for keeping both lists short.
+
 **Next steps.**
 
 - [ ] Draft SKILL.md for adsorption and transition-state calculations
