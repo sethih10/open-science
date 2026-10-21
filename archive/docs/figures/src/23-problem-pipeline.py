@@ -104,7 +104,7 @@ rows = [
   ("missing", "Missing", "calibration of disagreement against a few DFT\nlabels; a rule by system class; spin initialised\nfor Ni and Co"),
   "calibrated doubt that escalates to review\ninstead of guessing",
   ("EXTENSION · attaches to 5", "active-learning loop: doubt → a few\nDFT labels → fine-tune → re-run")),
- ("(8) Human picks ≤ 5 initial states", "on descriptor cards, rank and uncertainty",
+ ("(8) Human picks ≤ 5 states", "the final states after 9e, on descriptor cards,\nrank and uncertainty; initial states only if AB* is enumerated",
   ("AdsorbML", "ML-relax many candidates, DFT on the top k"),
   ("exists", "Not unique", "top-k then DFT is AdsorbML's recipe;\nthe human step is what differs"),
   "choice and reason to the lessons log,\nthen into the skill",
@@ -147,15 +147,15 @@ rows = [
   ("CatTSunami: ML + 3 DFT single points", "score the ML saddle with DFT; fmax < 0.05 eV/Å;\nin its case study 102 DFT bands converged and\n8 failed; 14 % of converged bands were wrong"),
   ("exists", "Not unique", "standard practice; the cost and the failures\nare the point (compute budget still open)"),
   "force calls and failure rate, gated versus\nnaive endpoints: the cost measurable", None),
- ("(14) Report", "barrier, validated path, both uncertainties,\ndecision trace, cost",
-  ("TSAgent BEP check · energetic span · OC20NEB", "BEP relation as a sanity check; energetic span\nif multi-step; OC20NEB DFT bands as the\nground truth"),
+ ("(14) Report, built now", "both energies, rejections with reasons,\nrecombination rate, doubt, decision trace",
+  ("AtomisticSkills logging · general-peer-review · OC20NEB", "every parameter logged beside its output; the\nreport read by the peer-review skill; OC20NEB\nproduct frames as the comparison"),
   ("missing", "Missing", "the OC20NEB subset and a single-placement\nbaseline; the decision-trace format"),
-  "three numbers: barrier shift, recombination\nrate, DFT force calls and failures; open\nskill + MCP tools on AtomisticSkills",
-  ("EXTENSION · attaches to 14", "multi-step mechanism scored by\nenergetic span; catalysis after that")),
+  "two numbers and two comparisons; open\nskill + MCP tools on AtomisticSkills",
+  ("EXTENSION · attaches to 14", "later phase: BEP check, energetic span,\nmulti-step mechanism, catalysis")),
 ]
 
 OWNERS = ['TOOL · HUMAN · SKILL', 'TOOL', 'TOOL', 'TOOL · LLM · SKILL', 'HUMAN · LLM', 'TOOL', 'TOOL', 'TOOL', 'TOOL', 'TOOL · LLM', 'TOOL', 'TOOL', 'TOOL · LLM · SKILL', 'TOOL', 'LLM · HUMAN · SKILL']
-LATER = {10, 11, 12, 13, 14}   # the path and the report: a later phase, not the goal now
+LATER = {10, 11, 12, 13}   # the path and the report: a later phase, not the goal now
 for i, (st, sb, (bh, bb), (gk, gh, gb), ours, ext) in enumerate(rows):
     cell("later" if i in LATER else "step", "step", i, ("later · " + st) if i in LATER else st, sb, hfs=7.9, bfs=6.6, owner=OWNERS[i])
     cell("borrow", "borrow", i, bh, bb)
@@ -170,7 +170,7 @@ for i in range(len(rows) - 1):
     arrow(ax, (sx, ytop(i) - H - 0.0008), (sx, ytop(i + 1) + 0.0008), lw=1.3, ms=8)
 
 phases = [("A · set up", 0, 0, GREY), ("B · initial state AB*", 1, 4, GREY),
-          ("C · the stated problem: the final state A* + B*", 5, 9, HI_EDGE), ("D · later phase: the path and the report", 10, 14, "#9a9a9a")]
+          ("C · the stated problem: the final state A* + B*", 5, 9, HI_EDGE), ("D · later phase: the path", 10, 13, "#9a9a9a"), ("E · report", 14, 14, GREY)]
 for lab, a, b, col in phases:
     y0, y1 = ytop(b) - H, ytop(a)
     ax.plot([0.028, 0.028], [y0 + 0.003, y1 - 0.003], color=col, lw=2.2 if col == HI_EDGE else 1.6)

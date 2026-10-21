@@ -61,7 +61,7 @@ task(0, 4, "D5", "decide", "Final-state rules", "distance metric; binding fragme
 task(1, 0, "T1", "build", "Settings lock", "convergence sweep on E_ads for cutoff,\nk-mesh, smearing, layers; writes\nPROJECT.md; every run reads it",
      reuse="AiiDA common workflows, SSSP", needs="D1, D3", badge=2)
 task(1, 1, "T2", "build", "Site and pair enumeration", "symmetry-complete sites and A–B pairs;\nBurnside count; fcc and hcp apart;\ncount checked against the pattern",
-     reuse="spglib, CatKit, pymatgen", needs="T1", badge=3)
+     reuse="spglib, ACAT; pymatgen as baseline", needs="T1", badge=3)
 task(1, 2, "T3", "build", "Placement script", "conformers in vacuum first; start 2 to 3 Å\nabove the site; random displacement;\nthe LLM never places atoms",
      reuse="ASE, CatKit", needs="T2")
 task(1, 3, "T4", "build", "Validity gate", "AdsorbML's four checks + imaginary mode\n+ bond re-formed; one code path for\ninitial and final states",
@@ -76,7 +76,7 @@ task(2, 1, "T7", "build", "Calibrated doubt", "ensemble disagreement against DFT
      reuse="UMA, MACE, EquiformerV2", needs="T6, T4")
 task(2, 2, "T8", "build", "Rank and human checkpoint", "cards + rank + uncertainty shown;\nthe choice and its reason go to the\nlessons log, later into the skill",
      reuse="none: ours", needs="T5, T7")
-task(2, 3, "T9", "ext", "+DFT on the chosen five", "single points before any path search;\nthe board's '+DFT?'", needs="T8, D2")
+task(2, 3, "T9", "ext", "+DFT on the chosen final states", "single points with the locked settings;\nthe board's '+DFT?'; only if D2 allows DFT", needs="T8, D2")
 task(2, 4, "T10", "ext", "Active-learning loop", "high doubt → a few DFT labels →\nfine-tune → re-run 6 to 8",
      reuse="AtomisticSkills ml-mace-finetune", needs="T7, D2")
 
@@ -89,8 +89,8 @@ task(3, 2, "P3", "ext", "Later: ML band and climbing image", "band on the MLIP, 
      reuse="ASE DyNEB with UMA", needs="P2")
 task(3, 3, "P4", "ext", "Later: saddle validation", "one imaginary mode; path ends at this IS and\nFS; connectivity constant along the band except\nthe breaking bond; diagnose, revise once",
      reuse="ASE vibrations, Sella, CatTSunami band checks", needs="P3")
-task(3, 4, "P5", "build", "DFT check and report", "DFT single points on the chosen final states\nwith the locked settings; E(FS near), E(FS ∞),\nrejections, uncertainty, full decision trace",
-     reuse="ASE calculators, AiiDA", needs="P1, T7, D2")
+task(3, 4, "P5", "build", "Final-state report", "E(FS near), E(FS ∞), rejections with reasons,\nrecombination rate, doubt, full decision trace;\nDFT single points only via T9, if D2 allows",
+     reuse="AtomisticSkills logging, general-peer-review", needs="P1, T7")
 
 # ---- column 4: measure and release
 task(4, 0, "M1", "measure", "H on Pt(111) end to end", "steps 1 to 8 on the simplest system;\nE_ads against CE27 and OC20",

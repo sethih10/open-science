@@ -22,10 +22,10 @@ The team's five-panel visualisation maps onto the full pipeline as follows.
 | Panel | Team's words                                                        | Pipeline rows        |
 |-------|---------------------------------------------------------------------|----------------------|
 | 1     | Inputs: relaxed initial state, relaxed surface, relaxed adsorbate   | 1, 1\*               |
-| 3     | Select unit cell and find unique adsorption sites                   | 1 cell selection, 2, 9a |
+| 3     | Select unit cell and find unique adsorption sites                   | 2, 9a; the cell is chosen in row 1 |
 | 4     | Minimal distance before the molecule pulls the atoms back, "how far?" | 9b, 9c, 9d         |
-| 5     | Most favourable configuration for adsorbent #1 and adsorbent #2     | 9e, 6, 7, 8          |
-| 2     | Output: dissociated final state                                     | 8, the human's pick; 14 |
+| 5     | Most favourable configuration for adsorbent #1 and adsorbent #2     | 9e, 7, 8             |
+| 2     | Output: dissociated final state                                     | 14                   |
 
 Quantities the code computes:
 
@@ -465,7 +465,7 @@ Critical path:
 - [ ] 4 · T4 `validity_gate`, 3.4. Needs T3.
 - [ ] 5 · T6 `mlip_choice`, 3.6. Needs D2.
 - [ ] 6 · P1 `dissociation_final_state`, 3.8. Needs T2, T4, T6, D5.
-- [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, D3.
+- [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
 - [ ] 8 · R1 Release: SKILL.md files, MCP tools beside AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
 Off-path tasks, built when the path needs them:
