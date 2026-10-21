@@ -597,6 +597,17 @@ The product state of a dissociation step is the co-adsorbed pair that sits as cl
 
 **Why nearest.** The nudged elastic band from AB\* to a far-away product passes the bond-breaking saddle and then one or more diffusion saddles; the band then holds several maxima, the climbing image can lock onto the wrong one, and the barrier reported is not the elementary step. The nearest valid product gives a band with one saddle. The nearest product is not necessarily the lowest in energy: fragments at adjacent sites often repel, so E(FS near) can lie above the infinite-separation value E(FS ∞) = E(A\*) + E(B\*) − E(slab) from separate cells. Both should be reported; the difference is the lateral interaction, and the diffusion from the near to the stable product is a separate step.
 
+**Why it matters for cost.** The DFT band is the expensive step, and it is the step that fails. A far or invalid product makes the band long, so it needs more images and more iterations, and it may not converge or may converge to the wrong maximum. The nearest validated product keeps the band short with one saddle, so it converges in fewer force calls and fails less often. CatTSunami reports the failure side of this even with its heuristic endpoints:
+
+| CatTSunami quantity                                                                   | Value                                  |
+|---------------------------------------------------------------------------------------|----------------------------------------|
+| Force convergence criterion for a band                                                | fmax < 0.05 eV/Å within the step limit |
+| ML bands that converged, dissociations and transfers (Equiformer V2)                  | 81 to 82 % and 68 to 72 %              |
+| DFT bands in the CO-hydrogenation case study that converged at the standard settings  | 102; 8 failed and needed a rerun       |
+| Converged bands that were nevertheless wrong                                          | 14 %                                   |
+
+The two wrong-band modes it names are too few frames to sample the saddle, and a bond other than the intended one breaking or forming along the band. Its two filters, the breaking bond elongated to between 1.25 and 1.63 times its initial length in some frame and connectivity constant along the band except that bond, belong in our saddle validation (step 12). So the endpoint work has three measurable outputs, not one: the barrier shift, the recombination rate of nearest pairs, and the DFT force calls and failure rate of bands from gated endpoints against bands from naive endpoints.
+
 ![The product fragments go as close as possible without bonding back; a far final state folds diffusion into the band](figures/21-nearest-non-recombining-final-state.png)
 
 *Figure: nearest non-recombining final state · 4 candidates, 1 profile, 4 recipe steps, schematic, not to scale*
@@ -719,6 +730,14 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 - Does any DFT nudged-elastic-band compute exist for the propagation experiment, or does it run on ML with OC20NEB labels as the reference?
 
 - Should the headline claim move from "knows when not to trust itself" to "barrier-ready endpoints": every adsorption energy validated as an initial or final state for a transition-state search, with the endpoint-to-barrier error propagation measured? TSAgent and CatDT make a plain transition-state agent a crowded claim; the endpoint claim is not yet taken.
+
+**Build plan.** Five columns in order; the numbered path is the shortest route to one measured barrier, and the answers in column 0 unblock everything to the right.
+
+![The shortest route to one measured barrier runs through ten numbered boxes; everything else hangs off them](figures/22-build-plan.png)
+
+*Figure: build plan · 5 columns, 25 tasks, critical path of 10, schematic*
+
+Reading the figure: column 0 holds the decisions only the team can make, in grey. Column 1 is the code foundation: settings lock, enumeration, placement, validity gate, descriptor card. Column 2 is ML relaxation and trust: potential choice, calibrated doubt, the human checkpoint, with the board's two question marks dashed. Column 3 is the path: the nearest non-recombining final state, pairing, the ML band, saddle validation, DFT refinement and the report. Column 4 is what gets measured, in amber, and the release, in blue. Each box names what it reuses in green and what it needs in grey. The numbered blue path is: system and product, settings lock, enumeration, validity gate, potential choice, nearest final state, ML band, saddle validation, the \*OH → \*O + \*H comparison against OC20NEB, release. The band at the bottom is the LLM and human layer, written last because it only calls the tools.
 
 **Next steps.**
 

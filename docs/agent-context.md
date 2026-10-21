@@ -261,6 +261,8 @@ Metrics: success in finding the DFT minimum; error against DFT; fraction of own 
 
 ## 18. Next steps
 
+Build order (critical path, figure 22 of the human document): 1 decide system and product; 2 settings lock; 3 site and pair enumeration; 4 validity gate; 5 MLIP choice; 6 nearest non-recombining final state; 7 ML band with climbing image; 8 saddle validation; 9 *OH → *O + *H against OC20NEB; 10 release. Column 0 decisions (system, compute, benchmark, headline claim, final-state rules) unblock everything else. The LLM and human layer (SKILL.md, interview, lessons log, planner) is written last.
+
 - [ ] Draft SKILL.md for adsorption and transition-state calculations
 - [ ] Draft the PROJECT.md template and the Formulate interview questions
 - [ ] Implement symmetry enumeration (sites and pairs) and the validity-check tools
@@ -363,6 +365,8 @@ Recipe (CatTSunami AutoFrameDissociation → ours):
 2. Place B in a shell around A. CatTSunami: 5 placements in a 1 to 3 Å shell, 25 pairs. Ours: all symmetry-distinct pairs ordered by site-graph distance.
 3. Relax each pair with the MLIP, then gate. CatTSunami: discard frames where the products react or an anomaly occurs. Ours: the section 6 gate plus the bond-re-formed check.
 4. Choose. CatTSunami: one survivor at random. Ours: nearest survivor first, then energy; keep several; report rejected pairs and E(FS near) − E(FS ∞).
+
+Cost rule: the DFT band is the expensive step and the one that fails. A far or invalid product means more images, more iterations, and a band that may not converge or may sample the wrong maximum. CatTSunami, with heuristic endpoints: force criterion fmax < 0.05 eV/Å; ML bands converged 81–82 % (dissociations) and 68–72 % (transfers); in its case study 102 DFT bands converged and 8 failed; 14 % of converged bands were wrong (too few frames to sample the saddle, or an unintended bond broke or formed). Add its two band checks to saddle validation: the breaking bond elongated 1.25× to 1.63× in some frame; connectivity constant along the band except that bond. Three measurable outputs of the endpoint work: barrier shift, nearest-pair recombination rate, DFT force calls and failure rate for gated versus naive endpoints.
 
 Prior work: CatTSunami (heuristic, sampled, open source in fairchem); Pynta (atom maps in, symmetry-unique configurations, IRC validation, DFT cost); NEBscape (global optimisation finds the lowest product, possibly the far one); Reproducible NEB orchestration (gas phase only); El Agente Potente (LLM agent, final-image choice not described); classical DFT papers place fragments at nearest or next-nearest hollows by hand.
 

@@ -83,10 +83,10 @@ ax.plot(x2, y2, color=GREY, lw=1.6, ls="--")
 ax.plot([8.8, 9.3], [0.32, 0.32], color=GREY, lw=2.4)
 ax.text(0.2, 0.15, "IS: AB*", ha="center", fontsize=8); ax.text(1.9, 2.55, "TS: the barrier we want", ha="center", fontsize=8, color=HI_EDGE)
 ax.text(3.8, 0.15, "FS near", ha="center", fontsize=8, color=HI_EDGE); ax.text(9.05, 0.06, "FS far", ha="center", fontsize=8, color="#555555")
-ax.text(6.3, 1.25, "diffusion saddles that a far final state\npulls into the same band", ha="center", fontsize=7.4, color="#555555")
+ax.text(6.3, 1.25, "diffusion saddles that a far final state\npulls into the same band: more images,\nmore iterations, and the band may not\nconverge or may sample the wrong maximum", ha="center", fontsize=7.0, color="#555555", linespacing=1.2)
 ax.annotate("", xy=(0.4, 2.4), xytext=(0.4, 0.4), arrowprops=dict(arrowstyle="<->", color=TEXT, lw=1.0))
 ax.text(0.55, 1.4, "E_a", fontsize=8.5)
-fig.text(0.25, 0.41, "Why the nearest valid final state: the band then holds one saddle", ha="center", fontsize=8.8, fontweight="bold")
+fig.text(0.25, 0.41, "Nearest valid state: one saddle, a short band, fewer failed DFT bands", ha="center", fontsize=8.8, fontweight="bold")
 
 # ---------- bottom right: recipe
 ax = fig.add_axes([0.50, 0.05, 0.48, 0.37]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
