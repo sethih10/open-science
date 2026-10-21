@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from ..errors import SettingsNotLocked
+from ..errors import OpenDecision, SettingsNotLocked
 from ..schemas.records import Settings
 
 FENCE = re.compile(r"```yaml\n(.*?)\n```", re.S)
@@ -60,3 +60,22 @@ def find_project(start: Optional[Path] = None) -> Path:
         if (p / "PROJECT.md").exists():
             return p / "PROJECT.md"
     raise FileNotFoundError("no PROJECT.md above the working directory")
+
+
+def current_settings(require_lock: bool = True) -> Settings:
+    """The settings of the current run: runs/<campaign>/PROJECT.md when a Run is set, else the nearest PROJECT.md."""
+    from .journal import current_run
+    run = current_run()
+    path = run.dir / "PROJECT.md" if run and (run.dir / "PROJECT.md").exists() else find_project()
+    s = read(path)
+    return require_locked(s) if require_lock else s
+
+
+def decision(tool: str, name: str, settings: Optional[Settings] = None):
+    """A threshold marked 'open: team decision'. It is never guessed: the team writes it into PROJECT.md under
+    decisions as <tool>.<name>, and a tool that needs one that is missing stops with OpenDecision."""
+    s = settings or current_settings()
+    key = f"{tool}.{name}"
+    if key not in s.decisions:
+        raise OpenDecision(f"{key} is open: team decision; set decisions.{key} in PROJECT.md")
+    return s.decisions[key]

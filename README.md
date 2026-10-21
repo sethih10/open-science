@@ -250,15 +250,17 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   ├── schemas/                           the records of section 4
 │   │   └── records.py                     the Pydantic records every tool takes and returns
 │   ├── runtime/                           what every tool runs under; the names are ChemGraph's
-│   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash
+│   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash; decision() for every open threshold
 │   │   ├── journal.py                     Run, trace.jsonl, the @traced decorator
 │   │   ├── cache.py                       content-addressed results of relaxations and force calls
 │   │   ├── checkpoints.py                 the five checkpoints of registry/agents.py: require, record
 │   │   ├── state.py                       the position in the pipeline, persisted in state.json
-│   │   └── policy.py                      the two hook commands of hooks/hooks.json
+│   │   ├── policy.py                      the two hook commands of hooks/hooks.json
+│   │   └── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
 │   ├── memory/                            what a campaign learns
 │   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
-│   ├── calculators/                       one interface, adapters imported lazily
+│   ├── calculators/                       one ASE adapter base and a Committee; potentials imported lazily
+│   │   ├── emt.py                         ASE EMT, the test potential: Pt-group metals and H, C, N, O
 │   │   ├── uma.py                         UMA through fairchem; needs HF_TOKEN
 │   │   ├── mace.py                        MACE, single model or committee
 │   │   └── chgnet.py                      CHGNet

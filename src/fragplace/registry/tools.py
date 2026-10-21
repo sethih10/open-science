@@ -234,7 +234,7 @@ REGISTRY: List[ToolSpec] = [
         inputs={"structures": "list[StructureRef]", "settings": "Settings", "backend": "local | slurm"},
         outputs={"energies": "dict candidate_id -> eV", "failures": "list[str]"},
         checks=("settings mismatch against PROJECT.md before submission", "custodian handlers before any agent diagnosis", "retries capped at three by the job tracker"),
-        wraps=("ase.calculators", "atomate2 through the AtomisticSkills MCP server", "custodian.vasp.handlers", "fragplace.compute.tracker"),
+        wraps=("ase.calculators", "atomate2 through the AtomisticSkills MCP server", "custodian.vasp.handlers", "fragplace.execution.tracker"),
         logs=("force calls, failures, every resubmission",), status="extension",
         lane="hpc", timeout_s=86400, requires=("exe:vasp_std or pw.x", "module:custodian"),
         allowed_roles=(PLANNER, "dft-recovery-agent"), checkpoint_gate="pick up to five final states"),

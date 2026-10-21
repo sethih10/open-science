@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -70,6 +70,7 @@ class Settings(BaseModel):
     protocol_reason: Optional[str] = Field(None, description="the planner's stated reason for the protocol")
     mlip: Optional[str] = None
     mlip_committee: List[str] = Field(default_factory=list)
+    decisions: Dict[str, Any] = Field(default_factory=dict, description="every threshold marked 'open: team decision', keyed <tool>.<name>, set by the team and locked with the rest")
     locked: bool = False
     approved_by: Optional[str] = None
     approved_at: Optional[datetime] = None

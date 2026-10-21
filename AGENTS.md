@@ -304,7 +304,7 @@ DFT single points on the chosen final states and the separated fragments at the 
 | Inputs | structures: list[StructureRef]; settings: Settings; backend: local \| slurm |
 | Outputs | energies: dict candidate_id -> eV; failures: list[str] |
 | Checks | settings mismatch against PROJECT.md before submission; custodian handlers before any agent diagnosis; retries capped at three by the job tracker |
-| Wraps | ase.calculators; atomate2 through the AtomisticSkills MCP server; custodian.vasp.handlers; fragplace.compute.tracker |
+| Wraps | ase.calculators; atomate2 through the AtomisticSkills MCP server; custodian.vasp.handlers; fragplace.execution.tracker |
 | Logs | force calls, failures, every resubmission |
 | Module | `src/fragplace/tools/dft.py`, function `dft_single_points(structures, settings, backend)` |
 
@@ -402,7 +402,7 @@ The records are the Pydantic classes of `src/fragplace/schemas/records.py`; a to
 | `RankedCandidate` | candidate_id: str, rank: int, site_graph_distance: int, energy_eV: float, doubt: Optional[fragplace.schemas.records.DoubtFlag], reason: str |
 | `RelaxationResult` | candidate_id: str, energy_eV: float, fmax_eV_per_A: float, steps: int, converged: bool, trajectory_path: Optional[str], calculator: str, cache_hit: bool |
 | `Report` | campaign: str, final_states: List[fragplace.schemas.records.FinalState], rejected: List[fragplace.schemas.records.GateResult], recombination_rate: float, recombination_rate_by_shell: Dict[int, float], doubt: List[fragplace.schemas.records.DoubtFlag], comparison_oc20neb: Dict[str, float], cost: Dict[str, float], trace_path: str, settings_hash: str |
-| `Settings` | metal: str, facet: str, adsorbate: str, product: Tuple[str, str], functional: str, dispersion: Optional[str], spin_polarised: bool, initial_moments: Dict[str, float], hubbard_u: Dict[str, float], pseudopotential_family: Optional[str], pseudopotential_version: Optional[str], cutoff_eV: Optional[float], kmesh: Optional[Tuple[int, int, int]], smearing: Optional[str], sigma_eV: Optional[float], layers: Optional[int], fixed_layers: Optional[int], vacuum_A: Optional[float], dipole_correction: bool, cell_repeat: Optional[Tuple[int, int]], min_image_distance_A: float, force_threshold_eV_per_A: float, scf_threshold_eV: float, convergence_target_meV: Optional[float], gas_references: List[fragplace.schemas.records.GasReference], protocol: Optional[str], protocol_reason: Optional[str], mlip: Optional[str], mlip_committee: List[str], locked: bool, approved_by: Optional[str], approved_at: Optional[datetime.datetime] |
+| `Settings` | metal: str, facet: str, adsorbate: str, product: Tuple[str, str], functional: str, dispersion: Optional[str], spin_polarised: bool, initial_moments: Dict[str, float], hubbard_u: Dict[str, float], pseudopotential_family: Optional[str], pseudopotential_version: Optional[str], cutoff_eV: Optional[float], kmesh: Optional[Tuple[int, int, int]], smearing: Optional[str], sigma_eV: Optional[float], layers: Optional[int], fixed_layers: Optional[int], vacuum_A: Optional[float], dipole_correction: bool, cell_repeat: Optional[Tuple[int, int]], min_image_distance_A: float, force_threshold_eV_per_A: float, scf_threshold_eV: float, convergence_target_meV: Optional[float], gas_references: List[fragplace.schemas.records.GasReference], protocol: Optional[str], protocol_reason: Optional[str], mlip: Optional[str], mlip_committee: List[str], decisions: Dict[str, Any], locked: bool, approved_by: Optional[str], approved_at: Optional[datetime.datetime] |
 | `Site` | index: int, label: str, point_group: str, coordination: int, atom_beneath: Optional[str], position: Tuple[float, float, float] |
 | `SiteEnumeration` | sites: List[fragplace.schemas.records.Site], count: int, burnside_count: int, symmetry_group: str, edges: List[Tuple[int, int]], baseline_count: Optional[int] |
 | `StructureRef` | path: str, format: str, role: <enum Role, energy_eV: Optional[float], settings_hash: Optional[str], calculator: Optional[str] |
@@ -576,15 +576,17 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   ├── schemas/                           the records of section 4
 │   │   └── records.py                     the Pydantic records every tool takes and returns
 │   ├── runtime/                           what every tool runs under; the names are ChemGraph's
-│   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash
+│   │   ├── project.py                     PROJECT.md: read, write, lock, require_locked, settings_hash; decision() for every open threshold
 │   │   ├── journal.py                     Run, trace.jsonl, the @traced decorator
 │   │   ├── cache.py                       content-addressed results of relaxations and force calls
 │   │   ├── checkpoints.py                 the five checkpoints of registry/agents.py: require, record
 │   │   ├── state.py                       the position in the pipeline, persisted in state.json
-│   │   └── policy.py                      the two hook commands of hooks/hooks.json
+│   │   ├── policy.py                      the two hook commands of hooks/hooks.json
+│   │   └── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
 │   ├── memory/                            what a campaign learns
 │   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
-│   ├── calculators/                       one interface, adapters imported lazily
+│   ├── calculators/                       one ASE adapter base and a Committee; potentials imported lazily
+│   │   ├── emt.py                         ASE EMT, the test potential: Pt-group metals and H, C, N, O
 │   │   ├── uma.py                         UMA through fairchem; needs HF_TOKEN
 │   │   ├── mace.py                        MACE, single model or committee
 │   │   └── chgnet.py                      CHGNet
