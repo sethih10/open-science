@@ -30,80 +30,58 @@ The team's five panels, numbered here in flow order, map onto the full pipeline;
 
 *Figure: simplified pipeline · 5 steps, owners, row mapping, schematic*
 
-Reading the figure: boxes run left to right in flow order, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the rows of the full pipeline. The table below carries the same owners and row mapping.
+Reading the figure: boxes run left to right in flow order, the owner line under each title is in colour, the highlighted box is the stated problem, and the grey line under each box names the board steps it covers. The table below carries the same owners and mapping.
 
-| Step | What it does | Owner | Rows of the full pipeline |
+| Step | What it does | Owner | Board steps |
 |---|---|---|---|
 | 1 Inputs | Relaxed AB\* on the surface, clean surface, adsorbate in vacuum, retrieved and locked with the settings in `PROJECT.md`; the human approves; the MLIP chosen before any placement | Human, Tool | 1, 1\* |
-| 2 Unit cell and unique sites | Cell wide enough that the pair never sees its periodic image, locked in row 1; symmetry-inequivalent sites on the slab, counted; the fragment keeping the binding atom placed near its old site | Tool | 2, 9a |
-| 3 Least distance before pull-back | B sites around A within [1.5 d, 5] Å; one force call per pair, then relaxation; the validity gate: no A–B bond, nothing desorbed | Tool | 9b, 9c, 9d |
-| 4 Best configuration for both | For adsorbent #1, A, and adsorbent #2, B: survivors clustered by SOAP; nearest first, then energy; the nearest and the lowest kept per cluster, more is open: team decision; the geometry-critic may order, never remove; doubt from the committee; the human picks up to five | Tool, LLM | 9e, 7, 8 |
-| 5 Output | A\* + B\* as close as they can be without bonding back; both energies; rejected pairs with reasons; recombination rate; the calibrated doubt from mlip_doubt; the LLM drafts the report and the human interprets | Tool, Human | 14 |
+| 2 Unit cell and unique sites | Cell wide enough that the pair never sees its periodic image, locked in row 1; symmetry-inequivalent sites on the slab, counted; the fragment keeping the binding atom placed near its old site | Tool | 2, 3.5 |
+| 3 Least distance before pull-back | B sites around A within [1.5 d, 5] Å; one force call per pair, then relaxation; the validity gate: no A–B bond, nothing desorbed | Tool | 3.1, 3.2, 3.3, 4, 5 |
+| 4 Best configuration for both | For adsorbent #1, A, and adsorbent #2, B: survivors clustered by SOAP; nearest first, then energy; the nearest and the lowest kept per cluster, more is open: team decision; the geometry-critic may order, never remove; doubt from the committee; the human picks up to five | Tool, LLM | 3.4, 3.6, 6, 7, 8 |
+| 5 Output | A\* + B\* as close as they can be without bonding back; both energies; rejected pairs with reasons; recombination rate; the calibrated doubt from mlip_doubt; the LLM drafts the report and the human interprets | Tool, Human | Solution |
 
 Owners: Tool is deterministic code; LLM plans, chooses and drafts from descriptor cards and never touches coordinates; Human locks settings, picks and interprets; Skill is a written procedure the LLM follows; Literature enters before the run and after it only, and a human verifies every value.
 
-The board's step 3, placing the dissociated fragment, has six points; each lands in one row of step 3 or step 4 above.
+## How the plan evolved, step by step
 
-| Point of the board's step 3 | Row that holds it |
-|---|---|
-| 1 Estimate the least distance at which B is not pulled back | 9d, the bond-re-formed check |
-| 2 Window [1.5 d, 5] Å, d the length of the bond to break | 9b |
-| 3 The MLIP's pull force on the binding fragment | 9c, one force call per pair before relaxing |
-| 4 Agentic knowledge of what the cleavage does, to criticise and adjust | geometry-critic on cards at 9a and 9b, core: proposes a site type per fragment to order the list; never removes a pair, never overrides a check |
-| 5 Site and orientation with pymatgen so the binding fragment adsorbs | 9a, symmetry-complete and counted |
-| 6 Alternatively minima hopping with the MLIP | 9a, NEBscape's generator wrapped as the baseline policy |
+The board is the reference: one row per board step, in the board's order and numbering, with what the board says, what the literature refined, and what we added. Nothing on the board was dropped; the ML variant of the filter in step 5 and the vision model in step 3 are recorded as not taken and as an extension.
 
-## The full pipeline
+![One row per board step: what the board says, what the literature refined, what we added](figures/board-evolution.png)
 
-Every row is borrowed or standard; the claim sits in rows 9b, 9d and 9e, the nearest-first objective, the logged gate and the recombination rate.
+*Figure: evolution of the plan · 15 board steps, 4 columns, schematic*
 
-![Surface + AB* in; the nearest non-recombining A* + B* out](figures/final-state-pipeline.png)
+Reading the figure: the left column quotes the board, with the owner line under each step; green is the refinement the literature gave, with its source; blue is what we added or decided; amber is a decision still open and dashed purple an extension. The dashed bracket marks step 3, the stated problem, with its six points in the board's order.
 
-*Figure: full pipeline · 11 rows, 5 columns, one colour per kind of idea, schematic*
+| Board step | What the board says | Refined by the literature | What we added or decided |
+|---|---|---|---|
+| 1 Structure retriever | Input prompt: surface, adsorbates, system description; surface and adsorbate with energies | Settings from a verified protocol, AiiDA common workflows and SSSP; OC20's RPBE and PAW if OC20NEB is the benchmark | Three relaxed inputs plus A and B as structures; settings locked in `PROJECT.md`; a cell wide enough for the pair; gas references open |
+| 1\* MLIP selection, AL prospect | Chosen before placement; active learning as a prospect | No potential is best everywhere, 80-MLIP survey; CatBench classes failures; ml-mlip-benchmark | Two or three candidates benchmarked on the system class, reason recorded; spin for Ni and Co; the candidates are the committee of step 7; active learning an extension |
+| 2 Adsorption sites with pymatgen | Python, with pymatgen | pymatgen labels no fcc or hcp hollow; ACAT gives labelled sites and the site graph; spglib the symmetry | Symmetry-complete and counted; fcc and hcp apart; pymatgen kept as the baseline |
+| 3.1 Least distance before pull-back | Estimate the minimum distance at which the dissociated atom is not pulled back | CatTSunami treats a bond as breaking at 1.25 to 1.63 times its length; NEBscape keeps fragments intact by constraint | The bond-re-formed check as code after relaxation, logged; the threshold open |
+| 3.2 Window [1.5 d, 5] Å | d the maximum vdW length of the bond to break, from the literature | NEBscape excludes separations above 4.5 Å; CatTSunami samples a 1 to 3 Å shell and picks one survivor at random | Every symmetry-distinct pair inside the window, ordered by site-graph distance, nearest first, counted; d and the upper bound open |
+| 3.3 Pull force with the MLIP | Estimate the pull force on the binding fragment to estimate its position | Neither NEBscape nor CatTSunami screens by force | One force call per pair before relaxing; a pull towards the other fragment queues the pair last, never drops it; threshold open |
+| 3.4 Agentic critique of the cleavage | Criticise and adjust the placement from knowledge of what the cleavage does | AdsMind: the LLM returns a site type and code places, 98.8 %; AtomWorld: LLM coordinate edits fail | geometry-critic reads descriptor cards, proposes a site type per fragment, orders the list; never edits coordinates, never overrides a check; a vision model is an extension |
+| 3.5 Site and orientation, pymatgen | Agentic knowledge or a package, so the binding fragment adsorbs | Code enumerates symmetry-distinct sites and orientations, El Agente Potente; CatTSunami 5 placements within 2 Å | Code places, never the LLM: the binding fragment at symmetry-distinct sites near its old site, counted; fixed or enumerated open |
+| 3.6 Or minima hopping with the MLIP | Alternative to 3.5 | NEBscape: minima hopping from symmetry-inequivalent sites with Hookean constraints; 94 % of 304 OC20NEB reactions converge; MIT | Kept as the alternative generator and as the baseline policy our nearest-first choice is scored against |
+| 4 Initial configurations | Output of step 3: all degrees of freedom times all sites | Burnside's lemma checks the count; a random displacement before relaxing avoids the symmetry trap | Every candidate pair relaxed with the chosen potential and the locked settings, displacement first; amplitude open |
+| 5 Physics-based and anomaly filtering | Physics by script; anomaly by ML and/or script; reasoning questions injected | AdsorbML's four checks in fairchem; its desorbed check treats A\* + B\* as one adsorbate | Nine checks as code, per fragment, before and after relaxation; the ML variant not taken; every rejection logged; an LLM critic on cards is an extension |
+| 6 SOAP clustering | Pick the 3 lowest-energy configurations from each cluster, could be more | NEBscape deduplicates by SOAP and keeps energy–distance Pareto fronts | Cluster the survivors; keep the nearest and the lowest per cluster, nearest first overall; count per cluster open |
+| 7 Uncertainty estimation | With all relevant models from 1\*; agentic uncertainty and DFT as question marks | MACE committees give variance; uncertainty-toolbox calibrates; El Agente Potente saw two MLIPs disagree in sign | Disagreement calibrated on a few DFT or OC20NEB labels; doubt escalates to the human; agentic uncertainty and DFT single points are extensions |
+| 8 Rank; user chooses up to 5 | Optional uncertainty and potential issues; critic and knowledge prompts | AdsorbML top-k then DFT; CatDT: a raw case bank beats distilled lessons, 68 % against 52 to 54 % | Descriptor cards with rank, doubt and verdicts; choice and reason to the case bank; only a human promotes a case to a skill |
+| Solution | Final output | OC20NEB product frames as the comparison; AtomisticSkills logging; general-peer-review | The nearest non-recombining final state with E(FS near), E(FS ∞), rejections, recombination rate and trace; pass criterion open |
 
-Reading the figure: each row is one pipeline step with its owner line, then the refinement borrowed with its source in green, the gap in amber for missing or red for already exists, what is ours in blue, and the extension layer dashed at the step it attaches to. The blue bracket marks rows 9a to 9e, the stated problem; row 14 is the final-state report. The figure folds row 1\* into row 5, 7; the table lists it apart. The verdict band at the bottom names what is taken, what is still missing before a claim can be measured, and what is ours in hackathon time.
-
-| Row | Borrowed from | Missing or exists | Ours | Extension |
-|---|---|---|---|---|
-| 1 Retrieve and lock | AiiDA common workflows, SSSP, OC20 settings | Missing: A\* + B\* as structures, one set of gas references, a wide enough cell | One locked settings file for IS and FS; the same file serves the later band | none |
-| 1\* MLIP selection before placement | AtomisticSkills ml-mlip-benchmark, CatBench, 80-MLIP survey | Missing: a rule by system class; spin for Ni and Co | One potential for IS and FS, chosen before any placement, benchmark and reason recorded; the LLM explains | Active learning: doubt, DFT labels, fine-tune, re-run steps 6 to 8 |
-| 2 to 4 Initial state AB\* | CatKit, AdsorbML, AtomWorld | Exists: every adsorption agent | Symmetry-complete and counted; fcc and hcp apart; descriptor card | none |
-| 4.1, 6 Validity gate | AdsorbML anomaly checks | Exists, one check short: no imaginary-mode check; the board's ML variant of the filter is not taken, the gate is code | The same gate, validity_gate, on every A\* + B\* candidate | geometry-critic on descriptor cards, never overrides |
-| 5, 7 MLIP and doubt | CatTSunami, fine-tuned MLIP TS, AtomisticSkills ml-committee-uncertainty | Missing: calibration on DFT labels | Committee of every potential benchmarked in 1\*, calibrated on DFT labels; doubt escalates to review | The active-learning loop of 1\* re-runs steps 6 to 8 |
-| 8 Human picks up to 5 | AdsorbML top-k then DFT | Exists: the human step is what differs | Up to five initial states chosen on cards, rank and doubt; choice and reason to the lessons log, then the skill; the human chooses a second time on the final-state report, row 14 | The board's three question marks: DFT on the five; agentic uncertainty over N runs; a vision model for the placement, only after the geometry benchmark shows an image helps |
-| 9a Place A | The board's pymatgen site and orientation so the binding fragment adsorbs, made symmetry-complete with spglib and ACAT; NEBscape minima hopping with the MLIP, the board's alternative route, wrapped as the baseline policy; CatTSunami 5 placements within 2 Å | Exists: both open source; A fixed or enumerated is open: team decision | The geometry-critic orders the list by a site type per fragment, the board's point 4; it never removes a pair | none |
-| 9b Enumerate B around A | NEBscape combinatorial pairs under 4.5 Å, CatTSunami 1 to 3 Å shell | Missing: a nearest-first objective and the metric | All symmetry-distinct pairs, nearest first, counted; compared with NEBscape's Pareto choice | Coverage scan over cell sizes |
-| 9c Pre-filter, then relax | NEBscape, CatTSunami relax every candidate | Missing: the pull-force threshold; queued or dropped | One force call per pair before any relaxation; flagged pairs queued last | none |
-| 9d Gate the pair | NEBscape Hookean constraints and graph checks, CatTSunami discards reacting frames | Missing: bond-re-formed check as code; imaginary mode on the pair | A test after relaxation with a logged reason; a failing state is never paired | none |
-| 9e Choose and report | NEBscape Pareto fronts and SOAP, CatTSunami random survivor | Missing: E(FS near) and E(FS ∞) both reported | The recombination rate of nearest pairs; the nearest and the lowest kept per SOAP cluster | Lowest energy within one site hop, and more than three per cluster: open: team decision |
-| 14 Report | AtomisticSkills hyperparameter logging and general-peer-review; OC20NEB product frames | Missing: OC20NEB subset, single-placement baseline, trace format | Two numbers and two comparisons; open skill and MCP tools on AtomisticSkills | BEP check, energetic span, multi-step and catalysis: later phase |
-
-Row 14, the final-state report, is task P5. DFT single points on the chosen final states are the extension T9 and run only if decision D2 allows DFT. The later phase, the path from AB\* to the final state and its barrier, is out of scope and lives in the archive: `archive/docs/adsorption-agent-workflow.md`, sections 12 and 15, and figures 22 and 23 there.
-
-The row numbers are the planner's; the second board numbered its steps differently, and each board step lives in one row.
-
-| Board step | Row |
-|---|---|
-| 1 Structure retriever | 1 |
-| 1\* MLIP selection before placement | 1\* |
-| 2 Adsorption sites; 4 initial configurations | 2 to 4 |
-| 3 Adsorbate placement, six points | 9a to 9e |
-| 5 Physics-based and anomaly filtering | 4.1, 6 |
-| 6 SOAP clustering, lowest per cluster | 9e |
-| 7 Uncertainty with all models from 1\* | 5, 7 |
-| 8 Rank; user picks up to 5 | 8, and again on the report at 14 |
-| Solution | 14 |
+The board's own open questions, answered as far as we can: step 3 applies to dissociative adsorption only, which is the fixed scope; the models of step 7 are the candidates benchmarked at 1\*; "phys. int." at step 8 is read as the physical issues shown on each card; the vision model feeds step 3 and is an extension. The path from AB\* to the final state and its barrier are out of scope and live in the archive, `archive/docs/adsorption-agent-workflow.md`, sections 12 and 15.
 
 ## What is ours and what is not
 
-Ours is the nearest-first objective, the logged gate and two numbers nobody reports; everything else is a wrapped tool.
+Ours is the nearest-first objective of 3.2, the logged gate of 3.1 and 5, the pull-force pre-filter of 3.3, and two numbers nobody reports; everything else is a wrapped tool.
 
 - NEBscape is the closest prior work and not an LLM agent: symmetry-inequivalent sites by spglib, two adsorbates placed combinatorially, separations beyond a cut-off excluded, Hookean fragment integrity, energy–distance Pareto selection, SOAP deduplication, a converged OC20NEB benchmark. Its endpoint generator is what row 9 wraps and its Pareto choice is the baseline our policy is scored against.
 - CatTSunami's AutoFrameDissociation, open source in fairchem, builds the same final state by sampling a shell and picks one survivor at random; its rejected frames are not reported.
 - Ours: a nearest-first objective over symmetry-complete, counted pairs, instead of a cut-off and a trade-off or a sampled shell.
 - Ours: one validity gate, validity_gate, on both endpoints, run after relaxation, with every rejection logged and its reason kept; a failing state is never paired.
 - Ours: two numbers nobody reports, the recombination rate of nearest pairs and the lateral interaction E(FS near) − E(FS ∞), and the three final-state policies compared on the same dissociations.
-- Not ours and not claimed: site finding, placement and ML relaxation. Every adsorption agent does rows 2 to 8. These are wrapped tools.
+- Not ours and not claimed: site finding, placement and ML relaxation. Every adsorption agent does steps 2, 3.5 and 4. These are wrapped tools.
 
 ## Measured
 
@@ -166,7 +144,7 @@ open-science-hackathon/
 ├── skills/                       few, human-written, one folder each, under 200 lines each
 │   ├── dft-settings-protocol/    pseudopotentials, cutoff, k-mesh, smearing, layers; the lock
 │   ├── mlip-doubt-calibration/   committee disagreement against DFT labels; when to escalate
-│   ├── dissociation-final-state/ the 9a to 9e procedure
+│   ├── dissociation-final-state/ board step 3, points 3.1 to 3.6, and steps 4 to 6
 │   ├── final-state-report/       the report: E(FS near), E(FS ∞), rejections, trace
 │   └── hpc-dft-jobs/             only with HPC: submission, what custodian handles, what to escalate
 ├── agents/                       one markdown file per role, one page each

@@ -81,7 +81,7 @@ task(2, 4, "T10", "ext", "Active-learning loop", "high doubt → a few DFT label
      reuse="AtomisticSkills ml-mace-finetune", needs="T7, D2")
 
 # ---- column 3: path
-task(3, 0, "P1", "build", "Nearest non-recombining FS", "pairs in [1.5 d, 5] Å, pull-force pre-filter,\nrelax, gate, SOAP-cluster, nearest first;\nreport rejections and E(FS near) − E(FS ∞)",
+task(3, 0, "P1", "build", "Nearest non-recombining FS", "board step 3, points 3.1 to 3.6, then 4 to 6:\nwindow, pull force, relax, gate, SOAP, nearest\nfirst; report rejections and E(FS near) − E(FS ∞)",
      reuse="NEBscape endpoint generator (MIT), fairchem helpers", needs="T2, T4, T6, D5", badge=6)
 task(3, 1, "P5", "build", "Final-state report", "E(FS near), E(FS ∞), rejections with reasons,\nrecombination rate, doubt, full decision trace;\nDFT single points only via T9, if D2 allows",
      reuse="AtomisticSkills logging, general-peer-review", needs="P1, T7")

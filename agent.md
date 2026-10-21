@@ -1,6 +1,6 @@
 # agent.md: what to build, how, and in which order
 
-Audience: a coding agent about to write code in this repository. Read this file first and in full; `CLAUDE.md` points here. It is the operational form of the design history in `archive/docs/`. Where this file and the archive differ, the team's board of 21 October 2026 and the fixed scope of section 1 are the authority, then `archive/docs/adsorption-agent-workflow.md`; fix whichever disagrees with the board. Conventions: "open: team decision" marks a value the team has not fixed; expose it as a named parameter without a default and ask, never fill it from memory. The board numbers its steps 1 to 8 with 1\*. 9a to 9e are this repository's sub-numbering of the board's step 3; 4.1 is the archive's alias for the board's step 5; 10 to 13 are the archive's later-phase path steps and 14 its report. Where two actors appear in a row, the Owner column does the work. Write code comments and docs as `archive/docs/agent-writing-style.md` says.
+Audience: a coding agent about to write code in this repository. Read this file first and in full; `CLAUDE.md` points here. It is the operational form of the design history in `archive/docs/`. Where this file and the archive differ, the team's board of 21 October 2026 and the fixed scope of section 1 are the authority, then `archive/docs/adsorption-agent-workflow.md`; fix whichever disagrees with the board. Conventions: "open: team decision" marks a value the team has not fixed; expose it as a named parameter without a default and ask, never fill it from memory. Numbering is the board's: 1, 1\*, 2, 3 with its points 3.1 to 3.6, 4 to 8, Solution. The archive uses its own row numbers, 4.1 and 6 for the board's step 5, 3.1 to 3.6 for the board's step 3, 14 for the Solution; the table in section 2 gives the correspondence. Where two actors appear in a row, the Owner column does the work. Write code comments and docs as `archive/docs/agent-writing-style.md` says.
 
 ## 1. Scope and problem
 
@@ -19,13 +19,13 @@ A keeps the binding atom, the team's adsorbate #1; B is the dissociated part, ad
 
 The team's five-panel visualisation maps onto the full pipeline as follows.
 
-| Panel | Team's words                                                        | Pipeline rows        |
+| Panel | Team's words                                                        | Board steps          |
 |-------|---------------------------------------------------------------------|----------------------|
-| 1     | Inputs: relaxed initial state, relaxed surface, relaxed adsorbate   | 1, 1\*               |
-| 3     | Select unit cell and find unique adsorption sites                   | 2, 9a; the cell is chosen in row 1 |
-| 4     | Minimal distance before the molecule pulls the atoms back, "how far?" | 9b, 9c, 9d         |
-| 5     | Most favourable configuration for adsorbent #1 and adsorbent #2     | 9e, 7, 8             |
-| 2     | Output: dissociated final state                                     | 14                   |
+| 1     | Inputs: relaxed initial state, relaxed surface, relaxed adsorbate   | Board 1, 1\*         |
+| 3     | Select unit cell and find unique adsorption sites                   | Board 2, 3.5; the cell is chosen in step 1 |
+| 4     | Minimal distance before the molecule pulls the atoms back, "how far?" | Board 3.1, 3.2, 3.3, 4, 5 |
+| 5     | Most favourable configuration for adsorbent #1 and adsorbent #2     | Board 3.4, 3.6, 6, 7, 8 |
+| 2     | Output: dissociated final state                                     | Solution             |
 
 Quantities the code computes:
 
@@ -35,25 +35,24 @@ Quantities the code computes:
 
 ## 2. The exact pipeline
 
-Tools do every deterministic step; the LLM chooses with a stated reason and drafts; humans approve, pick and interpret; skills hold the procedures. The plan follows NEBscape's shape; NEBscape is the closest prior work and CatTSunami is secondary. The board's six points of step 3 live in 9a to 9e; the rows run in execution order, so 9a and 9b follow 3, and 9c to 9e sit where the board's steps 4 to 6 act on the pairs.
+The board's order and numbering, one row per step; tools do every deterministic step, the LLM chooses with a stated reason and drafts, humans approve, pick and interpret, skills hold the procedures. The plan follows NEBscape's shape; NEBscape is the closest prior work and CatTSunami is secondary. The six points of step 3 run in the board's order 3.1 → 3.2 → 3.3 → 3.4 → 3.5 or 3.6 as a design; in code 3.5 places first, 3.2 lists the pairs, 3.3 screens them, 3.4 orders the list, 3.6 is the alternative generator, and 3.1 is applied as a check inside step 5.
 
-| Step | Owner | What it does                                                                                               | Tool, section 3            | Logs                                                        |
-|------|-------|------------------------------------------------------------------------------------------------------------|----------------------------|-------------------------------------------------------------|
-| 1    | Tool  | Structure retriever: takes the three supplied relaxed structures with their energies, AB\* on the slab, the clean slab and AB in vacuum, and A and B as structures; selects the surface cell so periodic images stay 10 Å apart; records the settings the inputs were relaxed with and locks them in PROJECT.md; the human supplies the physics choices and approves; `dft-settings-protocol` holds the settings protocol | dft_settings_lock | Settings as supplied; the cell and why; protocol and reason; pseudopotential family |
-| 1\*  | Tool  | MLIP selection before placement: benchmark two or three candidate potentials on the system class; the chosen one relaxes every IS and FS; every candidate benchmarked here is the committee of step 7; spin for Ni and Co; active learning is an extension | mlip_choice | Benchmark results; the choice and the reason the LLM states |
-| 2    | Tool  | Unique adsorption sites of the selected cell: symmetry-complete with fcc and hcp hollows apart, counted   | site_enumeration           | Symmetry group; every site; the count N and its check       |
-| 3    | Tool  | Placement of the dissociated fragments A and B: the board's six points as 9a to 9e; the `geometry-critic` reads the cards, proposes a site type and orientation per fragment, may reorder or add candidates, never overrides a check | adsorbate_placement, dissociation_final_state | Placements and their count; every critic proposal and what it changed |
-| 9a   | Tool  | Place A, the fragment keeping the binding atom: all symmetry-distinct placements near its IS site, counted; A fixed at its IS site is the cheap baseline, not the default; the `geometry-critic` proposes a site type per fragment to order the list | dissociation_final_state | Placements of A\* and their count |
-| 9b   | Tool  | Enumerate B sites around each A: all symmetry-distinct pairs ordered by site-graph distance, in-plane tiebreak, counted, within the board's window [1.5 d, 5] Å, d the length of the bond to break; minima hopping with the chosen MLIP, NEBscape's generator, is the alternative generator and the baseline policy; coverage scan over cell sizes is an extension | dissociation_final_state, site_enumeration | Ordered pairs and their count; generator used |
-| 4    | Tool  | Initial configurations of every pair: all degrees of freedom × all sites, orientations under the site's stabiliser, Burnside-counted; few conformers of A and B relaxed in vacuum first; start 2 to 3 Å up | site_enumeration, adsorbate_placement | Every orientation; the count N and its check |
-| 9c   | Tool  | Pull-force pre-filter: one MLIP force call per configuration; read the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold flags likely recombination and the pair goes to the back of the queue, not out; then relax every configuration with the chosen potential and the locked settings, random displacement first | dissociation_final_state, mlip_choice | Flagged pairs; relaxed pairs; force calls |
-| 5, 9d | Tool | Physics-based and anomaly filtering, the archive's 4.1: the gate of section 3.4 on every structure before and after ML relaxation, checks 1 to 11, desorption per fragment; verdict into the card; a failing state is never paired; the `geometry-critic` comments only, extension | validity_gate, descriptor_card | Every verdict with its measured value; every rejection with its reason |
-| 6, 9e | Tool | SOAP clustering of the gate's survivors as NEBscape does; keep the lowest-energy configurations per cluster as the board says and the nearest, our objective; nearest first overall, then energy; E(A\*), E(B\*) and E(FS ∞) with the chosen MLIP | dissociation_final_state | Final states; E(FS near); E(FS ∞); recombination rate |
-| 7    | Tool  | Uncertainty estimation with every candidate potential benchmarked at 1\* as the committee; disagreement calibrated on a few DFT labels if available, else OC20NEB labels; doubt escalates instead of guessing; `mlip-doubt-calibration` says when to doubt | mlip_doubt | Labels used; disagreement against DFT error; every flag and escalation |
-| 8    | Tool  | Rank the surviving final states: nearest first, then energy; cards with uncertainty and verdicts           | descriptor_card            | The cards shown and their order                             |
-| 8    | Human | Pick up to five final states on the cards; the choice and its reason go to the lessons log                 | 3.10                       | The choice; the reason                                      |
-| 14   | LLM   | Draft the report: both energies, lateral interaction, rejections with reasons, recombination rate, ML uncertainty, decision trace; `final-state-report` holds the format | final_state_report | The full decision trace |
-| After 14 | Human | Interpret results                                                                                        |                            | The interpretation                                          |
+| Step | Owner | What it does | Tool, section 3 | Logs | Archive row |
+|------|-------|--------------|-----------------|------|-------------|
+| 1 Structure retriever | Tool | Takes the three supplied relaxed structures with their energies and A and B as structures; selects the surface cell so periodic images stay 10 Å apart; locks the settings the inputs were relaxed with, plus the human's physics choices, in PROJECT.md; `dft-settings-protocol` holds the protocol | dft_settings_lock | Settings as supplied; the cell and why; protocol and reason | 1 |
+| 1\* MLIP selection | Tool | Benchmarks two or three candidate potentials on the system class before any placement; the chosen one relaxes every candidate; all candidates form the committee of step 7; spin for Ni and Co; active learning is an extension | mlip_choice | Benchmark results; the choice and the reason the LLM states | 5 |
+| 2 Adsorption sites | Tool | Symmetry-inequivalent sites of the selected cell, fcc and hcp hollows apart, counted; pymatgen's finder as the baseline | site_enumeration | Symmetry group; every site; the count N and its check | 2 |
+| 3.5 Site and orientation for the binding fragment | Tool | The fragment keeping the binding atom, A, placed at every symmetry-distinct site near its old site, counted; A fixed at its old site is the cheap baseline | adsorbate_placement, dissociation_final_state | Placements of A\* and their count | 3.5 |
+| 3.2 Window for the dissociated atom | Tool | B sites around each A within [1.5 d, 5] Å, d the length of the bond to break; every symmetry-distinct pair, ordered by site-graph distance with in-plane tiebreak, counted | dissociation_final_state, site_enumeration | Ordered pairs and their count | 3.2 |
+| 3.4 Agentic critique | LLM | `geometry-critic` reads the descriptor cards, proposes a site type and orientation per fragment, may reorder or add candidates; never edits coordinates, never removes a pair, never overrides a check | descriptor_card | Every proposal and what it changed | 3.5, 3.2 |
+| 3.6 Minima hopping, alternative | Tool | NEBscape's endpoint generator with the chosen MLIP as the alternative generator and the baseline policy | dissociation_final_state | Generator used; its candidates | 3.5 |
+| 3.3 Pull force | Tool | One MLIP force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it | dissociation_final_state, mlip_choice | Flagged pairs; force calls | 3.3 |
+| 4 Initial configurations | Tool | Every pair relaxed with the chosen potential and the locked settings; orientations under the site's stabiliser, Burnside-counted; random displacement first | site_enumeration, adsorbate_placement, dissociation_final_state | Every orientation and count; relaxed pairs | 4, 3.3 |
+| 5 Physics-based and anomaly filtering | Tool | The gate of section 3.4 on every structure before and after relaxation: nine checks per fragment plus the two final-state checks, 3.1 among them as the bond-re-formed check; verdict into the card; a failing pair is never kept; the ML variant not taken; an LLM critic comments only, extension | validity_gate, descriptor_card | Every verdict with its value; every rejection with its reason | 4.1, 6, 5 |
+| 6 SOAP clustering | Tool | Cluster the survivors by SOAP as NEBscape does; keep the lowest per cluster as the board says and the nearest, our objective; nearest first overall; E(A\*), E(B\*), E(FS ∞) with the chosen MLIP | dissociation_final_state | Final states; E(FS near); E(FS ∞); recombination rate | 6 |
+| 7 Uncertainty estimation | Tool | Disagreement across the committee of 1\*, calibrated on a few DFT labels if available, else OC20NEB labels; doubt escalates instead of guessing; `mlip-doubt-calibration` says when | mlip_doubt | Labels used; disagreement against label error; every flag and escalation | 7 |
+| 8 Rank; user chooses up to 5 | Human | Cards with rank, doubt and verdicts; the human picks; the choice and its reason go to the case bank | descriptor_card, 3.10 | The cards shown and their order; the choice; the reason | 8 |
+| Solution | LLM | Drafts the report: both energies, lateral interaction, rejections with reasons, recombination rate, doubt, decision trace; `final-state-report` holds the format; the human interprets | final_state_report | The full decision trace | 14 |
 
 Human checkpoints, where the agent stops and waits: approve settings; approve the plan; review flagged cases; pick up to five final states; interpret results. Autonomy level and which checkpoints a Balanced mode skips: open: team decision.
 
@@ -87,7 +86,7 @@ Record the settings the three supplied structures were relaxed with, lock them i
 
 H on Pt(111) is the first sweep when a sweep runs; the test adsorbate for the \*OH case is open: team decision.
 
-### 3.2 site_enumeration, steps 2, 4, 9a, 9b
+### 3.2 site_enumeration, steps 2, 3.2, 3.5 and 4
 
 List every symmetry-inequivalent site, orientation and A–B pair, with the count.
 
@@ -100,7 +99,7 @@ List every symmetry-inequivalent site, orientation and A–B pair, with the coun
 | Wraps  | `spglib.get_symmetry_dataset` and `get_symmetry` for the operations Burnside needs; `spglib.get_layergroup` is a developer API, test it against the site table before relying on it; `acat.adsorption_sites.SlabAdsorptionSites` with `get_unique_sites`, `get_graph`, `get_neighbor_site_list`; `acat.build.adlayer.SystematicPatternGenerator` for unique pairs, `min_adsorbate_distance` 1.5 Å by default; CatKit `AdsorptionSites` as a pattern only, GPL; `pymatgen.core.adsorption.AdsorbateSiteFinder.find_adsorption_sites` as the baseline, no fcc or hcp label |
 | Logs   | Symmetry group; every site, orientation and pair; N and its check                                                     |
 
-### 3.3 adsorbate_placement, steps 3, 4, 9a, 9b
+### 3.3 adsorbate_placement, steps 3.5 and 4
 
 Put a fragment at an enumerated site, orientation and height, by script. The LLM never places atoms.
 
@@ -113,7 +112,7 @@ Put a fragment at an enumerated site, orientation and height, by script. The LLM
 | Logs   | Site, orientation, height, displacement amplitude and the random draw, conformer source                               |
 | Open   | Displacement amplitude, shown in the docs only as an example call of 0.05 Å; number of conformers                    |
 
-### 3.4 validity_gate, steps 5 and 9d, the archive's 4.1 and 6
+### 3.4 validity_gate, steps 3.1 and 5
 
 One code path, `check(structure)`, that gives a verdict on every structure, initial and final, before ranking or pairing. A failing state is never paired.
 
@@ -153,7 +152,7 @@ Turn every structure into the text the LLM reads; it is the only view of geometr
 | Wraps  | pymatgen; the Robocrystallographer pattern; ASE rendering                                                            |
 | Logs   | The card beside the structure                                                                                        |
 
-### 3.6 mlip_choice, steps 1\*, 9c
+### 3.6 mlip_choice, steps 1\* and 3.3
 
 Choose one potential for IS and FS, with a recorded reason, before any placement; every candidate benchmarked here is the committee of 3.7.
 
@@ -179,7 +178,7 @@ Turn committee disagreement into a calibrated doubt that escalates instead of gu
 | Triggers | The committee disagrees, threshold calibrated on the labels, value open: team decision; Co, Ni or another magnetic metal, always, initialise spin; unseen chemistry, oxide, high coverage, electrochemical interface or organometallics outside OC20, always; result outside the expected range, prior width open: team decision |
 | Logs   | Labels used; disagreement against the label error; every flag and escalation                                         |
 
-### 3.8 dissociation_final_state, steps 3 and 9a to 9e
+### 3.8 dissociation_final_state, step 3 with points 3.1 to 3.6, and steps 4 to 6
 
 NEBscape's endpoint generator shape with fairchem's helpers and four changes: complete, counted enumeration as the primary generator, with minima hopping kept as the alternative; a nearest-first objective instead of NEBscape's fixed cut-off and the energy–distance Pareto front; the full gate as a test after relaxation instead of Hookean constraints during sampling; a report of every rejection.
 
@@ -187,22 +186,22 @@ NEBscape's endpoint generator shape with fairchem's helpers and four changes: co
 |--------|----------------------------------------------------------------------------------------------------------------------|
 | Inputs | The supplied initial state; A and B as structures; d, the length of the bond to break; the calculator and the committee from 3.6; PROJECT.md |
 | Outputs | Final states in order with cards; E(FS near); E(FS ∞); rejected pairs with reasons; recombination rate              |
-| Checks, 9a | All symmetry-distinct placements of A near its IS site, counted; A fixed at its IS site is the cheap baseline; the `geometry-critic` proposes a site type and orientation per fragment and may reorder or add candidates |
-| Checks, 9b | Pairs ordered by site-graph distance, in-plane tiebreak, within the board's window [1.5 d, 5] Å; whether d is the vacuum or the adsorbed bond length: open: team decision |
-| Checks, 9c | One force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it; threshold open: team decision; then relax with random displacement first |
-| Checks, 9d | Checks 1 to 11 of 3.4 on every relaxed pair                                                                       |
-| Checks, 9e | SOAP clustering of survivors as NEBscape does; keep the lowest-energy configurations per cluster as the board says and the nearest, our objective; configurations per cluster open: team decision |
+| Checks, 3.5 | All symmetry-distinct placements of A near its IS site, counted; A fixed at its IS site is the cheap baseline; the `geometry-critic` proposes a site type and orientation per fragment and may reorder or add candidates |
+| Checks, 3.2 | Pairs ordered by site-graph distance, in-plane tiebreak, within the board's window [1.5 d, 5] Å; whether d is the vacuum or the adsorbed bond length: open: team decision |
+| Checks, 3.3 and 4 | One force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it; threshold open: team decision; then relax with random displacement first |
+| Checks, 3.1 and 5 | Checks 1 to 11 of 3.4 on every relaxed pair                                                                       |
+| Checks, 6 | SOAP clustering of survivors as NEBscape does; keep the lowest-energy configurations per cluster as the board says and the nearest, our objective; configurations per cluster open: team decision |
 | Also computes | E(A\*) and E(B\*), each in its own cell with the chosen MLIP and the locked settings, for E(FS ∞); DFT single points are the extension 3.11 |
 | Generators | Primary: counted enumeration through 3.2 and 3.3. Alternative and baseline policy: minima hopping with the chosen MLIP, NEBscape's endpoint generator wrapped; its endpoint module is not named in `archive/docs/repo-survey.md`, read it from source before wrapping |
 | Recombination rate | Pairs failing check 10 over pairs relaxed; per distance shell or nearest shell only: open: team decision     |
 | Wraps  | NEBscape's endpoint generator, MIT, and its SOAP and farthest-point `selection`; secondary, `fairchem.applications.cattsunami.core.autoframe.AutoFrameDissociation` helpers `unwrap_atoms`, `traverse_adsorbate_dissociation`, `is_edge_list_respected`; its `get_best_sites_for_product1` and `get_best_unique_sites_for_product2`, 5 sites each and shells of 2× and 3× the largest slab covalent radius, are the shell-sampling policy we score against; tools 3.2, 3.3, 3.4 and 3.6 |
-| Critic | Core at 9a and 9b: the `geometry-critic` reads the cards, proposes a site type and orientation per fragment, AdsMind style, may reorder or add candidates, never removes a pair and never overrides a check |
-| Extensions | Coverage scan over cell sizes at 9b; lowest energy within one site hop at 9e                                     |
+| Critic | Core at 3.5 and 3.2: the `geometry-critic` reads the cards, proposes a site type and orientation per fragment, AdsMind style, may reorder or add candidates, never removes a pair and never overrides a check |
+| Extensions | Coverage scan over cell sizes at 3.2; lowest energy within one site hop at 6                                     |
 | Logs   | Counts of placements and pairs; generator used; every critic proposal; every rejection with its reason; E(FS near), E(FS ∞) and their difference; recombination rate |
 
 The later phase, the path from AB\* to the final state and its barrier, is out of scope; its tools and sources are in `archive/docs/agent-build-context.md`, sections 3.9 to 3.11.
 
-### 3.9 final_state_report, step 14
+### 3.9 final_state_report, the Solution
 
 One auditable record per reaction, with every number traced to a tool output.
 
@@ -335,7 +334,7 @@ Code decides every geometric and numerical question; the LLM plans, chooses with
 5. Never write numerical settings from memory. Pick the protocol and state why; the numbers come from the supplied inputs, the protocol or the sweep.
 6. Read PROJECT.md at every step. Never change a locked setting.
 7. Stop at every checkpoint and wait: approve settings, approve the plan, review flagged cases, pick up to five final states, interpret results.
-8. Never override a code check. The `geometry-critic` proposes and reorders candidates at 9a and 9b and comments on cards elsewhere; it never removes a pair.
+8. Never override a code check. The `geometry-critic` proposes and reorders candidates at 3.5 and 3.2 and comments on cards elsewhere; it never removes a pair.
 9. On ML doubt: stop, measure, repair, and ask only if repair fails.
 10. Diagnose failed jobs: read the errors, adjust, resubmit.
 11. Never pair a failing state. Report rejected pairs; never hide them.
@@ -356,9 +355,9 @@ Four agents and five skills of ours: four core, hpc-dft-jobs only with HPC. The 
 
 | Agent                    | Decides                                                              | Status                         | Pattern copied from                               |
 |--------------------------|----------------------------------------------------------------------|--------------------------------|---------------------------------------------------|
-| final-state-planner      | The next tool call and when to stop; holds the checkpoint list       | Core                           | AdsMind's pick-from-labels interface; CatDT's propose and validate rounds with fatal violations in code; TSAgent's replan log; El Agente Potente's typed graph for 9a to 9e |
+| final-state-planner      | The next tool call and when to stop; holds the checkpoint list       | Core                           | AdsMind's pick-from-labels interface; CatDT's propose and validate rounds with fatal violations in code; TSAgent's replan log; El Agente Potente's typed graph for 3.1 to 3.6 |
 | dft-settings-interviewer | What the Formulate interview locks into PROJECT.md                   | Core, runs once before the run | Get Physics Done's Formulate step; AutoDFT's settings rules; DREAMS's comparability judge |
-| geometry-critic          | The site type and orientation to try per fragment at 9a and 9b; whether a card and its verdicts disagree; never overrides | Core at 9a and 9b; comments on gate cards as an extension | Adsorb-Agent's site-versus-binding-atom check; AdsMind's site-type proposal; AtomWorld and LLMConfBench on cards not coordinates |
+| geometry-critic          | The site type and orientation to try per fragment at 3.5 and 3.2; whether a card and its verdicts disagree; never overrides | Core at 3.5 and 3.2; comments on gate cards as an extension | Adsorb-Agent's site-versus-binding-atom check; AdsMind's site-type proposal; AtomWorld and LLMConfBench on cards not coordinates |
 | dft-job-steward          | Resubmit, adjust or escalate a failed DFT job                        | Only with HPC, extension 3.11  | AutoDFT's capped recovery; TSAgent's failure taxonomy; VASPilot's handlers |
 
 The critic is separate so it cannot see the planner's reasoning and be anchored; the interviewer, so the planner cannot rewrite its fixed questions. `general-peer-review` from AtomisticSkills reviews the report; it is a reused skill, not a new role.
@@ -367,7 +366,7 @@ The critic is separate so it cannot see the planner's reasoning and be anchored;
 |--------------------------|-----------------------------------------------------------------|---------------|
 | dft-settings-protocol    | Pseudopotentials, cutoff, k-mesh, smearing, layers; the lock    | Core          |
 | mlip-doubt-calibration   | Committee disagreement against DFT labels; when to escalate     | Core          |
-| dissociation-final-state | 9a to 9e; what to report                                        | Core          |
+| dissociation-final-state | 3.1 to 3.6; what to report                                        | Core          |
 | final-state-report       | Report format: both energies, rejections, trace                 | Core          |
 | hpc-dft-jobs             | Submission; what custodian handles; what to escalate            | Only with HPC |
 
@@ -424,8 +423,8 @@ HPC is needed for DFT and nothing else, and DFT is an extension: the laptop and 
 
 | Lane   | Steps                                                            | Without HPC in the hackathon                                                                 |
 |--------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
-| Laptop | 1 lock from the supplied settings; 2 to 4; 5; 6; 8; 9a; 9b; 9d; 14 | Unchanged                                                                                  |
-| GPU    | 1\* benchmark; 7 committee; 9c force calls and relaxations; 9e MLIP energies; ML frequencies | Unchanged; one workstation or cloud GPU                          |
+| Laptop | 1 lock from the supplied settings; 2 to 4; 5; 6; 8; 3.5; 3.2; 5; 14 | Unchanged                                                                                  |
+| GPU    | 1\* benchmark; 7 committee; 3.3 force calls and relaxations; 6 MLIP energies; ML frequencies | Unchanged; one workstation or cloud GPU                          |
 | HPC, extensions only | Settings sweep when no relaxed inputs exist; DFT calibration labels for 7; DFT single points of 3.11; DFT frequencies | Not needed: OC20's RPBE and PAW values as the settings record; OC20NEB's released DFT bands as labels and ground truth; one DFT check run beforehand and recorded, if available |
 
 ## 9. Benchmark and measurables
@@ -472,8 +471,8 @@ Off-path tasks, built when the path needs them:
 | ML trust            | T7 `mlip_doubt`, 3.7; T8 rank and human checkpoint with the lessons log, 3.10               | T6, T4; T5, T7 |
 | Final state         | P5 `final_state_report`, 3.9                                                               | P1, T7         |
 | Measure             | M1 H on Pt(111) end to end; M4 Ni(111) doubt demo; M3 the three later numbers              | T1 to T8; T7, T8; P1, P3, D2 |
-| LLM and human layer, last | SKILL.md files; interview and PROJECT.md template; `lessons.md` seeded; `final-state-planner` that calls tools by name and stops at checkpoints; `geometry-critic` at 9a and 9b; hooks | The tools |
-| Extensions, later   | T9 `dft_single_points`, 3.11, DFT on the chosen five; T10 active-learning loop; M5 agentic uncertainty, N planner runs; `geometry-critic` on gate cards at 5; coverage scan at 9b; one-hop target at 9e; settings sweep and AB\* enumeration when no relaxed inputs exist | T8, D2; T7, D2; T8, P5 |
+| LLM and human layer, last | SKILL.md files; interview and PROJECT.md template; `lessons.md` seeded; `final-state-planner` that calls tools by name and stops at checkpoints; `geometry-critic` at 3.5 and 3.2; hooks | The tools |
+| Extensions, later   | T9 `dft_single_points`, 3.11, DFT on the chosen five; T10 active-learning loop; M5 agentic uncertainty, N planner runs; `geometry-critic` on gate cards at 5; coverage scan at 3.2; one-hop target at 6; settings sweep and AB\* enumeration when no relaxed inputs exist | T8, D2; T7, D2; T8, P5 |
 
 ## 11. Open decisions that block coding
 
@@ -488,11 +487,11 @@ Each question blocks the step or task beside it; never code around one with a gu
 | Convergence target for E_ads when the sweep runs: 10 or 25 meV? Which gas-phase references for AB, A and B? | T1, PROJECT.md             |
 | File format and schema for PROJECT.md, the card, the lessons log, the trace and the report                 | T1, T5, T8, P5              |
 | Thresholds for migrated, dissociated, reconstructed, intercalated, magnetism collapsed, expected-range width, imaginary-frequency noise; the surface plane; frequencies from MLIP or DFT; which checks run before relaxation | T4 |
-| A–B distance threshold for bond re-formed                                                                  | 9d; T4, P1                  |
-| Distance metric: site-graph with in-plane tiebreak, or in-plane alone; how the site graph is built; the pair call name | 9b; T2, P1          |
-| Does the cheap baseline, A fixed at its IS site, run before the full enumeration of A?                     | 9a; P1                      |
-| Is d the vacuum or the adsorbed bond length; the pull-force threshold                                      | 9b, 9c; P1                  |
-| Target: nearest survivor, or lowest energy within one site hop; configurations per SOAP cluster; how many final states to keep; recombination rate per shell or nearest shell only | 9e; P1, report |
+| A–B distance threshold for bond re-formed                                                                  | 5; T4, P1                  |
+| Distance metric: site-graph with in-plane tiebreak, or in-plane alone; how the site graph is built; the pair call name | 3.2; T2, P1          |
+| Does the cheap baseline, A fixed at its IS site, run before the full enumeration of A?                     | 3.5; P1                      |
+| Is d the vacuum or the adsorbed bond length; the pull-force threshold                                      | 3.2, 3.3; P1                  |
+| Target: nearest survivor, or lowest energy within one site hop; configurations per SOAP cluster; how many final states to keep; recombination rate per shell or nearest shell only | 6; P1, report |
 | Which candidate potentials at 1\*, so which committee at 7; doubt by ensemble, geometric sanity or both; threshold; how many labels; where the MLIP choice is recorded | T6, T7 |
 | Random displacement amplitude; number of conformers; test adsorbate for the \*OH sweep; adsorbate class and size beyond the first case | T3, T1, T6     |
 | Autonomy level; which checkpoints Balanced skips; recurrences before a case is promoted                     | T8, `final-state-planner`   |
