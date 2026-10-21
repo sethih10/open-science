@@ -266,6 +266,8 @@ Verified 21 October 2026 (docs/repo-survey.md): 133 public skills, MIT; none of 
 
 Build order (critical path, figure 22 of the human document): 1 decide system and product; 2 settings lock; 3 site and pair enumeration; 4 validity gate; 5 MLIP choice; 6 nearest non-recombining final state; 7 ML band with climbing image; 8 saddle validation; 9 *OH → *O + *H against OC20NEB; 10 release. Column 0 decisions (system, compute, benchmark, headline claim, final-state rules) unblock everything else. The LLM and human layer (SKILL.md, interview, lessons log, planner) is written last.
 
+Repository layout (figure 24 of the human document; tree and rules in docs/agent-build-context.md section 9): a Claude Code plugin beside AtomisticSkills. Folders by kind: docs/ (what and why), skills/ (procedures, one folder each, under 200 lines, name tools, no code), agents/ (one-page roles, no procedures), hooks/ (block coordinate edits, pause at checkpoints), mcp/tools/ (one typed file per tool, no logic), trust/ (all logic, one module per tool with the same name), tests/ (one file per tool), benchmark/, runs/<campaign>/ (PROJECT.md copy, trace.jsonl, cards, structures, report), lessons.md. One-way rule: agents call skills, skills call tools, tools call the library; never up or sideways. Reading order for an agent: CLAUDE.md, agent-context.md, agent-build-context.md, the given SKILL.md, tool docstrings.
+
 - [ ] Draft SKILL.md for adsorption and transition-state calculations
 - [ ] Draft the PROJECT.md template and the Formulate interview questions
 - [ ] Implement symmetry enumeration (sites and pairs) and the validity-check tools

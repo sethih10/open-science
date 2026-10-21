@@ -515,6 +515,65 @@ Each question below blocks the step or task named beside it. Do not code around 
 | Adsorbate class and size beyond the first case                                                            | T3, T6                         |
 | Headline claim                                                                                            | D4; report and demo, not code  |
 
-## 9. Sources
+## 9. Repository layout
+
+The repository is a Claude Code plugin that installs beside AtomisticSkills. It stays readable by three rules: every file has one kind and lives in the folder of that kind; calls go one way, agents to skills to tools to the library, never up or sideways; and every kind has one reading order, one for a human and one for an agent. Figure 24 of the design document draws it.
+
+```
+open-science-hackathon/
+├── README.md                     one page: what it is, how to install, how to run the first case
+├── CLAUDE.md                     agent instructions: reading order, rules, where things are
+├── PROJECT.md                    the locked settings and decisions of the current campaign
+├── pyproject.toml                one package: the library, the server and the tests
+├── docs/                         design document, agent context, build context, survey, figures
+├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
+├── skills/                       few, human-written, one folder each, under 200 lines each
+│   ├── adsorption-trust/SKILL.md the settings protocol, when to doubt, the checkpoints
+│   ├── final-state/SKILL.md      the 9a to 9e procedure; diagnosing a failed band
+│   └── report/SKILL.md           the report format and the BEP check
+├── agents/                       one markdown file per role, one page each
+│   ├── planner.md                calls tools by name, reads cards, stops at checkpoints
+│   └── critic.md                 extension: comments on cards, never overrides a check
+├── hooks/hooks.json              blocks coordinate edits; pauses at human checkpoints
+├── mcp/                          one server, typed tools, one file per tool
+│   ├── server.py                 registers the tools
+│   └── tools/                    settings_lock, enumerate, place, gate, card, mlip,
+│                                 final_state, pairing, band, validate_saddle, dft, report
+├── trust/                        pure Python, no LLM, no MCP: the logic every tool wraps;
+│                                 one module per tool, with the same name
+├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
+├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results
+├── runs/<campaign>/              PROJECT.md copy, trace.jsonl, cards/, structures/, report.md
+└── lessons.md                    the lessons log; recurring entries become skill lines
+```
+
+| Kind    | Folder            | One item is                                   | May call           | Holds logic |
+|---------|-------------------|-----------------------------------------------|--------------------|-------------|
+| Agent   | `agents/`         | A one-page role: what to do next and when to stop | Skills, tools    | No          |
+| Skill   | `skills/<name>/`  | A procedure, step by step, naming tools        | Tools              | No          |
+| Tool    | `mcp/tools/`      | One typed entry point, one file                | One library module | No          |
+| Library | `trust/`          | One module per tool, same name                 | Other modules      | Yes, tested |
+| Test    | `tests/`          | One file per tool                              | The library        |             |
+| Data    | `runs/`, `benchmark/`, `lessons.md` | Outputs, never code          |                    |             |
+| Docs    | `docs/`           | What and why; never how to call               |                    |             |
+
+Reading orders:
+
+| Reader  | Reads, in order                                                                                       |
+|---------|-------------------------------------------------------------------------------------------------------|
+| A human | `README.md`, the design document in `docs/`, `PROJECT.md`, the run's `report.md`, `lessons.md`      |
+| An agent | `CLAUDE.md`, `docs/agent-context.md`, this file, the skill it was given, the tool docstrings        |
+
+Rules that keep it readable:
+
+- One kind per file. A skill never contains code; an agent file never contains a procedure; a tool never contains logic. If a reader finds logic outside `trust/`, that is a bug.
+- One tool, one file, one library module, one test, all with the same name. `mcp/tools/gate.py` wraps `trust/checks.py` is the one allowed exception, because the gate has nine checks; name the test `tests/test_gate.py`.
+- Few agents. The planner and the human do the work; the critic is an extension. Add a role only when a human can say in one sentence what it decides.
+- Few skills. Three to start, each under 200 lines, each naming the tools it calls. Facts and ranges live in `trust/` and `PROJECT.md`, not in skills.
+- Logs live in `runs/`, never in the repository root; `lessons.md` is the one log a human edits.
+- Hooks enforce what prose cannot: the hook that blocks coordinate edits and the hook that pauses at a checkpoint sit in `hooks/hooks.json`, so the rules of section 5 do not depend on the model reading them.
+- The plugin manifest is the only place that lists skills, agents and the server, so adding one is one line there and one folder.
+
+## 10. Sources
 
 Same list as in `adsorption-agent-workflow.md`, section *Sources*. Cite from there; do not add a source here that is not there.

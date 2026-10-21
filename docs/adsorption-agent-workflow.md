@@ -772,6 +772,14 @@ Do not pivot; sharpen. Keep the adsorption domain and change the claim from "an 
 
 Reading the figure: column 0 holds the decisions only the team can make, in grey. Column 1 is the code foundation: settings lock, enumeration, placement, validity gate, descriptor card. Column 2 is ML relaxation and trust: potential choice, calibrated doubt, the human checkpoint, with the board's two question marks dashed. Column 3 is the path: the nearest non-recombining final state, pairing, the ML band, saddle validation, DFT refinement and the report. Column 4 is what gets measured, in amber, and the release, in blue. Each box names what it reuses in green and what it needs in grey. The numbered blue path is: system and product, settings lock, enumeration, validity gate, potential choice, nearest final state, ML band, saddle validation, the \*OH → \*O + \*H comparison against OC20NEB, release. The band at the bottom is the LLM and human layer, written last because it only calls the tools.
 
+**Repository layout.** A repository that mixes agents, skills, tools and data is hard to read unless each kind has one folder and calls go one way. The layout is a Claude Code plugin that installs beside AtomisticSkills; the build context (docs/agent-build-context.md, section 9) gives the tree and the rules.
+
+![One folder per kind, one file per tool, and calls go one way: agents to skills to tools to the library](figures/24-repository-layout.png)
+
+*Figure: repository layout · tree, reading orders, the one-way rule, schematic*
+
+Reading the figure: the tree on the left is coloured by kind: root files, documents, skills in green, agents in purple, MCP tools in blue, the library in white, runs and benchmark data in amber, tests outlined in pink. Each line carries a one-phrase note on what it holds. The top right gives the two reading orders, a human's from README to the design document to PROJECT.md to a run's report, and an agent's from CLAUDE.md to the agent context to the build context to the skill to the tool docstrings. The bottom right is the one-way rule: agents decide, skills say how, tools are typed entry points, the library holds every line of logic and every test, and runs hold every call and verdict. The rules under the tree keep it that way: one kind per file, skills under 200 lines that name tools and never contain code, one-page agents, and one tool per file wrapping one library module of the same name.
+
 **Next steps.**
 
 - [ ] Draft SKILL.md for adsorption and transition-state calculations
