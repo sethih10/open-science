@@ -9,7 +9,7 @@ This document records the reasoning behind that direction, so that a colleague o
 
 **The position in one paragraph.** A generic "agent that computes adsorption energies" already exists several times over (Adsorb-Agent, AdsMind, DREAMS, CatMaster, Catalyst-Agent, AutoDFT). Our contribution is therefore not the workflow itself but its trustworthiness: symmetry-complete site enumeration, explicit validity checks, detection of machine-learning failures (notably on magnetic Ni and Co), designed human checkpoints, a measured failure rate against a baseline, and an open, reusable release.
 
-**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Sections 14 and 15 give strategy, decisions and open questions.
+**How to read it.** Sections 2 to 5 give the science, the basic workflow, how the DFT numerical setup is chosen, and where the literature enters. Sections 6 and 7 cover prior adsorption agents and benchmarks. Sections 8 to 10 explain what scientific intuition the agent needs and where it comes from, why geometry stays in code, and what others have done to give agents such intuition. Section 11 places our work on AtomisticSkills. Sections 12 and 13 extend the workflow to reaction pathways. Section 14 records the whiteboard solution planner, its gaps and its extension layer. Sections 15 and 16 give strategy, decisions and open questions.
 
 **Who owns each step.** Each step has one owner: a deterministic tool (code), an LLM, a human, or a literature or benchmark input; knowledge files sit beside the flow. The diagram in section 13 carries its own key.
 
@@ -508,6 +508,37 @@ The dashed loop on the left sends rate-controlling steps from the microkinetic m
 - **Phase 4** adds kinetics, benchmark comparison and the open release.
 
 The single box whose silent failure corrupts everything downstream is "Approve settings and network": a wrong reference or a missing step cannot be repaired by later accuracy.
+
+## The solution planner from the whiteboard
+
+The whiteboard plan (21 October 2026) finds adsorption configurations well and stops before the path; the path steps are the part still to build, and the board's question marks form an extension layer kept outside the core.
+
+**The problem as stated on the board.** We know what we have (a surface with its energy, adsorbates relaxed in vacuum with theirs) and what we want (a final adsorbed product), and we do not know how to get from one to the other; the transition energy tells us how fast the product forms. That is a double-ended search: both endpoints are known, the saddle between them is not.
+
+![The whiteboard pipeline finds configurations; the path steps are what still has to be built](figures/19-solution-planner-pipeline.png)
+
+*Figure: solution planner · core, gaps, extension layer, schematic*
+
+Reading the figure: rows one and two are the eight whiteboard steps in grey, read left to right, with thin connectors wrapping each row to the next; under each step a red note names the problem we see and the fix. Step 8, the human choosing up to five configurations, hands over to the highlighted block of six path steps that the board does not yet contain: final-state enumeration, atom mapping and pairing, path search, saddle validation, DFT refinement, and the report. The dashed band at the bottom holds the board's question-mark items as an extension layer; each dashed box names the core step it attaches to, and none of them is needed for the core to run.
+
+**Mapping to the workflow table.**
+
+| Whiteboard step                      | Workflow step (section 3)                 | Status                                                                   |
+|--------------------------------------|-------------------------------------------|--------------------------------------------------------------------------|
+| (1) Structure retriever              | Choose system and settings                | Keep; lock settings and references in PROJECT.md first                   |
+| (2) Adsorption sites with pymatgen   | Site and orientation enumeration          | Fix: symmetry-complete with spglib and CatKit; fcc and hcp hollows apart |
+| (3) Adsorbate placement              | Site and orientation enumeration          | Fix: script only; symmetry, random displacement; the LLM never places atoms |
+| (4) Initial configurations           | Site and orientation enumeration          | Fix: conformers in vacuum first, Burnside counting; start 2 to 3 Å up    |
+| (4.1) Physics-based filtering        | Validity checks                           | Fix: write the tests (section 3 list)                                    |
+| (5) MLIP selection                   | ML pre-screening; flag ML doubt           | Problem: organometallics; dispersion, spin, images 10 Å apart            |
+| (6) Anomaly filter                   | Validity checks                           | Same code as (4.1), on every relaxed structure                           |
+| (7) Uncertainty estimation           | Flag ML doubt                             | Fix: calibrate disagreement against a few DFT labels                     |
+| (8) Rank; human picks up to five     | Review flagged cases                      | Fix: choose on card, rank and uncertainty; then DFT on the five          |
+| (9) to (14) path steps               | Extension to reaction pathways (section 12) | New: the part to build                                                   |
+
+**Extension layer** (the board's question marks, added later if time allows): agentic uncertainty, meaning the planner run several times on the same input with the variance of its choices reported; the active-learning loop from high uncertainty to DFT labels to a fine-tuned MLIP; an LLM critic that reads descriptor cards but never overrides a code check; DFT on the five chosen configurations before any path search; and multi-step mechanisms scored by energetic span, with catalysis after that.
+
+**Questions still open with the team.** The adsorbate class and size; whether the end product is the same molecule in a final geometry or a new molecule formed from two adsorbates; one elementary step or a short mechanism, and who supplies it; which DFT code, compute budget and MLIPs; and the pass criterion for the hackathon.
 
 ## Positioning and hackathon strategy
 

@@ -290,6 +290,33 @@ Rules:
 - The benchmark includes twenty geometry editing tasks (place, rotate, supercell, cut facet); target near 100% with tools; the test exists to catch the agent bypassing them.
 - Rejected: choosing configurations from the LLM's own chemical reasoning without enumeration (Adsorb-Agent style).
 
+## 21. Solution planner (whiteboard, 21 October 2026)
+
+Problem as stated: known surface and adsorbates (start), known product (end), unknown path; the transition energy gives the rate of forming the product. Double-ended search.
+
+Core steps on the board, with the fix for each:
+1. Structure retriever: surface, adsorbates, general description from the prompt. Fix: lock settings and references in PROJECT.md first.
+2. Adsorption sites with pymatgen. Fix: symmetry-complete (spglib, CatKit); fcc and hcp hollows distinguished by the atom beneath.
+3. Adsorbate placement. Fix: script only; symmetry plus random displacement; the LLM never places atoms; conformers generated in vacuum first; start 2–3 Å above the surface, not 10 Å.
+4. Initial configurations (all DoF × all sites). Fix: Burnside counting; keep few conformers.
+4.1. Physics-based filtering. Fix: the validity-check list of section 6.
+5. MLIP selection. Problem: organometallic adsorbates are where universal MLIPs fail; dispersion, spin state, periodic images ≥ 10 Å apart.
+6. Anomaly filter. Same code as 4.1 on every relaxed structure; verdict into the descriptor card.
+7. Uncertainty estimation across the MLIPs from 5. Fix: calibrate disagreement against a few DFT labels before calling it uncertainty.
+8. Rank; human picks up to five. Fix: choose on descriptor card, rank and uncertainty; then DFT on the five.
+
+Path steps to add after 8 (the part to build):
+9. Final-state enumeration: product geometry on the surface, sites, orientations, pair distances.
+10. Atom mapping and IS–FS pairing: minimal displacement after symmetry; keep several pairs.
+11. Path search: ML NEB (CatTSunami-style), then climbing-image or dimer refinement.
+12. Saddle validation: exactly one imaginary mode; the path reaches this IS and this FS.
+13. DFT refinement: single points, then relax endpoints and saddle with the locked settings.
+14. Report: barrier, validated path, MLIP and agentic uncertainties, energetic span if multi-step.
+
+Extension layer (question marks; not in the core): agentic uncertainty (run the planner N times, report decision variance; attaches to 7 and 8); active-learning loop (uncertainty → DFT labels → fine-tune → re-run 6–8; attaches to 5); LLM critic on descriptor cards that never overrides a code check (attaches to 4.1 and 6); DFT on the chosen five before any path search (attaches to 8); multi-step mechanism with energetic span, catalysis later (attaches to 14).
+
+Open with the team: adsorbate class and size; same molecule in a final geometry or a new molecule from two adsorbates; one step or a short mechanism and who supplies it; DFT code, compute, MLIPs; hackathon pass criterion.
+
 ## 19. Sources
 
 Same list as in `adsorption-agent-workflow.md`, section *Sources*. Cite from there; do not add a source here that is not there.
