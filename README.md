@@ -57,11 +57,11 @@ The board's step 3, placing the dissociated fragment, has six points; each lands
 
 Every row is borrowed or standard; the claim sits in rows 9b, 9d and 9e, the nearest-first objective, the logged gate and the recombination rate.
 
-![Surface + AB* in; the nearest non-recombining A* + B* out; the path to it is a later phase](figures/problem-pipeline.png)
+![Surface + AB* in; the nearest non-recombining A* + B* out](figures/final-state-pipeline.png)
 
-*Figure: full pipeline · 15 rows, 5 columns, one colour per kind of idea, schematic*
+*Figure: full pipeline · 11 rows, 5 columns, one colour per kind of idea, schematic*
 
-Reading the figure: each row is one pipeline step with its owner line, then the refinement borrowed with its source in green, the gap in amber for missing or red for already exists, what is ours in blue, and the extension layer dashed at the step it attaches to. The blue bracket marks rows 9a to 9e, the stated problem. Rows 10 to 13 are dashed grey, a later phase; row 14, the final-state report, is built now. The figure folds row 1\* into row 5, 7; the table lists it apart. The verdict band at the bottom names what is taken, what is still missing before a claim can be measured, and what is ours in hackathon time.
+Reading the figure: each row is one pipeline step with its owner line, then the refinement borrowed with its source in green, the gap in amber for missing or red for already exists, what is ours in blue, and the extension layer dashed at the step it attaches to. The blue bracket marks rows 9a to 9e, the stated problem; row 14 is the final-state report. The figure folds row 1\* into row 5, 7; the table lists it apart. The verdict band at the bottom names what is taken, what is still missing before a claim can be measured, and what is ours in hackathon time.
 
 | Row | Borrowed from | Missing or exists | Ours | Extension |
 |---|---|---|---|---|
@@ -76,13 +76,9 @@ Reading the figure: each row is one pipeline step with its owner line, then the 
 | 9c Pre-filter, then relax | NEBscape, CatTSunami relax every candidate | Missing: the pull-force threshold; queued or dropped | One force call per pair before any relaxation; flagged pairs queued last | none |
 | 9d Gate the pair | NEBscape Hookean constraints and graph checks, CatTSunami discards reacting frames | Missing: bond-re-formed check as code; imaginary mode on the pair | A test after relaxation with a logged reason; a failing state is never paired | none |
 | 9e Choose and report | NEBscape Pareto fronts and SOAP, CatTSunami random survivor | Missing: E(FS near) and E(FS ∞) both reported | The recombination rate of nearest pairs; the nearest and the lowest kept per SOAP cluster | Lowest energy within one site hop, and more than three per cluster: open: team decision |
-| 10 Map atoms, pair IS with FS | NEBscape mapping and alignment, CatTSunami unwrapping | Missing: intended-reaction check | Rejected pairs reported, not hidden | none |
-| 11 ML band and climbing image | CatTSunami ML NEB, fine-tuned MLIP TS, TSAgent | Exists: every TS agent | No claim: a wrapped tool | none |
-| 12 Validate saddle and band | NEBscape, CatTSunami, TSBench, Pynta | Missing: these checks as code in one tool | Validation in code; propagation measured | none |
-| 13 DFT refinement | CatTSunami ML plus 3 DFT single points | Exists: standard practice | Later phase: force calls and failure rate, gated versus naive | DFT single points on the chosen final states, dft_single_points, task T9, only if D2 allows DFT |
-| 14 Report, built now | AtomisticSkills hyperparameter logging and general-peer-review; OC20NEB product frames | Missing: OC20NEB subset, single-placement baseline, trace format | Two numbers and two comparisons; open skill and MCP tools on AtomisticSkills | BEP check, energetic span, multi-step and catalysis: later phase |
+| 14 Report | AtomisticSkills hyperparameter logging and general-peer-review; OC20NEB product frames | Missing: OC20NEB subset, single-placement baseline, trace format | Two numbers and two comparisons; open skill and MCP tools on AtomisticSkills | BEP check, energetic span, multi-step and catalysis: later phase |
 
-Rows 10 to 13 are a later phase and are not built now. Row 14, the final-state report, task P5, is built now. DFT single points on the chosen final states are the extension T9 and run only if decision D2 allows DFT.
+Row 14, the final-state report, is task P5. DFT single points on the chosen final states are the extension T9 and run only if decision D2 allows DFT. The later phase, the path from AB\* to the final state and its barrier, is out of scope and lives in the archive: `archive/docs/adsorption-agent-workflow.md`, sections 12 and 15, and figures 22 and 23 there.
 
 The row numbers are the planner's; the second board numbered its steps differently, and each board step lives in one row.
 
@@ -107,11 +103,11 @@ Ours is the nearest-first objective, the logged gate and two numbers nobody repo
 - Ours: a nearest-first objective over symmetry-complete, counted pairs, instead of a cut-off and a trade-off or a sampled shell.
 - Ours: one validity gate, validity_gate, on both endpoints, run after relaxation, with every rejection logged and its reason kept; a failing state is never paired.
 - Ours: two numbers nobody reports, the recombination rate of nearest pairs and the lateral interaction E(FS near) − E(FS ∞), and the three final-state policies compared on the same dissociations.
-- Not ours and not claimed: site finding, placement, ML relaxation, ML bands and DFT refinement. Every adsorption agent does rows 2 to 8; every transition-state agent does row 11. These are wrapped tools.
+- Not ours and not claimed: site finding, placement and ML relaxation. Every adsorption agent does rows 2 to 8. These are wrapped tools.
 
 ## Measured
 
-Two numbers are measured now and two comparisons, on an OC20NEB subset starting with \*OH → \*O + \*H on Pt(111); the barrier shift and the band cost are a later phase.
+Two numbers are measured and two comparisons, on an OC20NEB subset starting with \*OH → \*O + \*H on Pt(111).
 
 | Number | Definition | Compared |
 |---|---|---|
@@ -130,11 +126,11 @@ Pass criterion, open: team decision: a validated minimum with no A–B bond, at 
 
 The shortest route to one validated nearest final state runs through eight numbered tasks; the answers in column 0 unblock everything to their right.
 
-![Five columns in order; the numbered blue path is the shortest route to one validated nearest final state](figures/build-plan.png)
+![Five columns in order; the numbered blue path is the shortest route to one validated nearest final state](figures/final-state-build-plan.png)
 
-*Figure: build plan · 5 columns, 26 tasks, critical path of 8, schematic*
+*Figure: build plan · 5 columns, 23 tasks, critical path of 8, schematic*
 
-Reading the figure: five columns in build order, from the team's decisions through code foundations, ML trust and the final state to measurements and release; the numbered blue path is the critical path, grey boxes are off-path tasks, dashed boxes the later phase, and each box names what it reuses and needs.
+Reading the figure: five columns in build order, from the team's decisions through code foundations, ML trust and the final state to measurements and release; the numbered blue path is the critical path, grey boxes are off-path tasks, dashed boxes the extension layer, and each box names what it reuses and needs.
 
 1. D1 System and product: AB\*, surface, A\* + B\*; first case \*OH → \*O + \*H on Pt(111). Human decision.
 2. T1 Settings lock. Needs D1, D3. Reuses AiiDA common workflows and SSSP.
@@ -172,8 +168,7 @@ open-science-hackathon/
 │   ├── mlip-doubt-calibration/   committee disagreement against DFT labels; when to escalate
 │   ├── dissociation-final-state/ the 9a to 9e procedure
 │   ├── final-state-report/       the report: E(FS near), E(FS ∞), rejections, trace
-│   ├── hpc-dft-jobs/             only with HPC: submission, what custodian handles, what to escalate
-│   └── neb-saddle-diagnosis/     later phase: what to do when a band or saddle fails validation
+│   └── hpc-dft-jobs/             only with HPC: submission, what custodian handles, what to escalate
 ├── agents/                       one markdown file per role, one page each
 │   ├── final-state-planner.md    decides the next tool call and when to stop
 │   ├── dft-settings-interviewer.md runs the Formulate interview; writes PROJECT.md
@@ -185,8 +180,7 @@ open-science-hackathon/
 │   └── tools/                    dft_settings_lock, site_enumeration, adsorbate_placement,
 │                                 validity_gate, descriptor_card, mlip_choice, mlip_doubt,
 │                                 dissociation_final_state, final_state_report;
-│                                 extension: dft_single_points, only if D2 allows DFT;
-│                                 later phase: endpoint_pairing, neb_band, saddle_validation
+│                                 extension: dft_single_points, only if D2 allows DFT
 ├── finalstate/                   pure Python, no LLM, no MCP: one module per tool, same name
 ├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
 ├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results

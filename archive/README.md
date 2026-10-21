@@ -10,4 +10,4 @@ The theory, the design history and the reviews behind the project. Nothing here 
 | `docs/repo-survey.md` | 42 repositories opened on 21 October 2026: what to wrap, licences, a recommended stack |
 | `docs/chemistry-agents-review.md` | 39 LLM agents with chemistry or surface knowledge, by the channel it enters through, with numbers |
 | `docs/agent-writing-style.md` | Prose and figure conventions used for everything here |
-| `docs/figures/` | The figures and, under `src/`, the scripts for figures 13 to 26 |
+| `docs/figures/` | The figures and, under `src/`, the scripts for figures 13 to 28; 22 and 23 are the versions with the later phase, 27 and 28 the final-state-only versions shown in the root README |

@@ -14,7 +14,7 @@ A keeps the binding atom, the team's adsorbate #1; B is the dissociated part, ad
 | Input prompt | Surface, adsorbates, system description; critic and knowledge prompts as a fixed list; reasoning questions as a written skill |
 | Output, now  | Several nearest non-recombining final states in order, up to five picked by the human; E(FS near) and E(FS ∞); rejected pairs with reasons; recombination rate of nearest pairs; ML uncertainty; decision trace |
 | Extensions, the board's question marks | Agentic uncertainty, the planner run N times; DFT, single points on the chosen five and labels for calibration; a vision model for placement, only after the geometry benchmark shows an image helps; active learning from 1\*; more than three configurations per cluster, set by the recombination rate; a settings sweep and AB\* enumeration when no relaxed inputs exist |
-| Later phase, excluded | Barrier from AB\* to each kept final state: atom mapping, band, saddle validation, DFT band; kinetics; catalysis |
+| Out of scope | The path from AB\* to the final state and its barrier; kinetics; catalysis. Archived: `archive/docs/` |
 | First case   | \*OH → \*O + \*H on Pt(111), our final state against the product frame of the OC20NEB band; confirm: open: team decision |
 
 The team's five-panel visualisation maps onto the full pipeline as follows.
@@ -52,7 +52,6 @@ Tools do every deterministic step; the LLM chooses with a stated reason and draf
 | 7    | Tool  | Uncertainty estimation with every candidate potential benchmarked at 1\* as the committee; disagreement calibrated on a few DFT labels if available, else OC20NEB labels; doubt escalates instead of guessing; `mlip-doubt-calibration` says when to doubt | mlip_doubt | Labels used; disagreement against DFT error; every flag and escalation |
 | 8    | Tool  | Rank the surviving final states: nearest first, then energy; cards with uncertainty and verdicts           | descriptor_card            | The cards shown and their order                             |
 | 8    | Human | Pick up to five final states on the cards; the choice and its reason go to the lessons log                 | 3.10                       | The choice; the reason                                      |
-| 10 to 13 | Later phase | Atom mapping, ML band, saddle validation, DFT refinement; see section 3.8, last paragraph           | endpoint_pairing, neb_band, saddle_validation | Not built now                            |
 | 14   | LLM   | Draft the report: both energies, lateral interaction, rejections with reasons, recombination rate, ML uncertainty, decision trace; `final-state-report` holds the format | final_state_report | The full decision trace |
 | After 14 | Human | Interpret results                                                                                        |                            | The interpretation                                          |
 
@@ -156,7 +155,7 @@ Turn every structure into the text the LLM reads; it is the only view of geometr
 
 ### 3.6 mlip_choice, steps 1\*, 9c
 
-Choose one potential for IS, FS and the later band, with a recorded reason, before any placement; every candidate benchmarked here is the committee of 3.7.
+Choose one potential for IS and FS, with a recorded reason, before any placement; every candidate benchmarked here is the committee of 3.7.
 
 | Field  | Content                                                                                                              |
 |--------|----------------------------------------------------------------------------------------------------------------------|
@@ -201,7 +200,7 @@ NEBscape's endpoint generator shape with fairchem's helpers and four changes: co
 | Extensions | Coverage scan over cell sizes at 9b; lowest energy within one site hop at 9e                                     |
 | Logs   | Counts of placements and pairs; generator used; every critic proposal; every rejection with its reason; E(FS near), E(FS ∞) and their difference; recombination rate |
 
-Later phase, not built now, listed so names stay stable: `endpoint_pairing` wraps `nebscape.atommapper`, `minimize_rmsd` and `resolve_pbc` with CatTSunami's `unwrap_atoms`; `neb_band` wraps `ase.mep.DyNEB` with `FAIRChemCalculator`, since `OCPNEB` is gone in fairchem v2; `saddle_validation` wraps `ase.vibrations.Vibrations`, `sella.Sella` and `sella.IRC` with CatTSunami's band checks.
+The later phase, the path from AB\* to the final state and its barrier, is out of scope; its tools and sources are in `archive/docs/agent-build-context.md`, sections 3.9 to 3.11.
 
 ### 3.9 final_state_report, step 14
 
@@ -345,7 +344,7 @@ Code decides every geometric and numerical question; the LLM plans, chooses with
 
 ## 6. The roster
 
-Four agents and six skills of ours: four core now, hpc-dft-jobs only with HPC, neb-saddle-diagnosis later. The roster is short because selection precision falls with skill count and self-written skills gain nothing, as the table shows. Add a role only when a human can say in one sentence what it decides, and a skill only when a human has written and checked it.
+Four agents and five skills of ours: four core, hpc-dft-jobs only with HPC. The roster is short because selection precision falls with skill count and self-written skills gain nothing, as the table shows. Add a role only when a human can say in one sentence what it decides, and a skill only when a human has written and checked it.
 
 | Finding                                         | Number                                          | Source                                                                 |
 |-------------------------------------------------|-------------------------------------------------|------------------------------------------------------------------------|
@@ -371,9 +370,8 @@ The critic is separate so it cannot see the planner's reasoning and be anchored;
 | dissociation-final-state | 9a to 9e; what to report                                        | Core          |
 | final-state-report       | Report format: both energies, rejections, trace                 | Core          |
 | hpc-dft-jobs             | Submission; what custodian handles; what to escalate            | Only with HPC |
-| neb-saddle-diagnosis     | What to do when a band or saddle fails validation: diagnose, revise once, then flag it | Later phase |
 
-Reused from AtomisticSkills now: `ml-committee-uncertainty`, `ml-mlip-benchmark`, `ml-mace-finetune`, `chem-thermochemistry`, `general-peer-review`. Later phase, beside neb-saddle-diagnosis: `chem-neb-barrier`. Nine active now and twelve in all keeps selection precision high. Each skill stays under 200 lines and names its tools.
+Reused from AtomisticSkills: `ml-committee-uncertainty`, `ml-mlip-benchmark`, `ml-mace-finetune`, `chem-thermochemistry`, `general-peer-review`. Ten in all keeps selection precision high. Each skill stays under 200 lines and names its tools.
 
 ## 7. Repository layout
 
@@ -389,14 +387,13 @@ open-science-hackathon/
 ├── archive/docs/                 design document, agent context, build context, survey, review, figures
 ├── figures/                      the README figures: problem, simplified and full pipeline, build plan, layout
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
-├── skills/<name>/SKILL.md        the six skills of section 6, one folder each
+├── skills/<name>/SKILL.md        the five skills of section 6, one folder each
 ├── agents/<role>.md              the four agents of section 6, one page each
 ├── hooks/hooks.json              blocks coordinate edits; pauses at human checkpoints
 ├── mcp/server.py                 registers the tools on the MCP Python SDK
 ├── mcp/tools/                    dft_settings_lock, site_enumeration, adsorbate_placement, validity_gate,
 │                                 descriptor_card, mlip_choice, mlip_doubt, dissociation_final_state,
-│                                 final_state_report; extension: dft_single_points;
-│                                 later: endpoint_pairing, neb_band, saddle_validation
+│                                 final_state_report; extension: dft_single_points
 ├── finalstate/                   pure Python, no LLM, no MCP: one module per tool, same name
 ├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
 ├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results
@@ -433,7 +430,7 @@ HPC is needed for DFT and nothing else, and DFT is an extension: the laptop and 
 
 ## 9. Benchmark and measurables
 
-Two numbers are measured now on an OC20NEB subset, starting with \*OH → \*O + \*H on Pt(111); the barrier shift and band cost are later. Score with and without our skill, as AtomisticSkillsBenchmark does. Side runs: H on Pt(111) end to end against CE27 and OC20; the Ni(111) doubt demo; the geometry editing tasks of the table.
+Two numbers are measured on an OC20NEB subset, starting with \*OH → \*O + \*H on Pt(111). Score with and without our skill, as AtomisticSkillsBenchmark does. Side runs: H on Pt(111) end to end against CE27 and OC20; the Ni(111) doubt demo; the geometry editing tasks of the table.
 
 | Number                     | Definition                                                                                   | Compared                                   |
 |----------------------------|----------------------------------------------------------------------------------------------|--------------------------------------------|
@@ -442,7 +439,6 @@ Two numbers are measured now on an OC20NEB subset, starting with \*OH → \*O + 
 | Final state versus OC20NEB | Our nearest validated final state against the product frame of the released band: A–B distance, energy, validity | Per reaction in the subset |
 | Three policies             | Nearest-first, ours; energy–distance Pareto, NEBscape; shell sampling, CatTSunami; on the same dissociations: distance, energy, validity, recombination | Per reaction; NEBscape converged 94 % of 304 |
 | Geometry editing           | Place, rotate, supercell, cut facet, with tools against without                              | 20 tasks; target near 100 % with tools     |
-| Later phase                | Barrier shift from naive versus gated endpoints; DFT band force calls and failure rate       | Not now                                    |
 
 | Item              | What the docs say                                                                                   | Open                                  |
 |-------------------|-----------------------------------------------------------------------------------------------------|---------------------------------------|
@@ -451,7 +447,6 @@ Two numbers are measured now on an OC20NEB subset, starting with \*OH → \*O + 
 | Baselines         | A plain AdsorbML-style run with `AdsorbateSlabConfig`; AtomisticSkills `mat-surface-adsorption`, which calls MatCalc `AdsorptionCalc` on pymatgen's `AdsorbateSiteFinder`; NEBscape's Pareto choice and CatTSunami's shell sampling for the policy comparison | Exact definition |
 | Pass criterion    | Our final state is a validated minimum with no A–B bond, at least as near as the OC20NEB product frame, within an energy tolerance of it | The tolerance and the distance rule |
 | Reference points  | NEBscape's endpoint convergence, 94 % of 304 OC20NEB reactions; the OC20NEB product frame per reaction | None is stated as the criterion      |
-| Later-phase reference points | TSAgent 83 % on a 100-example OC20NEB subset; CatTSunami within 0.1 eV 91 %; activity trends need about 50 meV | Not now                   |
 
 ## 10. Build order
 
@@ -479,7 +474,6 @@ Off-path tasks, built when the path needs them:
 | Measure             | M1 H on Pt(111) end to end; M4 Ni(111) doubt demo; M3 the three later numbers              | T1 to T8; T7, T8; P1, P3, D2 |
 | LLM and human layer, last | SKILL.md files; interview and PROJECT.md template; `lessons.md` seeded; `final-state-planner` that calls tools by name and stops at checkpoints; `geometry-critic` at 9a and 9b; hooks | The tools |
 | Extensions, later   | T9 `dft_single_points`, 3.11, DFT on the chosen five; T10 active-learning loop; M5 agentic uncertainty, N planner runs; `geometry-critic` on gate cards at 5; coverage scan at 9b; one-hop target at 9e; settings sweep and AB\* enumeration when no relaxed inputs exist | T8, D2; T7, D2; T8, P5 |
-| Later phase         | P2 `endpoint_pairing`; P3 `neb_band`; P4 `saddle_validation`; barrier shift and band cost  | P1             |
 
 ## 11. Open decisions that block coding
 
@@ -516,7 +510,7 @@ Prior work for the final state:
 - [Pynta, JCIM 2023](https://chemrxiv.org/engage/chemrxiv/article-details/647114454f8b1884b755bc5a), [code, GPL](https://github.com/zadorlab/pynta): ACAT plus Sella on slabs; pattern only.
 - [El Agente Potente](https://arxiv.org/abs/2609.14840): typed execution graphs; reports a dissociated state unflagged.
 - [Reproducible orchestration of NEB best practices](https://arxiv.org/abs/2603.14737): gas phase only.
-- [TSAgent](https://arxiv.org/abs/2605.14154), [code](https://github.com/transition-state-search/TSAgent); [TSBench](https://arxiv.org/abs/2609.08503); [CatDT](https://arxiv.org/html/2606.05050); [AdsMind](https://arxiv.org/html/2606.19152), [code](https://github.com/AI4QC/AdsMind); [Adsorb-Agent](https://arxiv.org/html/2410.16658v3).
+- [CatDT](https://arxiv.org/html/2606.05050): endpoint gate in code and the memory ablation; [AdsMind](https://arxiv.org/html/2606.19152), [code](https://github.com/AI4QC/AdsMind): the pick-from-labels interface; [Adsorb-Agent](https://arxiv.org/html/2410.16658v3): the counter-example. Transition-state agents and benchmarks belong to the later phase and are listed in the archive.
 - Review of what none of them do: `archive/docs/chemistry-agents-review.md`.
 
 Tools wrapped, each opened on 21 October 2026, details in `archive/docs/repo-survey.md`:
