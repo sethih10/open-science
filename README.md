@@ -208,7 +208,7 @@ The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decisio
 
 ## Repository layout
 
-The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise. The plugin side is the one Claude Code documents and its own `hookify` plugin uses: `agents/`, `skills/`, `hooks/` and `.mcp.json`. The package side is [ChemGraph](https://github.com/argonne-lcf/ChemGraph)'s, folder for folder: `registry/`, `tools/`, `schemas/`, `runtime/`, `memory/`, `execution/`, `agent/`, `mcp/`, `eval/`, `cli/` under `src/`; the tools are grouped by category as ChemCrow and Biomni group theirs. Which step, tools and agents run next, and where the human is asked, is code in `agent/pipeline.py`, not a prompt. The tree is generated from the files on disk, the registry and the roster, so every tool, skill and agent in it is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
+The agent is FragPlace: the board calls the pieces of the broken bond the binding fragments, and the agent places them. The repository is a Claude Code plugin around one Python package, `fragplace`, in two layouts that exist elsewhere and that anyone who has opened them will recognise. The plugin side is the one Claude Code documents and its own `hookify` plugin uses: `agents/`, `skills/`, `hooks/` and `.mcp.json`. The package side is [ChemGraph](https://github.com/argonne-lcf/ChemGraph)'s, folder for folder: `registry/`, `tools/`, `schemas/`, `runtime/`, `memory/`, `execution/`, `agent/`, `mcp/`, `eval/`, `cli/` under `src/`; the tools are grouped by category as ChemCrow and Biomni group theirs. Which step, tools and agents run next, and where the human is asked, is data in `registry/steps.py` and code in `agent/pipeline.py`, not a prompt. The tree is generated from the files on disk, the registry and the roster, so every tool, skill and agent in it is one named in the tables above; the naming rules and the operational modules are in `AGENTS.md` section 7.
 
 <!-- registry:layout -->
 ```
@@ -236,7 +236,8 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 ├── src/fragplace/                         the package; the folder names are ChemGraph's, the tools by category ChemCrow's and Biomni's
 │   ├── registry/                          every tool and every agent defined once
 │   │   ├── tools.py                       ToolSpec and REGISTRY, the tools of section 3; CATEGORY maps each tool to its module
-│   │   └── agents.py                      the roster, the checkpoints, the skill names; the figures import it
+│   │   ├── agents.py                      the roster, the checkpoints, the skill names; the figures import it
+│   │   └── steps.py                       the steps in execution order, each with its agents, its tools and its checkpoint; 3.5 commented out
 │   ├── tools/                             one module per category, as ChemCrow and Biomni group theirs; a function per tool, parameters as in the registry
 │   │   ├── literature.py                  literature_lookup
 │   │   ├── structure.py                   structure_retrieval, calculation_protocol
@@ -271,7 +272,7 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   │   ├── slurm.py                       the HPC lane, custodian inside the job script
 │   │   └── tracker.py                     job attempts, diagnoses, the retry cap of three
 │   ├── agent/                             who runs next, as code
-│   │   ├── pipeline.py                    the steps in execution order, each with its tools, its agents and its checkpoint; the deterministic rollout
+│   │   ├── pipeline.py                    the deterministic rollout over registry/steps.py; stops at every checkpoint, resumes from state.json
 │   │   └── prompts.py                     loads agents/<name>.md, the one copy Claude Code also reads
 │   ├── mcp/                               the MCP side
 │   │   └── server.py                      one MCP tool per registry entry; the fragplace-server command
