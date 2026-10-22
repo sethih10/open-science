@@ -12,8 +12,8 @@ fig = plt.figure(figsize=(FW, FH))
 ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, FW); ax.set_ylim(0, FH); ax.axis("off")
 fig.text(0.5, 0.985, "Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work",
          ha="center", va="top", fontsize=12.5, fontweight="bold")
-fig.text(0.5, 0.967, f"board of {BOARD_DATE} · three phases left to right, cards top to bottom · {PAUSE} a checkpoint where the agent waits · dashed: an extension · tool names are the functions under src/fragplace/tools/, skills the folders under skills/, agents the files under agents/",
-         ha="center", va="top", fontsize=8.4, color="#555555")
+fig.text(0.5, 0.967, f"board of {BOARD_DATE} · three phases left to right, cards top to bottom · {PAUSE} a checkpoint where the agent waits · dashed: an extension; a dashed card: a step deferred, on the board but commented out of the code\ntool names are the functions under src/fragplace/tools/, skills the folders under skills/, agents the files under agents/",
+         ha="center", va="top", fontsize=8.4, color="#555555", linespacing=1.3)
 
 COLS = {"setup": 0.4, "step3": 5.6, "select": 10.8}; CW = 4.8; CARD_W = 4.6
 TOPY = 12.55; ROW, RGAP, HEAD, PADB, GAP = 0.30, 0.06, 0.36, 0.10, 0.24
@@ -37,6 +37,7 @@ def chips_of(s):
     if s.agent_ext: rows.append(("L", "extension: " + s.agent_ext, False, True, False))
     if s.skill: rows.append(("S", s.skill, s.owners[0] == "S", False, False))
     if s.tools: rows.append(("T", s.action, s.owners[0] == "T", False, False))
+    if s.deferred: rows.insert(0, ("T", "deferred: " + s.deferred, False, True, False))
     if s.ext_tools: rows.append(("T", "extension: " + ", ".join(s.ext_tools), False, True, False))
     return rows
 
@@ -44,8 +45,8 @@ def card(x, ytop_, s):
     rows = chips_of(s)
     h = HEAD + len(rows) * (ROW + RGAP) + PADB
     y = ytop_ - h
-    ax.add_patch(FancyBboxPatch((x, y), CARD_W, h, boxstyle="round,pad=0.02,rounding_size=0.12", fc="white", ec="#9a9a9a", lw=1.1, zorder=2))
-    ax.text(x + 0.16, y + h - 0.19, s.title, ha="left", va="center", fontsize=9.0, fontweight="bold", zorder=4)
+    ax.add_patch(FancyBboxPatch((x, y), CARD_W, h, boxstyle="round,pad=0.02,rounding_size=0.12", fc="#f7f7f5" if s.deferred else "white", ec="#9a9a9a", lw=1.1, ls="--" if s.deferred else "-", zorder=2))
+    ax.text(x + 0.16, y + h - 0.19, s.title, ha="left", va="center", fontsize=9.0, fontweight="bold", color="#777777" if s.deferred else "black", zorder=4)
     if s.checkpoint:
         ax.text(x + CARD_W - 0.14, y + h - 0.19, f"{PAUSE} {s.checkpoint}", ha="right", va="center", fontsize=6.8, color=LANE["H"][1], fontweight="bold", zorder=4)
     yy = y + h - HEAD - ROW

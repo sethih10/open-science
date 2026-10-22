@@ -22,8 +22,9 @@ KIND = {"board":  dict(fc="white",   ec="#374151", lw=1.1, ls="-"),
         "lit":    dict(fc="#dcfce7", ec="#15803d", lw=1.1, ls="-"),
         "ours":   dict(fc=HI_FACE,   ec=HI_EDGE,   lw=1.4, ls="-"),
         "open":   dict(fc="#fef3c7", ec="#b45309", lw=1.1, ls="-"),
-        "ext":    dict(fc="#f3e8ff", ec="#7e22ce", lw=1.2, ls="--")}
-TITLE_COL = {"board": "#111827", "lit": "#14532d", "ours": "#1e3a8a", "open": "#92400e", "ext": "#581c87"}
+        "ext":    dict(fc="#f3e8ff", ec="#7e22ce", lw=1.2, ls="--"),
+        "deferred": dict(fc="#f0efe9", ec="#8a8a85", lw=1.1, ls="--")}
+TITLE_COL = {"board": "#111827", "lit": "#14532d", "ours": "#1e3a8a", "open": "#92400e", "ext": "#581c87", "deferred": "#555555"}
 OWNER_COL = {"TOOL": "#374151", "LLM": "#0e7490", "HUMAN": "#be185d", "SKILL": "#4d7c0f"}
 LANE = {"H": ("Human", "#be185d", "#fdf2f8"), "L": ("LLM agent", "#0e7490", "#ecfeff"),
         "S": ("Skill", "#4d7c0f", "#f7fee7"), "T": ("Tool", "#374151", "#f3f4f6")}

@@ -47,7 +47,10 @@ alternative and the baseline policy
 or
 open: the binding fragment fixed at
 its old site, or enumerated
-in code: 3.5, 3.2, 3.3, 3.4; 3.6 is the alternative; 3.1 runs inside step 5
+deferred: later; the team decides how;
+A stays at its initial-state site for
+now
+in code: 3.2, 3.3, 3.4; 3.5 deferred; 3.6 is the alternative; 3.1 runs inside step 5
 (4) Initial configurations
 relaxation: relax every pair with the chosen MLIP and the locked
 settings, random displacement first; Burnside-counted

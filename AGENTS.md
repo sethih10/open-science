@@ -35,7 +35,7 @@ Quantities the code computes:
 
 ## 2. The exact pipeline
 
-The board's order and numbering, one row per step; tools do every deterministic step, the LLM chooses with a stated reason and drafts, humans approve, pick and interpret, skills hold the procedures. The plan follows NEBscape's shape; NEBscape is the closest prior work and CatTSunami is secondary. The six points of step 3 run in the board's order 3.1 → 3.2 → 3.3 → 3.4 → 3.5 or 3.6 as a design; in code 3.5 places first, 3.2 lists the pairs, 3.3 screens them, 3.4 orders the list, 3.6 is the alternative generator, and 3.1 is applied as a check inside step 5.
+The board's order and numbering, one row per step; tools do every deterministic step, the LLM chooses with a stated reason and drafts, humans approve, pick and interpret, skills hold the procedures. The plan follows NEBscape's shape; NEBscape is the closest prior work and CatTSunami is secondary. Step 3.5 is deferred: it stays on the board but is commented out of `agent/pipeline.py` until the team decides how to implement it; fragment A stays at its initial-state site for now and `adsorbate_placement` runs only at step 4, for B. The six points of step 3 run in the board's order 3.1 → 3.2 → 3.3 → 3.4 → 3.5 or 3.6 as a design; in code 3.5 places first, 3.2 lists the pairs, 3.3 screens them, 3.4 orders the list, 3.6 is the alternative generator, and 3.1 is applied as a check inside step 5.
 
 <!-- board:pipeline -->
 | Step | Owner | What it does | Tools | Checkpoint |
@@ -48,7 +48,7 @@ The board's order and numbering, one row per step; tools do every deterministic 
 | (3.2) Window [1.5 d, 5] Å | Tool | B sites around each A within [1.5 d, 5] Å, d the length of the bond to break; every symmetry-distinct pair, ordered by site-graph distance with in-plane tiebreak, counted | `pair_enumeration`, `literature_lookup` |  |
 | (3.3) Pull force with the MLIP | Tool | One MLIP force call per pair; the force component on each fragment along the A–B axis; a pull towards the other fragment above the threshold queues the pair last, never drops it | `pull_force_screen` |  |
 | (3.4) Agentic critique of the cleavage | LLM | `surface-chemist` reads the descriptor cards, proposes a site type and orientation per fragment, may reorder or add candidates; never edits coordinates, never removes a pair, never overrides a check | `descriptor_card` |  |
-| (3.5) Site and orientation, pymatgen | Tool | The fragment keeping the binding atom, A, placed at every symmetry-distinct site near its old site, counted; A fixed at its old site is the cheap baseline | `adsorbate_placement` |  |
+| (3.5) Site and orientation, pymatgen | Tool | Deferred, later; the team decides how; A stays at its initial-state site for now. The fragment keeping the binding atom, A, placed at every symmetry-distinct site near its old site, counted; A fixed at its old site is the cheap baseline | `adsorbate_placement` |  |
 | (3.6) Or minima hopping with the MLIP | Tool | NEBscape's endpoint generator with the chosen MLIP as the alternative generator and the baseline policy | `minima_hopping` |  |
 | (4) Initial configurations | Tool | Every pair relaxed with the chosen potential and the locked settings; orientations under the site's stabiliser, Burnside-counted; random displacement first | `relaxation`, `adsorbate_placement` |  |
 | (5) Physics-based and anomaly filtering | Tool | The gate of section 3.4 on every structure before and after relaxation: nine checks per fragment plus the two final-state checks, 3.1 among them as the bond-re-formed check; verdict into the card; a failing pair is never kept; the ML variant not taken; an LLM critic comments only, extension | `anomaly_filter`, `descriptor_card` |  |
@@ -657,7 +657,7 @@ HPC is needed for DFT and nothing else, and DFT is an extension: the laptop and 
 
 | Lane   | Steps                                                            | Without HPC in the hackathon                                                                 |
 |--------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
-| Laptop | 1 lock from the supplied settings; 2 to 4; 5; 6; 8; 3.5; 3.2; 5; 14 | Unchanged                                                                                  |
+| Laptop | 1 lock from the supplied settings; 2 to 4; 5; 6; 8; 3.5, deferred; 3.2; 5; 14 | Unchanged                                                                                  |
 | GPU    | 1\* benchmark; 7 committee; 3.3 force calls and relaxations; 6 MLIP energies; ML frequencies | Unchanged; one workstation or cloud GPU                          |
 | HPC, extensions only | Settings sweep when no relaxed inputs exist; DFT calibration labels for 7; DFT single points of dft_single_points; DFT frequencies | Not needed: OC20's RPBE and PAW values as the settings record; OC20NEB's released DFT bands as labels and ground truth; one DFT check run beforehand and recorded, if available |
 

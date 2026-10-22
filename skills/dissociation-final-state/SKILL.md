@@ -5,10 +5,10 @@ description: The six points of the board's step 3 and steps 4 to 6 as a procedur
 
 # The nearest non-recombining final state
 
-Order in code: 3.5, 3.2, 3.3, 3.4, then 4, 5, 6; 3.6 is the alternative generator; 3.1 runs inside step 5.
+Order in code: 3.2, 3.3, 3.4, then 4, 5, 6; 3.6 is the alternative generator; 3.1 runs inside step 5. Step 3.5 is deferred: A stays at its initial-state site until the team decides how to implement the enumeration.
 
 1. `site_enumeration` on the selected cell; read the count, never the coordinates.
-2. 3.5: `adsorbate_placement` of A, the fragment that keeps the binding atom, at every symmetry-distinct site near its old site; A fixed at its old site is the cheap baseline, a team decision.
+2. 3.5, deferred: A, the fragment that keeps the binding atom, stays at its initial-state site; the enumeration of its sites waits for the team's decision. `adsorbate_placement` is used at step 4 to place B.
 3. 3.2: `literature_lookup` for d, the length of the bond to break; `pair_enumeration` inside [1.5 d, 5] Å, nearest first by site-graph distance, counted.
 4. 3.3: `pull_force_screen`, one force call per pair; a pull towards the other fragment queues the pair last, never drops it.
 5. 3.4: hand the descriptor cards to the surface-chemist; take its ordering; never its coordinates. It never removes a pair.

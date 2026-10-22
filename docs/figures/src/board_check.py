@@ -31,6 +31,9 @@ for s in STEPS:
             need(s.open in flat[n], f"figure {n}: open decision missing at {s.key}: {s.open}")
     if s.ext:
         need(s.ext in flat[29], f"figure 29: extension missing at {s.key}")
+    if s.deferred:
+        for n in (29, 30, 31):
+            need(s.deferred in flat[n], f"figure {n}: deferred note missing at {s.key}")
     for t in s.tools + s.ext_tools:
         for n in (30, 31, 32):
             need(t in flat[n], f"figure {n}: tool missing: {t} (step {s.key})")

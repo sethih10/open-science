@@ -151,9 +151,10 @@ Ours
 code places, the LLM never does: the fragment
 keeping the binding atom at symmetry-distinct
 sites near its old site, counted
-Open
-the binding fragment fixed at its old site, or
-enumerated
+DEFERRED
+later; the team decides how; A stays at its
+initial-state site for now · open: the binding
+fragment fixed at its old site, or enumerated
 (3.6) Or minima hopping with the MLIP
 TOOL
 alternatively, minima hopping with the
@@ -263,6 +264,6 @@ the pass criterion against the OC20NEB product
 frame
 step 3: adsorbate placement, the stated problem
 The board's own open questions: step 3 applies to dissociative adsorption only, by the fixed scope; the models of step 7 are the candidates benchmarked at 1*; "phys. int." at step 8 is read as the physical issues shown on each card; the vision model feeds step 3 and is an extension.
-The six points of step 3 keep the board's order 1 → 2 → 3 → 4 → 5 or 6; in code: 3.5, 3.2, 3.3, 3.4; 3.6 is the alternative; 3.1 runs inside step 5.
+The six points of step 3 keep the board's order 1 → 2 → 3 → 4 → 5 or 6; in code: 3.2, 3.3, 3.4; 3.5 deferred; 3.6 is the alternative; 3.1 runs inside step 5.
 How the plan evolved: one row per step of the board, in the board's order; what the board says, what the literature refined, what we added
 board of 21 October 2026, numbering kept, including the six points of step 3 · owner line under each step · amber is open, dashed purple is an extension · schematic

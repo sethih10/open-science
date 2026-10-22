@@ -86,10 +86,11 @@ half = (iw - 0.03) / 2; xl, xr = ix, ix + half + 0.03
 ax.plot([xl + half / 2, xr + half / 2], [yy - 0.0, yy - 0.0], color=GREY_E, lw=1.2, zorder=4)
 yy -= 0.004
 for s, xx in ((BY_KEY["3.5"], xl), (BY_KEY["3.6"], xr)):
-    ax.add_patch(FancyBboxPatch((xx, yy - fork_h), half, fork_h, boxstyle="round,pad=0.003,rounding_size=0.012", fc="white", ec=GREY_E, lw=1.2, zorder=3))
-    ax.text(xx + half / 2, yy - 0.005, wrap(s.title, 24), ha="center", va="top", fontsize=7.2, fontweight="bold", zorder=4, linespacing=1.05)
+    off = bool(s.deferred)   # a deferred step is drawn dashed and grey: on the board, commented out of the code
+    ax.add_patch(FancyBboxPatch((xx, yy - fork_h), half, fork_h, boxstyle="round,pad=0.003,rounding_size=0.012", fc=GREY_F if off else "white", ec=GREY_E, lw=1.2, ls="--" if off else "-", zorder=3))
+    ax.text(xx + half / 2, yy - 0.005, wrap(s.title, 24), ha="center", va="top", fontsize=7.2, fontweight="bold", color="#777777" if off else "black", zorder=4, linespacing=1.05)
     tool, rest = mono_split(s.action)
-    ax.text(xx + half / 2, yy - fork_h + 0.005, wrap(f"{tool}: {rest}", 36), ha="center", va="bottom", fontsize=5.9, color="#333333", zorder=4, linespacing=1.12)
+    ax.text(xx + half / 2, yy - fork_h + 0.005, wrap(f"{tool}: {rest}", 36), ha="center", va="bottom", fontsize=5.9, color="#777777" if off else "#333333", zorder=4, linespacing=1.12)
     centre[s.key] = yy - fork_h / 2
 ax.text(CX + W / 2, yy - fork_h / 2, "or", ha="center", va="center", fontsize=8, color="#555555", zorder=5)
 s35 = BY_KEY["3.5"]
@@ -98,6 +99,12 @@ if s35.open:
     ax.plot([CX + W, TX], [ty, ty], color=AMB_E, lw=1.0, zorder=2)
     ax.add_patch(FancyBboxPatch((TX, ty - th / 2), TW, th, boxstyle="round,pad=0.002,rounding_size=0.008", fc=AMB_F, ec=AMB_E, lw=1.0, zorder=3))
     ax.text(TX + TW / 2, ty, wrap("open: " + s35.open, 38), ha="center", va="center", fontsize=6.0, color=AMB_T, zorder=4, linespacing=1.15)
+if s35.deferred:
+    ty = centre["3.5"] - (0.030 + 0.006 if s35.open else 0.0); th = 0.030
+    if not s35.open:
+        ax.plot([CX + W, TX], [ty, ty], color=GREY_E, lw=1.0, zorder=2)
+    ax.add_patch(FancyBboxPatch((TX, ty - th / 2), TW, th, boxstyle="round,pad=0.002,rounding_size=0.008", fc=GREY_F, ec=GREY_E, lw=1.0, ls="--", zorder=3))
+    ax.text(TX + TW / 2, ty, wrap("deferred: " + s35.deferred, 38), ha="center", va="center", fontsize=6.0, color="#555555", zorder=4, linespacing=1.15)
 ax.text(CX + W / 2, g_top - g_h + 0.012, code_order_note(), ha="center", va="center", fontsize=6.4, style="italic", color=CORAL_E, zorder=4)
 y = g_top - g_h
 down(y - 0.002, y - G + 0.002); y -= G

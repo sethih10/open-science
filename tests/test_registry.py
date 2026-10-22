@@ -93,7 +93,9 @@ def test_pipeline_agrees_with_the_board_and_the_registry():
         assert set(step.agents) - {pipeline.PLANNER} == {n for n, _ in b.agents} - {pipeline.PLANNER}, step.key
         assert set(step.tools) == set(b.tools), step.key
         assert set(step.ext_tools) == set(b.ext_tools), step.key
-    assert set(pipeline.STEP_ORDER) | {"3.1"} == set(board)  # 3.1 runs inside 5 and is not a step of its own
+    deferred = {s.key for s in _board.STEPS if s.deferred}
+    assert set(pipeline.STEP_ORDER) | {"3.1"} | deferred == set(board)  # 3.1 runs inside 5; deferred steps stay on the board only
+    assert "3.5" in deferred and "3.5" not in pipeline.STEP_ORDER
 
 
 def test_rollout_stops_at_each_checkpoint_and_resumes(tmp_path: Path):
@@ -114,5 +116,5 @@ def test_rollout_stops_at_each_checkpoint_and_resumes(tmp_path: Path):
     assert len(stops) == 5
     steps_called = [s for s, _ in calls]
     assert steps_called == sorted(steps_called, key=pipeline.STEP_ORDER.index)
-    assert "3.6" not in steps_called and "3.5" in steps_called
+    assert "3.6" not in steps_called and "3.5" not in steps_called and "4" in steps_called  # 3.5 deferred, 3.6 the alternative
     assert ("prompt", "literature_lookup") in calls and ("8", "ranking") in calls

@@ -81,6 +81,9 @@ T
 surface-chemist reads descriptor_card text, proposes a site type and
 orientation per fragment, reorders; never edits coordinates
 (3.5) Site and orientation, pymatgen
+T
+deferred: later; the team decides how; A stays at its initial-state site
+for now
 S
 dissociation-final-state
 T
@@ -162,4 +165,5 @@ extension: dft_single_points
 Legend: H human · L LLM agent · S skill, a written procedure the LLM follows · T tool, deterministic code · thick edge does the work · dashed, an extension · ❚❚ a checkpoint where the agent waits for the human.
 solution-planner runs every card: it calls each tool by name, reads cards, never writes coordinates.
 Who does what, step by step: one card per board step; inside it, the human, the LLM agent, the skill and the tool that act, the thick edge does the work
-board of 21 October 2026 · three phases left to right, cards top to bottom · ❚❚ a checkpoint where the agent waits · dashed: an extension · tool names are the functions under src/fragplace/tools/, skills the folders under skills/, agents the files under agents/
+board of 21 October 2026 · three phases left to right, cards top to bottom · ❚❚ a checkpoint where the agent waits · dashed: an extension; a dashed card: a step deferred, on the board but commented out of the code
+tool names are the functions under src/fragplace/tools/, skills the folders under skills/, agents the files under agents/

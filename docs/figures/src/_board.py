@@ -10,6 +10,7 @@ Field notes:
 - action: the one line a figure prints under the step name: the tool and what it does.
 - open: the one headline open decision shown as the amber tag; AGENTS.md section 11 holds the full list.
 - ext: the extension at this step, dashed purple in every figure.
+- deferred: the step stays on the board, numbered, but is commented out of the pipeline code until the team decides how to implement it; grey and dashed in every figure.
 - code_order: for the six points of step 3, the order the code runs them; 0 means the alternative.
 - checkpoint: one of CHECKPOINTS. The placement of "approve the plan" after 1* is the team's to confirm.
 """
@@ -44,6 +45,7 @@ class Step:
     detail: str = ""                          # what the step does in full, for AGENTS.md section 2
     open: Optional[str] = None
     ext: Optional[str] = None
+    deferred: Optional[str] = None               # the step is kept on the board but commented out of the code for now
     skill: Optional[str] = None
     agents: Tuple[Tuple[str, str], ...] = ()    # (name, what it does here), one per agent acting at the step
     agent_ext: Optional[str] = None               # a dashed LLM chip
@@ -149,6 +151,7 @@ STEPS = [
          action="adsorbate_placement: A at every symmetry-distinct site near its old site, counted; A fixed is the cheap baseline",
          owners=("T",), tools=("adsorbate_placement",),
          open="the binding fragment fixed at its old site, or enumerated",
+         deferred="later; the team decides how; A stays at its initial-state site for now",
          skill="dissociation-final-state", code_order=1),
     Step("3.6", "Or minima hopping with the MLIP", "step3", 5,
          detail="NEBscape's endpoint generator with the chosen MLIP as the alternative generator and the baseline policy",
@@ -227,10 +230,14 @@ BY_KEY = {s.key: s for s in STEPS}
 
 def code_order_note() -> str:
     pts = [s for s in STEPS if s.is_point]
-    run = [s.key for s in sorted((p for p in pts if p.code_order and p.code_order < 5), key=lambda p: p.code_order)]
+    run = [s.key for s in sorted((p for p in pts if p.code_order and p.code_order < 5 and not p.deferred), key=lambda p: p.code_order)]
+    deferred = [s.key for s in pts if s.deferred]
     alt = [s.key for s in pts if s.code_order == 0]
     inside = [s.key for s in pts if s.code_order == 5]
-    return f"in code: {', '.join(run)}; {', '.join(alt)} is the alternative; {', '.join(inside)} runs inside step 5"
+    note = f"in code: {', '.join(run)}; "
+    if deferred:
+        note += f"{', '.join(deferred)} deferred; "
+    return note + f"{', '.join(alt)} is the alternative; {', '.join(inside)} runs inside step 5"
 
 
 if __name__ == "__main__":
