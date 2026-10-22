@@ -20,13 +20,19 @@ from fragplace.schemas import records  # noqa: E402
 def md(s):
     return str(s).replace("*", "\\*").replace("|", "\\|")
 
+def row(step, cells):
+    """One table row; every cell of a deferred step is struck through, so the row reads as commented out."""
+    if step.deferred:
+        cells = [f"~~{c}~~" if c.strip() else c for c in cells]
+    return "| " + " | ".join(cells) + " |"
+
 def evolution_table():
     rows = ["| Board step | What the board says | Refined by the literature | What we added or decided | Open, or an extension |", "|---|---|---|---|---|"]
     for s in STEPS:
         tail = f"Open: {s.open}" if s.open else (f"Extension: {s.ext}" if s.ext else "none")
         if s.deferred:
             tail = f"Deferred: {s.deferred}" + (f". Open: {s.open}" if s.open else "")
-        rows.append(f"| {md(s.title)} | {md(s.board)} | {md(s.lit_source)}: {md(s.lit)} | {md(s.ours)} | {md(tail)} |")
+        rows.append(row(s, [md(s.title), md(s.board), f"{md(s.lit_source)}: {md(s.lit)}", md(s.ours), md(tail)]))
     return "\n".join(rows)
 
 def agents_cell(s):
@@ -37,7 +43,7 @@ def who_table():
     rows = ["| Step | Human | LLM agent | Skill | Tool | Checkpoint |", "|---|---|---|---|---|---|"]
     for s in STEPS:
         tool = (f"deferred, {s.deferred}; " if s.deferred else "") + (s.action if s.tools else "")
-        rows.append(f"| {md(s.title)} | {md(s.human or '')} | {md(agents_cell(s))} | {md(s.skill or '')} | {md(tool)} | {md(s.checkpoint or '')} |")
+        rows.append(row(s, [md(s.title), md(s.human or ''), md(agents_cell(s)), md(s.skill or ''), md(tool), md(s.checkpoint or '')]))
     rows += ["", "The actor that does the work in each step, in order: " + ", ".join(f"{s.title} {OWNER_NAMES[s.owners[0]].lower()}" for s in STEPS) + "."]
     return "\n".join(rows)
 
@@ -46,7 +52,7 @@ def modules_table():
     for s in STEPS:
         for name in s.tools + s.ext_tools:
             t = BY_NAME[name]
-            rows.append(f"| {PHASES[s.phase]} | {md(s.title)} | `{t.name}` | {md(', '.join(t.inputs))} | {md(', '.join(t.outputs))} | {t.status} |")
+            rows.append(row(s, [PHASES[s.phase], md(s.title), f"`{t.name}`", md(', '.join(t.inputs)), md(', '.join(t.outputs)), "deferred at this step" if s.deferred else t.status]))
     return "\n".join(rows)
 
 def pipeline_table():
@@ -55,7 +61,7 @@ def pipeline_table():
         owner = {"T": "Tool", "L": "LLM", "H": "Human", "S": "Skill"}[s.owners[0]]
         tools = ", ".join(f"`{t}`" for t in s.tools) + (" ; extension: " + ", ".join(f"`{t}`" for t in s.ext_tools) if s.ext_tools else "")
         detail = (f"Deferred, {s.deferred}. " if s.deferred else "") + s.detail
-        rows.append(f"| {md(s.title)} | {owner} | {md(detail)} | {tools} | {md(s.checkpoint or '')} |")
+        rows.append(row(s, [md(s.title), owner, md(detail), tools, md(s.checkpoint or '')]))
     return "\n".join(rows)
 
 def tools_section():

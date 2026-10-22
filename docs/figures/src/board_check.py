@@ -60,7 +60,7 @@ sec = agent[agent.index("## 2. The exact pipeline"):agent.index("## 3. The tools
 rows = [l for l in sec.splitlines() if l.startswith("| ") and not l.startswith("| Step") and not l.startswith("|--")]
 by_first = {}
 for l in rows:
-    cells = [c.strip() for c in l.strip("|").split("|")]
+    cells = [c.strip().strip("~") for c in l.strip("|").split("|")]   # a deferred row is struck through
     by_first[cells[0]] = cells
 for s in STEPS:
     if s.key == "prompt": continue
