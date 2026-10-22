@@ -13,9 +13,9 @@ title(fig, "How the plan evolved: one row per step of the board, in the board's 
       f"board of {BOARD_DATE}, numbering kept, including the six points of step 3 · owner line under each step · amber is open, dashed purple is an extension · schematic")
 
 leg = [("board", "as written on the board"), ("lit", "refined by the literature, with the source"), ("ours", "what we added or decided"),
-       ("open", "open: team decision"), ("ext", "extension layer, later")]
+       ("open", "open: team decision"), ("ext", "extension layer, later"), ("deferred", "deferred: on the board, commented out of the code")]
 for j, (k, lab) in enumerate(leg):
-    x = 0.04 + j * 0.19
+    x = 0.04 + j * 0.16
     ax.add_patch(FancyBboxPatch((x, 0.8905), 0.018, 0.011, boxstyle="round,pad=0.002,rounding_size=0.004", zorder=2, **KIND[k]))
     ax.text(x + 0.023, 0.896, lab, ha="left", va="center", fontsize=8.2)
 ax.text(0.04, 0.877, "Owner line:", ha="left", va="center", fontsize=7.6, color="#333333")
