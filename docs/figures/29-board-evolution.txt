@@ -1,5 +1,5 @@
 as written on the board
-refined by the literature, with the source
+refined by the literature
 what we added or decided
 open: team decision
 extension layer, later

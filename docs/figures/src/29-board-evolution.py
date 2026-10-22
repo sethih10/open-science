@@ -12,7 +12,7 @@ ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("
 title(fig, "How the plan evolved: one row per step of the board, in the board's order; what the board says, what the literature refined, what we added",
       f"board of {BOARD_DATE}, numbering kept, including the six points of step 3 · owner line under each step · amber is open, dashed purple is an extension · schematic")
 
-leg = [("board", "as written on the board"), ("lit", "refined by the literature, with the source"), ("ours", "what we added or decided"),
+leg = [("board", "as written on the board"), ("lit", "refined by the literature"), ("ours", "what we added or decided"),
        ("open", "open: team decision"), ("ext", "extension layer, later"), ("deferred", "deferred: commented out of the code")]
 for j, (k, lab) in enumerate(leg):
     x = 0.04 + j * 0.155
