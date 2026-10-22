@@ -48,7 +48,9 @@ def adsorbate_placement(sites: SiteEnumeration, fragment: StructureRef, site_ind
     so its other atoms point away from the surface. Orientation k is the k-th distinct image of the fragment under
     the site group; a single atom has one. Every atom of the placed fragment then moves by a draw uniform in
     [-a, a] per axis, a the locked amplitude, from a generator seeded by the candidate's id, so a rerun places the
-    same atoms. The id is A<site> or B<site>, after the base's id when there is one: A004-B017.
+    same atoms. The id is A<site> or B<site>, after the base's id when there is one: A004-B017. The candidate
+    carries each fragment's binding atom in info["binding_A"] and info["binding_B"], the base's kept, so every later
+    tool finds the atom the human named.
     """
     settings = project.current_settings()
     amplitude = float(project.decision("adsorbate_placement", "displacement_amplitude_A", settings))
@@ -78,7 +80,8 @@ def adsorbate_placement(sites: SiteEnumeration, fragment: StructureRef, site_ind
     placed.set_cell(cell)
     out = host + placed
     out.set_constraint(host.constraints)
-    out.info = {}
+    out.info = {key: int(host.info[key]) for key in ("binding_A", "binding_B") if key in host.info}
+    out.info[f"binding_{letter}"] = len(host) + artifacts.binding_atom(frag)
     ref = artifacts.write(out, cid, Role.candidate, settings_hash=project.settings_hash(settings))
     log("adsorbate_placement", f"{cid}: {letter} {frag.get_chemical_formula()} at site {site_index} ({site.label}), orientation "
                                f"{orientation} of {len(shapes)}, {height_A} Å up, displacement {amplitude} Å, seed {seed}, "
@@ -147,7 +150,8 @@ def minima_hopping(slab: StructureRef, fragments: Tuple[StructureRef, StructureR
     NEBscape's generator is not packaged, so ASE's MinimaHopping runs here with its own defaults, from the slab
     with A and B where the two refs put them; a ref that holds a whole candidate gives the atoms tagged as its
     fragment. Each bond inside a fragment gets a Hookean spring that acts beyond the bond length, so no fragment
-    falls apart; nothing holds A and B apart, and the gate rejects a pair that bonded back.
+    falls apart; nothing holds A and B apart, and the gate rejects a pair that bonded back. Every minimum carries
+    the binding atoms the refs name in info["binding_A"] and info["binding_B"].
     """
     from ase.constraints import FixAtoms, Hookean
     from ase.optimize.minimahopping import MinimaHopping
@@ -165,7 +169,10 @@ def minima_hopping(slab: StructureRef, fragments: Tuple[StructureRef, StructureR
             rt = geometry.BOND_MULT * sum(geometry.cutoffs(atoms, 1.0)[k] for k in (i, j))
             springs.append(Hookean(a1=i, a2=j, rt=rt, k=HOOKE_K_EV_PER_A2))
     atoms.set_constraint([FixAtoms(indices=fixed)] + springs)
-    atoms.calc = calculators.get(calculator)._calc
+    adapter = calculators.get(calculator)
+    adapter.check(atoms)
+    atoms.calc = adapter._calc
+    binding = {"binding_A": n + _binding_in(fragments[0], "A"), "binding_B": n + len(frag_a) + _binding_in(fragments[1], "B")}
     run = current_run()
     work = (run.dir if run else Path(".")) / "minima_hopping" / content_hash({"s": artifacts.structure_hash(atoms), "c": calculator, "n": n_hops})
     work.mkdir(parents=True, exist_ok=True)
@@ -181,7 +188,18 @@ def minima_hopping(slab: StructureRef, fragments: Tuple[StructureRef, StructureR
     for k, m in enumerate(minima):
         m.set_constraint([FixAtoms(indices=fixed)])
         m.set_tags(atoms.get_tags())
+        m.info = dict(binding)
         ref = artifacts.write(m, f"MH{k:03d}", Role.candidate, energy_eV=float(m.get_potential_energy()), settings_hash=sh, calculator=calculator)
         out.append(Candidate(id=f"MH{k:03d}", structure=ref, generator="minima_hopping"))
     log("minima_hopping", f"{n_hops} hops with {calculator}, {len(springs)} fragment springs; {len(out)} minima in {work.name}")
     return out
+
+
+def _binding_in(ref: StructureRef, fragment: str) -> int:
+    """The binding atom's index among the atoms artifacts.fragment_atoms takes from ref: a whole candidate's
+    binding_A or binding_B, by its place among the fragment's atoms; a fragment file's binding_atom."""
+    atoms = artifacts.read(ref)
+    idx = artifacts.fragment_indices(atoms, fragment)
+    if idx and len(idx) < len(atoms):
+        return idx.index(artifacts.binding_index(atoms, fragment))
+    return artifacts.binding_atom(atoms)

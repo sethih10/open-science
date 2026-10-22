@@ -4,7 +4,7 @@ The theory, the design history and the reviews behind the project. Nothing here 
 
 | Path | What it is |
 |---|---|
-| `try-the-agent.md` | One campaign with the agents in Claude Code, step by step: what to type, what the agent does, what to look at; and the checks that need no agent |
+| `try-the-agent.md` | One study with the agents in Claude Code, step by step: what to type, what the agent does, what to look at; and the checks that need no agent |
 | `design/adsorption-agent-workflow.md` | The design document with all 26 figures: science, workflow, prior work, intuition, geometry, the final-state problem, build plan, decisions |
 | `design/agent-context.md` | The same, text only, for agents |
 | `design/agent-build-context.md` | The long form of `AGENTS.md`: every tool with inputs, outputs, checks and thresholds, data formats, build order, open decisions |

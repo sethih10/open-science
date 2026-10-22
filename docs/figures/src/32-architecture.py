@@ -36,11 +36,11 @@ rbox(3.35, 5.0, 9.3, 2.9, L_F, L_E, lw=1.6)
 ax.text(8.0, 7.65, "LLM agents: plan, propose, draft; never compute, never place atoms", ha="center", va="center", fontsize=9.6, fontweight="bold", color=L_E, zorder=4)
 names = [n for n in AGENTS if n not in HPC_ONLY]
 for i, n in enumerate(names):
-    row, col = divmod(i, 3)
-    x = 3.55 + col * 3.05; y0 = 6.35 - row * 1.15
-    rbox(x, y0, 2.85, 1.05, "white", L_E, lw=1.0, z=3)
-    ax.text(x + 1.425, y0 + 0.86, n, ha="center", va="center", fontsize=8.2, fontweight="bold", color=L_E, zorder=4)
-    ax.text(x + 1.425, y0 + 0.40, wrap(AGENTS[n], 48), ha="center", va="center", fontsize=6.3, zorder=4, linespacing=1.2)
+    row, col = divmod(i, 4)   # four per row: seven agents fit in two rows
+    x = 3.50 + col * 2.30; y0 = 6.35 - row * 1.15
+    rbox(x, y0, 2.20, 1.05, "white", L_E, lw=1.0, z=3)
+    ax.text(x + 1.10, y0 + 0.86, n, ha="center", va="center", fontsize=8.2, fontweight="bold", color=L_E, zorder=4)
+    ax.text(x + 1.10, y0 + 0.40, wrap(AGENTS[n], 40), ha="center", va="center", fontsize=6.0, zorder=4, linespacing=1.15)
 ax.text(8.0, 5.08, "hooks: no coordinate edits; a pause at every checkpoint", ha="center", va="bottom", fontsize=6.8, color=L_E, style="italic", zorder=4)
 
 # ---- skills strip

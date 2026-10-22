@@ -8,4 +8,4 @@ The measurables of the README, scored on an OC20NEB subset that starts with *OH 
 | `baselines/` | NEBscape's Pareto choice, CatTSunami's shell sampling, a single placement, per reaction |
 | `score.py` | recombination rate, lateral interaction, the three-policy comparison, the OC20NEB product-frame comparison |
 | `results/` | one JSON per run, written by `fragplace.tools.report` |
-| `agents/` | the agent-level harness: the same campaign run with and without each skill and each agent, scored on the same subset, as AtomisticSkillsBenchmark and aviary environments do |
+| `agents/` | the agent-level harness: the same study run with and without each skill and each agent, scored on the same subset, as AtomisticSkillsBenchmark and aviary environments do |

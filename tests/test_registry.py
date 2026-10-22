@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from fragplace.registry.tools import BY_NAME, CHECKPOINTS, LANES, OPERATIONS, REGISTRY, ToolSpec, for_role, mcp_name
+from fragplace.registry.tools import BY_NAME, CHECKPOINTS, LANES, OPERATIONS, ORCHESTRATOR_OPERATIONS, REGISTRY, ToolSpec, for_role, mcp_name
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "docs" / "figures" / "src"))
@@ -77,29 +77,31 @@ def test_agent_file_lists_exactly_the_tools_the_registry_allows(name: str):
     assert m, f"agents/{name}.md has no tools line"
     listed = {t.strip() for t in m.group(1).split(",") if t.strip().startswith("mcp__")}
     allowed = {mcp_name(t.name) for t in for_role(name)} | {mcp_name(op) for op in OPERATIONS}
+    if name == _board.PLANNER:
+        allowed |= {mcp_name(op) for op in ORCHESTRATOR_OPERATIONS}
     assert listed == allowed, f"{name}: listed {sorted(listed)} but the registry allows {sorted(allowed)}"
     assert re.search(r"^name:\s*" + re.escape(name) + r"\s*$", text, re.M)
 
 
 def test_pipeline_agrees_with_the_board_and_the_registry():
-    from fragplace.agent import pipeline
+    from fragplace.study import rollout
     from fragplace.runtime import checkpoints, state
-    assert state.STEP_ORDER == pipeline.STEP_ORDER
+    assert state.STEP_ORDER == rollout.STEP_ORDER
     assert checkpoints.CHECKPOINTS == CHECKPOINTS == _board.CHECKPOINTS
     board = {s.key: s for s in _board.STEPS}
-    for step in pipeline.PIPELINE:
+    for step in rollout.PIPELINE:
         b = board[step.key]
         assert step.checkpoint == b.checkpoint, step.key
-        assert set(step.agents) - {pipeline.PLANNER} == {n for n, _ in b.agents} - {pipeline.PLANNER}, step.key
+        assert set(step.agents) - {rollout.PLANNER} == {n for n, _ in b.agents} - {rollout.PLANNER}, step.key
         assert set(step.tools) == set(b.tools), step.key
         assert set(step.ext_tools) == set(b.ext_tools), step.key
     deferred = {s.key for s in _board.STEPS if s.deferred}
-    assert set(pipeline.STEP_ORDER) | {"3.1"} | deferred == set(board)  # 3.1 runs inside 5; deferred steps stay on the board only
-    assert "3.5" in deferred and "3.5" not in pipeline.STEP_ORDER
+    assert set(rollout.STEP_ORDER) | {"3.1"} | deferred == set(board)  # 3.1 runs inside 5; deferred steps stay on the board only
+    assert "3.5" in deferred and "3.5" not in rollout.STEP_ORDER
 
 
 def test_rollout_stops_at_each_checkpoint_and_resumes(tmp_path: Path):
-    from fragplace.agent import pipeline
+    from fragplace.study import rollout
     from fragplace.errors import CheckpointPending
     from fragplace.runtime import checkpoints
     from fragplace.schemas.records import HumanChoice
@@ -108,13 +110,13 @@ def test_rollout_stops_at_each_checkpoint_and_resumes(tmp_path: Path):
     stops = []
     for _ in range(6):
         try:
-            assert pipeline.run(tmp_path, "c", invoke) == "done"
+            assert rollout.run(tmp_path, "c", invoke) == "done"
             break
         except CheckpointPending as e:
             stops.append(e.name)
             checkpoints.record(tmp_path, HumanChoice(checkpoint=stops[-1], chosen=[], reason="ok", who="team"))
     assert len(stops) == 5
     steps_called = [s for s, _ in calls]
-    assert steps_called == sorted(steps_called, key=pipeline.STEP_ORDER.index)
+    assert steps_called == sorted(steps_called, key=rollout.STEP_ORDER.index)
     assert "3.6" not in steps_called and "3.5" not in steps_called and "4" in steps_called  # 3.5 deferred, 3.6 the alternative
     assert ("prompt", "literature_lookup") in calls and ("8", "ranking") in calls

@@ -3,21 +3,39 @@
 Registered names are the ones mlip_selection chooses among. Each adapter is imported lazily, so the package
 installs without the potentials; a missing package fails at first use with a clear message. Every adapter wraps
 an ASE calculator, so energy_forces, relax and spread are written once here; an adapter only builds its calculator.
+An adapter that knows its elements refuses atoms of any other before calculating, with UnsupportedElements.
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
 
 _FACTORIES: Dict[str, Callable[..., "ASEAdapter"]] = {}
-_LOADED: Dict[str, "ASEAdapter"] = {}     # a potential loads its weights once per process
+_LOADED: Dict[str, "ASEAdapter"] = {}     # a potential loads its weights once per process; only an adapter that built its calculator
+
+
+class UnsupportedElements(ValueError):
+    """A potential was asked about elements it has no parameters for."""
 
 
 class ASEAdapter:
-    """One potential behind ASE. Subclasses set `name` and build `self._calc` in __init__."""
+    """One potential behind ASE. Subclasses set `name` and build `self._calc` in __init__, and `elements` when the
+    potential covers only some elements."""
     name: str = "ase"
     _calc = None
+    elements: Optional[FrozenSet[str]] = None   # the elements the potential has parameters for; None for every element
+    spin: bool = False                          # whether the potential takes a spin state; no adapter here does
+
+    def unsupported(self, symbols: Iterable[str]) -> List[str]:
+        """The elements among symbols the potential has no parameters for."""
+        return [] if self.elements is None else sorted(set(symbols) - self.elements)
+
+    def check(self, atoms) -> None:
+        missing = self.unsupported(atoms.get_chemical_symbols())
+        if missing:
+            raise UnsupportedElements(f"{self.name} has no parameters for {', '.join(missing)}")
 
     def energy_forces(self, atoms) -> Tuple[float, "object"]:
+        self.check(atoms)
         atoms = atoms.copy()
         atoms.calc = self._calc
         return float(atoms.get_potential_energy()), atoms.get_forces()
@@ -26,6 +44,7 @@ class ASEAdapter:
         """BFGS on a copy, constraints respected; returns (atoms, converged, steps, fmax_reached)."""
         import numpy as np
         from ase.optimize import BFGS
+        self.check(atoms)
         atoms = atoms.copy()
         atoms.calc = self._calc
         opt = BFGS(atoms, logfile=None, trajectory=trajectory)
@@ -54,12 +73,17 @@ def _load() -> None:
 
 
 def get(name: str, **kw) -> ASEAdapter:
+    """The adapter of a registered potential, built once per process. A factory that raises, or that builds no
+    calculator, leaves nothing cached, so the next call tries again."""
     _load()
     if name not in _FACTORIES:
         raise KeyError(f"unknown calculator {name}; known: {sorted(_FACTORIES)}")
     key = f"{name} {sorted(kw.items())!r}"
     if key not in _LOADED:
-        _LOADED[key] = _FACTORIES[name](name=name, **kw)
+        adapter = _FACTORIES[name](name=name, **kw)
+        if adapter._calc is None:
+            raise RuntimeError(f"{name} built no calculator")
+        _LOADED[key] = adapter
     return _LOADED[key]
 
 

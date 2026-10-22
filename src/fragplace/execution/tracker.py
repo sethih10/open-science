@@ -1,13 +1,16 @@
-"""A persisted job tracker with a retry cap: every submission, its state and its attempts in runs/<campaign>/jobs.json.
+"""A persisted job tracker with a retry cap: every submission, its state and its attempts in runs/<study>/jobs.json.
 
-The recovery agent may ask for a retry only while attempts are below the cap; the cap is code, not a prompt.
+The recovery agent may ask for a retry only while attempts are below the cap; the cap is code, not a prompt. The
+batch lane keeps its jobs here too, each under its request hash, with the heavy tool, the Slurm state, the
+resources of the last attempt and the times it was submitted and finished; state is one of the four words of
+execution.slurm.STATES.
 """
 from __future__ import annotations
 
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +28,12 @@ class JobRecord(BaseModel):
     attempts: int = 1
     diagnoses: List[str] = Field(default_factory=list)
     updated: datetime = Field(default_factory=datetime.now)
+    tool: Optional[str] = None                  # the batch lane's: the heavy tool the job calls
+    hash: Optional[str] = None                  # the batch lane's request hash, the record's key in jobs.json
+    slurm_state: Optional[str] = None           # PENDING, RUNNING, COMPLETED, TIMEOUT, as Slurm last said
+    resources: Dict[str, Any] = Field(default_factory=dict)
+    submitted: Optional[datetime] = None
+    finished: Optional[datetime] = None
 
 
 class JobTracker:
@@ -36,7 +45,15 @@ class JobTracker:
                 self.jobs[k] = JobRecord.model_validate(v)
 
     def _save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps({k: v.model_dump(mode="json") for k, v in self.jobs.items()}, indent=1, default=str))
+
+    def put(self, key: str, rec: JobRecord) -> JobRecord:
+        """Keep rec under key, its update time now, and save."""
+        rec.updated = datetime.now()
+        self.jobs[key] = rec
+        self._save()
+        return rec
 
     def add(self, job: Job, handle: JobHandle) -> JobRecord:
         rec = self.jobs.get(job.name)

@@ -1,7 +1,7 @@
 """Content-addressed cache for expensive calls: relaxations, force calls, single points.
 
 The key is the hash of the structure, the calculator name and the settings hash, so a changed setting never
-returns a stale result. Values are JSON records under runs/<campaign>/cache/.
+returns a stale result. Values are JSON records under runs/<study>/cache/.
 """
 from __future__ import annotations
 

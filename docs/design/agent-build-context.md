@@ -525,7 +525,7 @@ A Claude Code plugin beside AtomisticSkills, figure 24. Three rules: each file h
 open-science-hackathon/
 ├── README.md                     one page: what it is, how to install, how to run the first case
 ├── CLAUDE.md                     agent instructions: reading order, rules, where things are
-├── PROJECT.md                    the locked settings and decisions of the current campaign
+├── PROJECT.md                    the locked settings and decisions of the current study
 ├── pyproject.toml                one package: the library, the server and the tests
 ├── docs/                         design document, agent context, build context, survey, figures
 ├── .claude-plugin/plugin.json    declares the skills, agents, hooks and the MCP server
@@ -552,7 +552,7 @@ open-science-hackathon/
 │                                 one module per tool, with the same name
 ├── tests/                        one test file per tool; Burnside on C4v; the gate on known failures
 ├── benchmark/                    OC20NEB subset, baselines, scoring scripts, results
-├── runs/<campaign>/              PROJECT.md copy, trace.jsonl, cards/, structures/, report.md
+├── runs/<study>/              PROJECT.md copy, trace.jsonl, cards/, structures/, report.md
 └── lessons.md                    the lessons log; recurring entries become skill lines
 ```
 

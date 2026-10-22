@@ -1,6 +1,6 @@
 """Structures on disk and the conventions every tool shares for them.
 
-A StructureRef points at an extxyz file under runs/<campaign>/structures/; the LLM never sees coordinates, only
+A StructureRef points at an extxyz file under runs/<study>/structures/; the LLM never sees coordinates, only
 the card. Atom roles travel as ASE tags, the fairchem convention extended by one value for the second fragment:
 0 subsurface, 1 the top slab layer, 2 fragment A, the one that keeps the binding atom, 3 fragment B, the one
 that was broken off. Constraints travel with the file. Every heavy import is local so the package imports
@@ -83,6 +83,17 @@ def binding_atom(atoms) -> int:
     if "binding_atom" in atoms.info:
         return int(atoms.info["binding_atom"])
     return int(np.argmin(atoms.positions[:, 2]))
+
+
+def binding_index(atoms, fragment: str) -> int:
+    """The index of a fragment's binding atom in a whole structure: info["binding_A"] or info["binding_B"], as
+    structure_retrieval and adsorbate_placement write them from the bond the human named, else the fragment's
+    lowest atom."""
+    key = f"binding_{fragment}"
+    if key in atoms.info:
+        return int(atoms.info[key])
+    idx = fragment_indices(atoms, fragment)
+    return min(idx, key=lambda i: atoms.positions[i, 2])
 
 
 def adsorbate_indices(atoms) -> List[int]:

@@ -18,6 +18,8 @@ class Role(str, Enum):
     initial_state = "initial_state"
     fragment_A = "fragment_A"          # keeps the binding atom, the team's adsorbent #1
     fragment_B = "fragment_B"          # the dissociated part, adsorbent #2
+    fragment_A_vacuum = "fragment_A_vacuum"   # A relaxed alone in vacuum, when the human supplies it
+    fragment_B_vacuum = "fragment_B_vacuum"   # B relaxed alone in vacuum, when the human supplies it
     candidate = "candidate"
     reference = "reference"
 
@@ -37,15 +39,16 @@ class GasReference(BaseModel):
     energy_eV: float
     correction_eV: float = 0.0
     note: str = ""
+    calculator: Optional[str] = Field(None, description="the method the energy was computed with, so energies on different scales are never mixed")
 
 
 class Settings(BaseModel):
-    """The locked numerical and physical settings of a campaign; written to PROJECT.md by calculation_protocol."""
+    """The locked numerical and physical settings of a study; written to PROJECT.md by calculation_protocol."""
     metal: str
     facet: str
     adsorbate: str                   # AB
     product: Tuple[str, str]         # (A, B)
-    functional: str                  # PBE, RPBE, BEEF-vdW
+    functional: Optional[str] = None  # PBE, RPBE, BEEF-vdW; None in a study that runs no DFT
     dispersion: Optional[str] = None
     spin_polarised: bool = False
     initial_moments: Dict[str, float] = Field(default_factory=dict)
@@ -59,15 +62,17 @@ class Settings(BaseModel):
     layers: Optional[int] = None
     fixed_layers: Optional[int] = None
     vacuum_A: Optional[float] = None
-    dipole_correction: bool = True
+    dipole_correction: Optional[bool] = True     # None, as every DFT setting, in a study that runs no DFT
     cell_repeat: Optional[Tuple[int, int]] = None
+    cell_A: Optional[Tuple[float, float]] = Field(None, description="in-plane lengths in Å of the selected cell, after cell_repeat; the k-mesh rule reads them")
     min_image_distance_A: float = 10.0
     force_threshold_eV_per_A: float = 0.03
-    scf_threshold_eV: float = 1e-5
+    scf_threshold_eV: Optional[float] = 1e-5
     convergence_target_meV: Optional[float] = Field(None, description="open: team decision, 10 or 25")
     gas_references: List[GasReference] = Field(default_factory=list)
-    protocol: Optional[str] = Field(None, description="which protocol library or sweep the values come from")
+    protocol: Optional[str] = Field(None, description="which protocol library or sweep the values come from; mlip when no DFT runs")
     protocol_reason: Optional[str] = Field(None, description="the planner's stated reason for the protocol")
+    origins: Dict[str, str] = Field(default_factory=dict, description="where each setting calculation_protocol reports came from: human, the protocol, a decision, PROJECT.md before the lock, or unset")
     mlip: Optional[str] = None
     mlip_committee: List[str] = Field(default_factory=list)
     decisions: Dict[str, Any] = Field(default_factory=dict, description="every threshold marked 'open: team decision', keyed <tool>.<name>, set by the team and locked with the rest")
@@ -89,7 +94,7 @@ class LiteratureValue(BaseModel):
 
 class Site(BaseModel):
     index: int
-    label: str                       # "fcc", "hcp", "bridge", "top", "4fold"
+    label: str                       # "fcc", "hcp", "bridge", "top", "4fold"; on a slab of several elements "top Na", "bridge Na-Cl", "hollow"
     point_group: str                 # "C3v", "C2v", "C4v"
     coordination: int
     atom_beneath: Optional[str] = None
@@ -186,7 +191,7 @@ class DoubtFlag(BaseModel):
     candidate_id: str
     committee_spread_eV: float
     calibrated_error_eV: Optional[float] = None
-    trigger: str                     # "disagreement" | "unmeasured" | "magnetic_metal" | "unseen_chemistry" | "out_of_range"
+    trigger: str                     # "disagreement" | "unmeasured" | "magnetic_metal" | "unseen_chemistry" | "open_shell" | "out_of_range"
     escalate: bool
 
 
@@ -258,10 +263,13 @@ class FinalState(BaseModel):
     AB_distance_A: float
     site_graph_distance: int
     recombined: bool = False
+    E_ads_A_eV: Optional[float] = Field(None, description="A on the slab against A's own gas reference on the same potential, from reference_energies")
+    E_ads_B_eV: Optional[float] = Field(None, description="B on the slab against B's own gas reference on the same potential, from reference_energies")
+    reaction_energy_eV: Optional[float] = Field(None, description="E(FS near) − E(IS), when E(IS) is on the potential's scale")
 
 
 class Report(BaseModel):
-    campaign: str
+    study: str
     final_states: List[FinalState]
     rejected: List[GateResult]
     recombination_rate: float

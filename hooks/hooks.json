@@ -12,6 +12,16 @@
       {
         "matcher": "mcp__plugin_fragplace_fragplace__.*",
         "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.runtime.policy require-checkpoint"}]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.runtime.policy guard-question"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.study.human"}]
       }
     ]
   }

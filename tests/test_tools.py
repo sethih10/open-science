@@ -293,11 +293,11 @@ def test_report_writes_markdown_and_json_with_rates_from_the_trace(here):
     c = here.first["hcp"]
     gate = anomaly_filter(relaxed(c), c, here.slab.structure, here.settings, None, None)
     rep = report("test", [], [] if gate.passed else [gate], [], {})
-    assert (here.run.dir / "report.md").exists() and json.loads((here.run.dir / "report.json").read_text())["campaign"] == "test"
+    assert (here.run.dir / "report.md").exists() and json.loads((here.run.dir / "report.json").read_text())["study"] == "test"
     shell = next(p.site_graph_distance for p in here.pairs if p.candidate_id == c.id)
     assert rep.recombination_rate_by_shell[shell] == 0.0 and rep.cost["gates"] >= 1
     with pytest.raises(ValueError):
-        report("another campaign", [], [], [], {})
+        report("another study", [], [], [], {})
 
 
 # ---- prompt and 3.6: literature_lookup, minima_hopping; the extensions

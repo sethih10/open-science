@@ -1,6 +1,6 @@
 # PROJECT
 
-The locked settings and decisions of the current campaign. Written by `calculation_protocol`, locked at the approve-settings checkpoint; every tool reads it and none changes a locked value. The fields are `fragplace.schemas.records.Settings`; the human answers of the Formulate interview sit under *Interview*. This is the template; `fragplace init <campaign>` copies it into `runs/<campaign>/`.
+The locked settings and decisions of the current study. Written by `calculation_protocol`, locked at the approve-settings checkpoint; every tool reads it and none changes a locked value. The fields are `fragplace.schemas.records.Settings`; the human answers of the Formulate interview sit under *Interview*. This is the template; `fragplace init <study>` copies it into `runs/<study>/`.
 
 settings hash: `not locked`
 
@@ -13,25 +13,25 @@ settings hash: `not locked`
     "O",
     "H"
   ],
-  "functional": "RPBE",
+  "functional": null,
   "dispersion": null,
   "spin_polarised": false,
   "initial_moments": {},
   "hubbard_u": {},
-  "pseudopotential_family": "PAW",
+  "pseudopotential_family": null,
   "pseudopotential_version": null,
-  "cutoff_eV": 350.0,
+  "cutoff_eV": null,
   "kmesh": null,
-  "smearing": "Methfessel-Paxton",
-  "sigma_eV": 0.1,
-  "layers": 4,
-  "fixed_layers": 2,
-  "vacuum_A": 15.0,
-  "dipole_correction": true,
+  "smearing": null,
+  "sigma_eV": null,
+  "layers": null,
+  "fixed_layers": null,
+  "vacuum_A": null,
+  "dipole_correction": null,
   "cell_repeat": null,
   "min_image_distance_A": 10.0,
   "force_threshold_eV_per_A": 0.03,
-  "scf_threshold_eV": 1e-05,
+  "scf_threshold_eV": null,
   "convergence_target_meV": null,
   "gas_references": [],
   "protocol": null,
@@ -58,6 +58,7 @@ settings hash: `not locked`
     "anomaly_filter.magnetism_collapsed": null,
     "anomaly_filter.intercalated": null,
     "anomaly_filter.frequencies_source": null,
+    "anomaly_filter.checks_before_relaxation": null,
     "soap_clustering.per_cluster": null,
     "uncertainty_estimation.escalation_threshold_eV": null,
     "uncertainty_estimation.label_count": null,
@@ -91,4 +92,6 @@ Five questions the human answers before anything runs; each answer becomes a che
 | D4 headline claim | open: team decision |
 | D5 final-state rules: distance metric, A fixed or enumerated, nearest or lowest within one hop | open: team decision |
 
-Every threshold marked open in the registry sits under `decisions` above as null; `fragplace decisions` lists them with what each means. `calculation_protocol` refuses the lock while any is null.
+Every threshold marked open in the registry sits under `decisions` above as null; `fragplace decisions` lists them with what each means. `calculation_protocol` refuses the lock while any the study needs is null.
+
+The DFT settings above stay null in a study that runs no DFT, every study until `dft_single_points` is built: its protocol is `mlip`, the potential chosen at 1\* computes every energy, and it is never asked `calculation_protocol.convergence_target_meV`; `anomaly_filter.frequencies_source` is then `mlip`. A study that runs DFT names `oc20`, `sssp` or `aiida_common_workflows` and fills them.

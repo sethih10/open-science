@@ -20,30 +20,41 @@ with HPC, dft-recovery-agent retries a failed
 DFT step, capped at three
 LLM agents: plan, propose, draft; never compute, never place atoms
 solution-planner
-the next tool call and when to stop; holds the
-checkpoint list; calls every tool by name, reads
-cards, never writes coordinates
+the orchestrator: the next tool call,
+hand-off and question for the human, and
+when to stop; holds the checkpoint list;
+reads cards, never writes coordinates
 literature-reader
-which published values and sources to put before
-the human: E_ads with functional and site, and
-d, the length of the bond to break
+which published values and sources to
+put before the human: E_ads of AB, A and
+B, the reaction energy, and d, the
+length of the bond to break
 computational-chemist
-which protocol and settings to propose for the
-lock, from the Formulate interview and the
-inputs' own settings
+which protocol and settings to propose
+for the lock, from the Formulate
+interview it drafts and the inputs' own
+settings
 surface-chemist
-which site types and orderings to try per
-fragment, from the chemistry of the broken bond;
-never a coordinate, never an override
+which site types and orderings to try
+per fragment, from the chemistry of the
+broken bond; never a coordinate, never
+an override
 mlip-specialist
-which potential to use, and whether to trust,
-repair or escalate on the calibrated doubt
+which potential to use, and whether to
+trust, repair or escalate on the
+calibrated doubt
+hpc-specialist
+which lane and resources each heavy step
+gets on the cluster; and on a failed
+heavy call, what to change; never
+submits or cancels a job
 scientific-critic
-whether the plan and the report hold up, judged
-in its own context before the human sees them
+whether the plan and the report hold up,
+judged in its own context before the
+human sees them
 hooks: no coordinate edits; a pause at every checkpoint
 Skills the agents follow, written by humans:
-ours: dft-settings-protocol · mlip-doubt-calibration · dissociation-final-state · final-state-report · hpc-dft-jobs
+ours: dft-settings-protocol · mlip-doubt-calibration · dissociation-final-state · final-state-report · hpc-dft-jobs · triton-hpc
 reused from AtomisticSkills: ml-committee-uncertainty · ml-mlip-benchmark · ml-mace-finetune · chem-thermochemistry · general-peer-review
 Tools, deterministic code under src/fragplace/tools/<category>.py, each wrapping one module of fragplace/; the planner calls them by name, in this order:
 literature_lookup
@@ -54,10 +65,12 @@ calculation_protocol
 step 1
 mlip_selection
 step 1*
+compute_plan
+step 1*
 site_enumeration
 step 2
 adsorbate_placement
-steps 3.5, 4
+steps 3.2, 3.5
 pair_enumeration
 step 3.2
 pull_force_screen
@@ -86,5 +99,5 @@ call by name; cards come back
 PROJECT.md, the locked settings,
 read by every tool
 Reading: the human supplies and decides; the agents route the work through skills to tools; tools compute and come back as descriptor cards; the planner stops at every checkpoint and the human picks. Nothing the agents say is a number they computed.
-The architecture: the human at both ends, 6 LLM agents that only plan, propose and draft, the skills they follow, 17 tools that do every calculation
+The architecture: the human at both ends, 7 LLM agents that only plan, propose and draft, the skills they follow, 18 tools that do every calculation
 board of 21 October 2026 · arrows are calls and hand-offs · every number the agents report is a tool output · hooks block coordinate edits and pause at the checkpoints

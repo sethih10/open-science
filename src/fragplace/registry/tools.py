@@ -16,12 +16,18 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 OPEN = "open: team decision"
+# A study that runs no DFT locks with this protocol: the potential chosen at 1* computes every energy, and the lock
+# holds no DFT setting. It is every study's protocol until dft_single_points is built.
+NO_DFT = "mlip"
+DFT_ONLY = ("calculation_protocol.convergence_target_meV",)     # open decisions a study without DFT is never asked
+WITHOUT_DFT = {"anomaly_filter.frequencies_source": "mlip"}     # the only answer an open decision has when no DFT runs
 # the category module under fragplace/tools/ that holds each tool, grouped as ChemCrow and Biomni group theirs
 CATEGORY = {
             "literature_lookup": "literature",
             "structure_retrieval": "structure",
             "calculation_protocol": "structure",
             "mlip_selection": "uncertainty",
+            "compute_plan": "compute",
             "uncertainty_estimation": "uncertainty",
             "active_learning": "uncertainty",
             "site_enumeration": "sites",
@@ -72,13 +78,15 @@ class ToolSpec:
 REGISTRY: List[ToolSpec] = [
     ToolSpec(
         name="literature_lookup", board_steps=("prompt", "3.2"),
-        purpose="Published E_ads values with functional and site, and the length d of the bond to break, for a human to verify; one or two values, never from the model's memory.",
-        inputs={"system": "str, metal, facet, adsorbate", "quantity": "E_ads | bond_length_d | site", "sources": "list of source names"},
+        purpose="Published E_ads values with functional and site, the reaction energy of AB* -> A* + B*, and the length d of the bond to break, for a human to verify; one or two values, never from the model's memory.",
+        inputs={"system": "str, surface(facet) species, or surface(facet) AB->A+B for a reaction", "quantity": "E_ads | reaction_energy | bond_length_d | site",
+                "sources": "list of source names", "reported": "values the literature-reader read in papers, each with its DOI or URL; source papers"},
         outputs={"values": "list[LiteratureValue], verified_by_human False until the checkpoint"},
         checks=("every value carries a DOI or URL", "at most two values per quantity"),
-        wraps=("paper-qa2 for papers", "Materials Project API through the LLaMP pattern", "Catalysis-Hub"),
+        wraps=("papers: values the literature-reader read in papers it found by web search", "CMR CatApp, DTU's open database of reaction energies",
+               "Catalysis-Hub, with a personal API key", "Materials Project API through the LLaMP pattern"),
         logs=("query", "every value with its source"),
-        lane="laptop", timeout_s=300, requires=("module:paperqa", "module:mp_api", "env:MP_API_KEY"),
+        lane="laptop", timeout_s=300, requires=("module:ase", "env:CATHUB_API_KEY for Catalysis-Hub"),
         allowed_roles=("literature-reader",), read_only=True),
     ToolSpec(
         name="structure_retrieval", board_steps=("1",),
@@ -88,28 +96,47 @@ REGISTRY: List[ToolSpec] = [
         checks=("the three inputs share one settings set, check 8", "images at least min_image_distance_A apart"),
         thresholds={"min_image_distance_A": "10", "image_measure": OPEN + ": own_image, each atom to its own image, or pair_to_image, the pair to its nearest image"},
         wraps=("ase.io", "pymatgen.core"), logs=("input hashes", "the cell and why"),
-        requires=("module:ase", "module:pymatgen"), allowed_roles=("computational-chemist", PLANNER)),
+        requires=("module:ase", "module:pymatgen"), allowed_roles=("computational-chemist",)),
     ToolSpec(
         name="calculation_protocol", board_steps=("1",),
         purpose="Lock the numerical and physical settings in PROJECT.md from the inputs' settings, the human's physics choices and a verified protocol; never from the model's memory.",
-        inputs={"settings_from_inputs": "Settings, as read from the relaxed inputs", "physics_choices": "dict from the human: functional, dispersion, spin, U", "protocol": "aiida_common_workflows | sssp | oc20", "protocol_reason": "str, stated by the computational chemist"},
+        inputs={"settings_from_inputs": "Settings, as read from the relaxed inputs", "physics_choices": "dict from the human: functional, dispersion, spin, U, and a k-mesh when the human gives one", "protocol": "mlip, no DFT runs | aiida_common_workflows | sssp | oc20", "protocol_reason": "str, stated by the computational chemist"},
         outputs={"settings": "Settings with locked False until the human approves"},
-        checks=("cutoff, k-mesh, smearing, layers from the protocol table of agent.md section 3", "if OC20NEB is the benchmark, RPBE and PAW as OC20"),
-        thresholds={"convergence_target_meV": OPEN, "gas_references": OPEN},
+        checks=("protocol mlip: no DFT setting is set or asked; the lock holds the selected cell, the force threshold, the gas references and the open decisions",
+                "a DFT protocol: cutoff, k-mesh, smearing, layers from the protocol table of AGENTS.md section 3, the k-mesh by the protocol's rule on the selected cell",
+                "if OC20NEB is the benchmark, RPBE and PAW as OC20"),
+        thresholds={"convergence_target_meV": OPEN + ": DFT only, asked when the study runs DFT", "gas_references": OPEN},
         wraps=("aiida_common_workflows.workflows.relax.CommonRelaxWorkChain protocols", "SSSP", "pymatgen.io.vasp.sets.MPRelaxSet"),
         logs=("protocol and reason", "every setting and its origin"),
-        allowed_roles=("computational-chemist", PLANNER)),
+        allowed_roles=("computational-chemist",)),
     ToolSpec(
         name="mlip_selection", board_steps=("1*",),
         purpose="Benchmark two or three candidate potentials on the system class and choose one; every candidate becomes the committee of uncertainty_estimation.",
-        inputs={"candidates": "list[str], calculator names", "system_class": "str, metal | oxide | organometallic", "labels": "list[StructureRef] with DFT energies, or OC20NEB"},
-        outputs={"chosen": "str", "committee": "list[str]", "benchmark": "dict name -> error_eV and anomaly classes"},
+        inputs={"candidates": "list[str], calculator names", "system_class": "str, metal | oxide | ionic | organometallic", "labels": "list[StructureRef] with DFT energies, or OC20NEB; without energies the benchmark is geometric"},
+        outputs={"chosen": "str", "committee": "list[str]", "benchmark": "dict name -> error_eV or, geometric, the adsorbate's largest move and the residual fmax, and anomaly classes"},
         checks=("spin initialised on Co and Ni", "cross-family comparison on E_ads only, never total energies"),
         thresholds={"candidates": OPEN, "label_count": OPEN},
         wraps=("catbench.adsorption.AdsorptionCalculation", "catbench.adsorption.AdsorptionAnalysis", "AtomisticSkills ml-mlip-benchmark", "fairchem.core.FAIRChemCalculator", "mace.calculators.MACECalculator", "chgnet"),
         logs=("benchmark results", "the choice and the specialist's reason"),
         lane="gpu", timeout_s=7200, requires=("module:catbench", "module:fairchem.core", "env:HF_TOKEN", "weights:uma-s-1p2p1"),
         allowed_roles=("mlip-specialist",), checkpoint_gate="approve settings", cacheable=True),
+    ToolSpec(
+        name="compute_plan", board_steps=("1*",),
+        purpose="Measure the seconds per force call of the chosen potential once, on the selected cell with the adsorbate, and estimate per heavy step the minutes per item, the total when the items are known, and the lane the code's table recommends; with rules, check each proposed rule.",
+        inputs={"calculator": "str, the potential chosen at mlip_selection", "slab": "StructureRef, the selected cell",
+                "adsorbate": "StructureRef, the adsorbate in vacuum, set on the slab for the timing",
+                "items": "dict heavy tool -> int | None, the items of its call when known",
+                "rules": "dict heavy tool -> rule | None; a rule: lane worker | batch | auto, batch_above_min, cpus, mem_GB, time HH:MM:SS, workers, partition optional",
+                "timing": "dict | None, the measurement cached for the study; measured again when None or for another potential or size"},
+        outputs={"timing": "dict: calculator, atoms, s_per_force_call, force_calls_per_item", "estimates": "dict heavy tool -> force calls and minutes per item, items, total minutes, lane and why",
+                 "rules": "dict heavy tool -> rule, checked; None without rules", "warnings": "list[str], a rule whose time is shorter than its estimate"},
+        checks=("the force call runs in a lane, never on a login node", "a rule names a heavy tool, a lane of worker, batch or auto, and sets cpus, mem_GB and time",
+                "cores, memory and time within the partition's limits; no GPU partition while torch is CPU only", "workers no more than cpus"),
+        thresholds={"batch_above_min": "70, inferred from about 1.5 s per MACE-MP-small force call on 146 atoms with 2 CPUs",
+                    "batch_cpus": "8 to 16, inferred", "force_calls_per_relaxation": "150, inferred: BFGS to the study's fmax, below the step cap of 500"},
+        wraps=("fragplace.calculators", "fragplace.execution.srun.TABLE", "skills/triton-hpc decision table"),
+        logs=("the measured seconds per force call", "the estimate per heavy step", "every rule refused, with its reason"),
+        lane="gpu", timeout_s=1800, requires=("module:ase",), allowed_roles=("hpc-specialist",), checkpoint_gate="approve settings"),
     ToolSpec(
         name="site_enumeration", board_steps=("2",),
         purpose="Every symmetry-inequivalent site of the slab, fcc and hcp hollows apart, with the site graph and a Burnside-checked count; pymatgen's finder as the baseline.",
@@ -118,9 +145,9 @@ REGISTRY: List[ToolSpec] = [
         checks=("Burnside count equals the explicit list", "C4v square cell with two identical adsorbates gives 2"),
         wraps=("spglib.get_symmetry_dataset", "acat.adsorption_sites.SlabAdsorptionSites", "acat.adsorption_sites.SlabAdsorptionSites.get_graph", "pymatgen.core.adsorption.AdsorbateSiteFinder as baseline"),
         logs=("symmetry group", "every site", "count and check"),
-        requires=("module:spglib", "module:acat"), checkpoint_gate="approve the plan", cacheable=True),
+        timeout_s=1800, requires=("module:spglib", "module:acat"), checkpoint_gate="approve the plan", cacheable=True),
     ToolSpec(
-        name="adsorbate_placement", board_steps=("3.5", "4"),
+        name="adsorbate_placement", board_steps=("3.5", "3.2"),
         purpose="Place fragment A at every symmetry-distinct site near its old site and B at a given site, by script; orientations under the site's stabiliser; a random displacement before relaxation.",
         inputs={"sites": "SiteEnumeration", "fragment": "StructureRef", "site_index": "int", "orientation": "int", "height_A": "float", "displacement_amplitude_A": "float", "base": "Candidate | None, the candidate the fragment is added to; the slab of the enumeration when None"},
         outputs={"candidate": "Candidate"},
@@ -174,10 +201,11 @@ REGISTRY: List[ToolSpec] = [
         outputs={"gate": "GateResult"},
         checks=("1 desorbed per fragment", "2 migrated", "3 dissociated within a fragment", "4 reconstructed", "5 not a minimum", "6 magnetism collapsed", "7 outside expected range", "8 settings mismatch", "9 intercalated", "10 A–B bond re-formed", "11 periodic image"),
         thresholds={"desorbed_A": "3", "AB_bond_reformed_A": OPEN, "migrated": OPEN, "dissociated": OPEN, "reconstructed": OPEN, "imaginary_noise_cm": OPEN, "expected_range_width_eV": OPEN, "magnetism_collapsed": OPEN, "intercalated": OPEN,
-                    "frequencies_source": OPEN + ": mlip or dft"},
+                    "frequencies_source": OPEN + ": mlip or dft",
+                    "checks_before_relaxation": OPEN + ": the checks run on the placed structures before relaxation, as a list of check numbers; a candidate that fails one is not relaxed"},
         wraps=("fairchem.data.oc.utils.DetectTrajAnomaly", "ase.vibrations.Vibrations", "acat.adsorbate_coverage.SlabAdsorbateCoverage", "CatBench anomaly classes as names"),
         logs=("every verdict with its measured value", "every rejection with its reason"),
-        requires=("module:fairchem.data", "module:ase", "module:acat"), checkpoint_gate="approve the plan"),
+        timeout_s=3600, requires=("module:fairchem.data", "module:ase", "module:acat"), checkpoint_gate="approve the plan"),
     ToolSpec(
         name="soap_clustering", board_steps=("6",),
         purpose="Cluster the survivors by SOAP; keep the nearest and the lowest per cluster; nearest first overall.",
@@ -186,13 +214,13 @@ REGISTRY: List[ToolSpec] = [
         checks=("nearest-first ordering preserved across clusters",),
         thresholds={"per_cluster": OPEN + ": the board says 3, could be more"},
         wraps=("dscribe.descriptors.SOAP", "sklearn.cluster"), logs=("clusters and representatives",),
-        requires=("module:dscribe", "module:sklearn"), checkpoint_gate="approve the plan"),
+        timeout_s=1800, requires=("module:dscribe", "module:sklearn"), checkpoint_gate="approve the plan"),
     ToolSpec(
         name="uncertainty_estimation", board_steps=("7",),
         purpose="Committee disagreement across the candidates benchmarked at 1*, calibrated on a few DFT or OC20NEB labels; a doubt flag that escalates to the human instead of guessing.",
         inputs={"candidates": "list[Candidate]", "committee": "list[str]", "labels": "list[StructureRef] | None"},
         outputs={"flags": "list[DoubtFlag]"},
-        checks=("disagreement compared on E_ads, never on total energies across families", "magnetic metals always flagged", "unseen chemistry always flagged"),
+        checks=("disagreement compared on E_ads, never on total energies across families", "magnetic metals always flagged", "unseen chemistry always flagged", "an open shell on a slab with a non-metal flagged"),
         thresholds={"escalation_threshold_eV": OPEN, "label_count": OPEN},
         wraps=("mace.calculators.MACECalculator with model_paths", "uncertainty_toolbox.metrics.get_all_metrics", "AtomisticSkills ml-committee-uncertainty"),
         logs=("labels used", "spread against label error", "every flag and escalation"),
@@ -217,16 +245,17 @@ REGISTRY: List[ToolSpec] = [
         checkpoint_gate="review flagged cases"),
     ToolSpec(
         name="reference_energies", board_steps=("solution",),
-        purpose="E(A*), E(B*) and E(slab) each in its own cell with the chosen potential and the locked settings, for E(FS ∞) and the lateral interaction.",
-        inputs={"slab": "StructureRef", "fragments": "tuple[StructureRef, StructureRef]", "calculator": "str"},
-        outputs={"E_slab_eV": "float", "E_A_eV": "float", "E_B_eV": "float", "E_inf_eV": "float"},
+        purpose="E(A*), E(B*) and E(slab) each in its own cell with the chosen potential and the locked settings, for E(FS ∞) and the lateral interaction; and each fragment's adsorption energy against its own gas reference on the same potential.",
+        inputs={"slab": "StructureRef", "fragments": "tuple[StructureRef, StructureRef]", "calculator": "str",
+                "gas": "tuple[StructureRef, StructureRef] | None, A and B in vacuum as supplied; the cleaved fragments when None"},
+        outputs={"E_slab_eV": "float", "E_A_eV": "float", "E_B_eV": "float", "E_inf_eV": "float", "E_ads_A_eV": "float", "E_ads_B_eV": "float"},
         checks=("same settings as every candidate, check 8",), wraps=("fragplace.calculators",), logs=("the three energies",),
         lane="gpu", timeout_s=3600, requires=("module:ase",), checkpoint_gate="pick up to five final states", cacheable=True),
     ToolSpec(
         name="report", board_steps=("solution",),
-        purpose="One auditable record per campaign: final states with both energies, rejections with reasons, the recombination rate, doubt, the OC20NEB comparison, cost and the decision trace.",
-        inputs={"campaign": "str", "final_states": "list[FinalState]", "rejected": "list[GateResult]", "flags": "list[DoubtFlag]", "comparison": "dict"},
-        outputs={"report": "Report, written to runs/<campaign>/report.md and report.json"},
+        purpose="One auditable record per study: final states with both energies, rejections with reasons, the recombination rate, doubt, the OC20NEB comparison, cost and the decision trace.",
+        inputs={"study": "str", "final_states": "list[FinalState]", "rejected": "list[GateResult]", "flags": "list[DoubtFlag]", "comparison": "dict"},
+        outputs={"report": "Report, written to runs/<study>/report.md and report.json"},
         checks=("every number traces to a tool output", "the scientific critic reads the draft with the general-peer-review skill"),
         wraps=("AtomisticSkills hyperparameter logging pattern",), logs=("the full trace path",),
         allowed_roles=(PLANNER, "scientific-critic"), checkpoint_gate="pick up to five final states"),
@@ -263,10 +292,14 @@ def for_role(role: str) -> List[ToolSpec]:
 
 # The names agents call: Claude Code gives a plugin's MCP tools the prefix mcp__plugin_<plugin>_<server>__.
 MCP_PREFIX = "mcp__plugin_fragplace_fragplace__"
-# Two operations on a campaign that are not pipeline tools, open to every agent of the roster.
+# Operations on a study that are not pipeline tools: two open to every agent of the roster, and one for the
+# orchestrator alone, since only the orchestrator shows the human anything.
 OPERATIONS: Dict[str, str] = {
-    "campaign_status": "where the campaign stands: what is done, what comes next, the checkpoint due with its evidence, the open decisions",
+    "study_status": "where the study stands: what is done, what comes next, the question box to ask when a checkpoint is due, the open decisions",
     "note": "an agent's decision or review with its reason, into the trace and the report under the agent's name",
+}
+ORCHESTRATOR_OPERATIONS: Dict[str, str] = {
+    "show_structures": "pictures and .xyz files of candidates at one stage, for the human to look at before answering",
 }
 
 
@@ -277,6 +310,16 @@ def mcp_name(name: str) -> str:
 def open_decisions() -> List[str]:
     """Every threshold marked open, keyed <tool>.<name> as PROJECT.md holds it under decisions."""
     return [f"{t.name}.{k}" for t in REGISTRY for k, v in t.thresholds.items() if v.startswith(OPEN)]
+
+
+def runs_dft(protocol: Optional[str]) -> bool:
+    """Whether a study runs DFT: only when its lock names a DFT protocol. No protocol yet means no DFT."""
+    return protocol not in (None, NO_DFT)
+
+
+def asked_decisions(dft: bool) -> List[str]:
+    """The open decisions a study must set: all of them with DFT; without, none of DFT_ONLY and none WITHOUT_DFT answers."""
+    return [k for k in open_decisions() if dft or (k not in DFT_ONLY and k not in WITHOUT_DFT)]
 
 
 def fixed_threshold(tool: str, name: str) -> float:

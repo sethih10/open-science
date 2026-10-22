@@ -1,0 +1,89 @@
+root files
+documents
+skills: procedures
+agents: roles
+MCP tools
+library: the logic
+runs and data
+tests
+open-science-hackathon/
+the repository is a Claude Code plugin
+README.md
+one page: what it is, install, run the first case
+CLAUDE.md
+agent instructions: reading order, rules, where things are
+PROJECT.md
+locked settings and decisions of the current study
+pyproject.toml
+one package: the library, the server, the tests
+docs/
+design doc, agent context, build context, survey, figures
+.claude-plugin/plugin.json
+declares skills, agents, hooks and the MCP server
+skills/
+few, human-written, one folder each
+dft-settings-protocol · mlip-doubt-calibration
+the settings lock · doubt against DFT labels
+dissociation-final-state · final-state-report · hpc-dft-jobs
+9a to 9e · the report · only with HPC
+agents/
+one markdown file per role, one page each
+final-state-planner.md · dft-settings-interviewer.md
+next tool call, when to stop · the interview, once
+geometry-critic.md · dft-job-steward.md
+extension: card versus verdicts · only with HPC
+hooks/hooks.json
+blocks coordinate edits; pauses at human checkpoints
+mcp/
+one server, typed tools, one file per tool
+server.py
+registers the tools below
+tools/dft_settings_lock.py · site_enumeration.py
+T1 · T2
+tools/adsorbate_placement.py · validity_gate.py · descriptor_card.py
+T3 · T4 · T5
+tools/mlip_choice.py · mlip_doubt.py · dissociation_final_state.py
+T6 · T7 · P1, 9a to 9e
+tools/dft_single_points.py · final_state_report.py
+P5 · 14; later: endpoint_pairing, neb_band, saddle_validation
+finalstate/
+pure Python, no LLM, no MCP: the logic the tools wrap
+site_enumeration.py · validity_gate.py · ...
+one module per tool, same name as the tool
+tests/
+one test file per tool; Burnside on C4v; the gate on known failures
+benchmark/
+OC20NEB subset, baselines, scoring, results
+runs/<study>/
+PROJECT.md copy, trace.jsonl, cards/, structures/, report.md
+lessons.md
+the lessons log; recurring entries become skill lines
+Who reads what, in order
+A human
+README.md
+docs/ design document
+PROJECT.md
+runs/<study>/report.md
+lessons.md
+An agent
+CLAUDE.md
+docs/agent-context.md
+docs/agent-build-context.md
+skills/*/SKILL.md
+mcp tool docstrings
+The one-way rule: calls go down, never up or sideways
+agents/
+decide what to do next; no logic
+skills/
+say how, step by step; no logic
+mcp/tools/
+typed entry points; no logic
+finalstate/
+all the logic; tested
+runs/
+every call and verdict logged
+tests/ sits beside finalstate/ and never beside an agent: if a check
+is wrong, the test fails, not the conversation
+Readability rules: every file has one kind; a skill is under 200 lines and names tools, never code; an agent file is one page; a tool is one file that wraps one library module of the same name.
+Repository layout: one folder per kind, one file per tool, and a one-way rule: agents call skills, skills call tools, tools call the library
+left: the tree, coloured by kind · right: who reads what, in order · a Claude Code plugin beside AtomisticSkills · schematic

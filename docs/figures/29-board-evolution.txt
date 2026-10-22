@@ -29,9 +29,11 @@ a Formulate interview that locks scope, conventions
 and verification targets; compact written settings
 rules, such as spin for Ni and Co
 Ours
-the computational-chemist asks five fixed
-questions and writes PROJECT.md; the three relaxed
-inputs and A, B as structures are supplied
+the computational-chemist drafts five fixed
+questions, the orchestrator asks them, code writes
+the answers into PROJECT.md; the three relaxed
+inputs, and A and B in vacuum when given, are
+supplied
 none
 (1) Structure retriever
 TOOL
@@ -42,9 +44,11 @@ fed by the input prompt: surf + adsorbates
 (2) and a general system description;
 surface and adsorbate with their energies
 AiiDA common workflows · SSSP · OC20
-numerical settings come from a verified protocol,
-never from the model; OC20's RPBE and PAW if the
-benchmark is OC20NEB
+no DFT runs until dft_single_points is built:
+protocol mlip locks the cell, the force threshold
+and the gas species, and the potential computes
+every energy; DFT settings only from a verified
+protocol, never from the model
 Ours
 the three relaxed inputs plus A and B as
 structures; settings locked in PROJECT.md; a cell
@@ -65,7 +69,8 @@ the system class
 Ours
 benchmark two or three, record why; spin for Ni
 and Co; the candidates become the committee of
-step 7
+step 7; the hpc-specialist sets each heavy step's
+lane and resources from compute_plan's estimate
 EXTENSION
 active_learning: doubt → a few DFT labels →
 fine-tune → re-run
@@ -106,7 +111,8 @@ survivor at random
 Ours
 every symmetry-distinct pair inside the window,
 ordered by site-graph distance, nearest first,
-counted: the objective is explicit
+counted: the objective is explicit; B placed on
+each
 Open
 d from vacuum or from the adsorbed molecule; 5
 Å or NEBscape's 4.5 Å
@@ -195,9 +201,10 @@ Ours
 nine checks as code, per fragment, before and
 after relaxation; the ML variant not taken; every
 rejection logged with its reason
-EXTENSION
-an LLM critic reads the card and comments; it
-never overrides a check
+Open
+which checks run before relaxation ·
+extension: an LLM critic reads the card and
+comments; it never overrides a check
 (6) SOAP clustering
 TOOL
 pick the 3 lowest-energy configurations from
@@ -246,8 +253,8 @@ human promotes a case to a skill
 Open
 up to five, or fewer
 Solution
-LLM
 TOOL
+LLM
 HUMAN
 SKILL
 final output, with uncertainty and issues

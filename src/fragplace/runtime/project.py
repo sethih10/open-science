@@ -1,4 +1,4 @@
-"""PROJECT.md: the locked settings and decisions of one campaign.
+"""PROJECT.md: the locked settings and decisions of one study.
 
 The file is Markdown for the human with one fenced ```yaml block that holds the Settings record. Every tool that
 reads the project calls require_locked() first; the lock is set only at the approve-settings checkpoint.
@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from ..errors import OpenDecision, SettingsNotLocked
-from ..registry.tools import open_decisions
+from ..registry.tools import asked_decisions, runs_dft
 from ..schemas.records import Settings
 
 FENCE = re.compile(r"```yaml\n(.*?)\n```", re.S)
@@ -20,7 +20,7 @@ HASH_LINE = re.compile(r"^settings hash: `[^`]*`$", re.M)
 
 
 def settings_hash(settings: Settings) -> str:
-    payload = settings.model_dump(mode="json", exclude={"locked", "approved_by", "approved_at", "protocol_reason"})
+    payload = settings.model_dump(mode="json", exclude={"locked", "approved_by", "approved_at", "protocol_reason", "origins"})
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -47,7 +47,7 @@ def write(path: Path, settings: Settings, title: str = "PROJECT") -> None:
         text = FENCE.sub(lambda _: block, old, count=1)
         text = HASH_LINE.sub(f"settings hash: `{settings_hash(settings)}`", text, count=1)
     else:
-        text = (f"# {title}\n\nThe locked settings and decisions of this campaign. Edited by calculation_protocol and locked at the "
+        text = (f"# {title}\n\nThe locked settings and decisions of this study. Edited by calculation_protocol and locked at the "
                 f"approve-settings checkpoint; every tool reads it and none changes a locked value.\n\n"
                 f"settings hash: `{settings_hash(settings)}`\n\n{block}\n")
     Path(path).write_text(text)
@@ -73,7 +73,7 @@ def find_project(start: Optional[Path] = None) -> Path:
 
 
 def current_settings(require_lock: bool = True) -> Settings:
-    """The settings of the current run: runs/<campaign>/PROJECT.md when a Run is set, else the nearest PROJECT.md."""
+    """The settings of the current run: runs/<study>/PROJECT.md when a Run is set, else the nearest PROJECT.md."""
     from .journal import current_run
     run = current_run()
     path = run.dir / "PROJECT.md" if run and (run.dir / "PROJECT.md").exists() else find_project()
@@ -91,6 +91,31 @@ def decision(tool: str, name: str, settings: Optional[Settings] = None):
     return s.decisions[key]
 
 
-def missing_decisions(settings: Settings) -> list:
-    """Every open threshold of the registry that PROJECT.md does not set yet."""
-    return [k for k in open_decisions() if settings.decisions.get(k) is None]
+GAS_FILE = "gas_references.json"     # the potential's gas references of a study without DFT, beside PROJECT.md
+
+
+def write_potential_gas(run_dir: Path, refs: list) -> None:
+    """The gas references the potential chosen at 1* computed, for a study that runs no DFT. They sit beside the
+    lock, never in it: the lock holds the species, and an energy computed after it changes no locked value."""
+    Path(run_dir, GAS_FILE).write_text(json.dumps([g.model_dump(mode="json") for g in refs], indent=1, ensure_ascii=False))
+
+
+def gas_references(settings: Settings) -> list:
+    """The gas references every reader uses: the lock's in a study that runs DFT; else the potential's, computed after
+    1*, and none before. Energies the supplied files carry are never among them, so two scales never mix."""
+    from ..schemas.records import GasReference
+    if runs_dft(settings.protocol):
+        return list(settings.gas_references)
+    from .journal import current_run
+    run = current_run()
+    path = Path(run.dir, GAS_FILE) if run else None
+    if path is None or not path.exists():
+        return []
+    return [GasReference.model_validate(g) for g in json.loads(path.read_text())]
+
+
+def missing_decisions(settings: Settings, dft: Optional[bool] = None) -> list:
+    """Every open threshold of the registry that PROJECT.md does not set yet and the study needs: a study that runs
+    no DFT, the default until its lock names a DFT protocol, is never asked a DFT-only one."""
+    needed = asked_decisions(runs_dft(settings.protocol) if dft is None else dft)
+    return [k for k in needed if settings.decisions.get(k) is None]

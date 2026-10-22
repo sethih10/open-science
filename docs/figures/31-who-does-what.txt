@@ -3,26 +3,27 @@ Step 3: adsorbate placement, the stated problem
 Select and report
 Input prompt
 H
-supplies the surface, the adsorbates and a description; answers the five
-interview questions
+supplies the relaxed inputs; answers the five interview questions in the
+question box
 L
-computational-chemist: runs the Formulate interview, writes PROJECT.md
+computational-chemist: drafts the Formulate interview the orchestrator
+asks
 L
-literature-reader: fetches E_ads and d with their sources for the human
-to verify
+literature-reader: fetches E_ads, the reaction energy and d with their
+sources, from databases and papers, for the human to check
 S
 dft-settings-protocol
 T
-literature_lookup: published E_ads and the bond length d, with source,
-for the human to verify
+literature_lookup: published E_ads of AB, A and B, the reaction energy
+and the bond length d, with source, for the human to check
 (1) Structure retriever
 ❚❚ approve settings
 H
-approves the settings lock
+approves the settings lock in the question box
 ❚❚
 L
-computational-chemist: proposes the settings lock and states the
-protocol's reason
+computational-chemist: calls structure_retrieval and
+calculation_protocol, proposes the lock and states the protocol's reason
 S
 dft-settings-protocol
 T
@@ -32,18 +33,21 @@ PROJECT.md
 (1*) MLIP selection, AL prospect
 ❚❚ approve the plan
 H
-approves the plan
+approves the plan in the question box
 ❚❚
 L
 mlip-specialist: chooses the potential from the benchmark and records
 why
+L
+hpc-specialist: proposes each heavy step's lane and resources
 L
 scientific-critic: reviews the plan before the human approves it
 S
 ml-mlip-benchmark, reused
 T
 mlip_selection: two or three candidates benchmarked on the system class;
-the chosen one relaxes, all form the committee of step 7
+the chosen one relaxes, all form the committee of step 7; compute_plan:
+minutes per heavy step, its lane and resources
 T
 extension: active_learning
 (2) Adsorption sites with pymatgen
@@ -58,13 +62,14 @@ anomaly_filter, check 10: the A–B bond re-formed after relaxation; runs
 inside step 5
 (3.2) Window [1.5 d, 5] Å
 L
-literature-reader: supplies d, the length of the bond to break, with its
-source
+literature-reader: looks for d, the length of the bond to break, with
+its source, for the human to check
 S
 dissociation-final-state
 T
 pair_enumeration: every symmetry-distinct A–B pair in [1.5 d, 5] Å,
-nearest first by site-graph distance, counted; d from literature_lookup
+nearest first by site-graph distance, counted; d published and checked,
+else measured; adsorbate_placement puts B on each
 (3.3) Pull force with the MLIP
 S
 dissociation-final-state
@@ -73,13 +78,14 @@ pull_force_screen: one MLIP force call per pair; a pull towards the
 other fragment queues the pair last
 (3.4) Agentic critique of the cleavage
 L
-surface-chemist: proposes a site type per fragment from the chemistry of
-the cleavage, orders the list; never overrides a check
+surface-chemist: orders the list from the chemistry of the cleavage,
+with a site type per fragment as advice; never adds a candidate or
+overrides a check
 S
 dissociation-final-state
 T
-surface-chemist reads descriptor_card text, proposes a site type and
-orientation per fragment, reorders; never edits coordinates
+surface-chemist reads descriptor_card text, reorders, advises a site
+type per fragment; never edits coordinates
 (3.5) Site and orientation, pymatgen
 T
 deferred: later; the team decides how; A stays at its initial-state site
@@ -100,8 +106,8 @@ alternative and the baseline policy
 S
 dissociation-final-state
 T
-relaxation: relax every pair with the chosen MLIP and the locked
-settings, random displacement first; Burnside-counted
+relaxation: relax every pair the first gate passed with the chosen MLIP
+and the locked settings, random displacement first; Burnside-counted
 (5) Physics-based and anomaly filtering
 L
 extension: surface-chemist: comments on cards, never overrides
@@ -109,7 +115,8 @@ S
 dissociation-final-state
 T
 anomaly_filter: nine checks per fragment plus two final-state checks,
-before and after relaxation; verdict into the card; rejections logged
+before relaxation with the checks the team lists and after it with all;
+verdict into the card; rejections logged
 (6) SOAP clustering
 S
 dissociation-final-state
@@ -119,7 +126,7 @@ lowest per cluster kept
 (7) Uncertainty estimation
 ❚❚ review flagged cases
 H
-reviews the flagged cases
+reviews the flagged cases in the question box
 ❚❚
 L
 mlip-specialist: decides trust, repair or escalate from the calibrated
@@ -137,10 +144,12 @@ extension: dft_single_points
 (8) Rank; user chooses up to 5
 ❚❚ pick up to five final states
 H
-picks up to five on the cards; choice and reason to the case bank
+picks up to five in the question box; outside an example, choice and
+reason to the case bank
 ❚❚
 L
-solution-planner: shows the cards with rank, doubt and verdicts
+solution-planner: shows the cards and the ranked pictures; asks the pick
+in the question box
 T
 ranking: nearest first, then energy; one descriptor_card per final state
 with doubt and verdicts; the human picks; choice and reason to
@@ -148,10 +157,10 @@ lessons.md
 Solution
 ❚❚ interpret results
 H
-interprets the report
+interprets the report in the question box
 ❚❚
 L
-solution-planner: drafts the report
+solution-planner: shows the report and the whole summary
 L
 scientific-critic: reviews the report in its own context before the
 human reads it

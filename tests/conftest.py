@@ -23,6 +23,9 @@ DECISIONS = {
     "anomaly_filter.AB_bond_reformed_A": 1.3, "anomaly_filter.migrated": 1.0, "anomaly_filter.dissociated": 1.25,
     "anomaly_filter.reconstructed": 0.5, "anomaly_filter.imaginary_noise_cm": 50.0, "anomaly_filter.expected_range_width_eV": 2.0,
     "anomaly_filter.magnetism_collapsed": 0.1, "anomaly_filter.intercalated": 0.0,
+    # Desorbed, intercalated, A–B bond re-formed and periodic image mean something on an unrelaxed placed structure;
+    # 2, 3 and 4 would compare it with itself, and 5 to 8 need a calculation.
+    "anomaly_filter.checks_before_relaxation": [1, 9, 10, 11],
     "soap_clustering.per_cluster": 3,
     "uncertainty_estimation.escalation_threshold_eV": 0.1, "uncertainty_estimation.label_count": 3,
     "ranking.shortlist_size": 5,

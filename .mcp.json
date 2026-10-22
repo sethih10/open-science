@@ -1,5 +1,16 @@
 {
   "mcpServers": {
-    "fragplace": {"command": "${CLAUDE_PLUGIN_ROOT}/.venv/bin/fragplace-server", "args": []}
+    "fragplace": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/.venv/bin/fragplace-server",
+      "args": [],
+      "env": {
+        "FRAGPLACE_SRUN": "${FRAGPLACE_SRUN:-}",
+        "FRAGPLACE_SLURM_JOB": "${FRAGPLACE_SLURM_JOB:-}",
+        "FRAGPLACE_LANE": "${FRAGPLACE_LANE:-}",
+        "FRAGPLACE_SRUN_IDLE_MIN": "${FRAGPLACE_SRUN_IDLE_MIN:-}",
+        "CATHUB_API_KEY": "${CATHUB_API_KEY:-}"
+      },
+      "timeout": 86400000
+    }
   }
 }

@@ -1,6 +1,6 @@
-"""Resumable run state: which board step the campaign is at, which are done, which checkpoint is pending.
+"""Resumable run state: which board step the study is at, which are done, which checkpoint is pending.
 
-runs/<campaign>/state.json. A run that stops, at a checkpoint, on an escalation or on a crash, resumes from here;
+runs/<study>/state.json. A run that stops, at a checkpoint, on an escalation or on a crash, resumes from here;
 nothing is recomputed that the cache and the trace already hold. The pattern is TSAgent's runtime state file; the step order itself is registry.steps.
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ from ..registry.steps import STEP_ORDER  # noqa: E402  the order is the registry
 
 
 class RunState(BaseModel):
-    campaign: str
+    study: str
     current_step: str = "prompt"
     completed_steps: List[str] = Field(default_factory=list)
     pending_checkpoint: Optional[str] = None
@@ -30,9 +30,9 @@ def path(run_dir: Path) -> Path:
     return Path(run_dir) / "state.json"
 
 
-def load(run_dir: Path, campaign: str) -> RunState:
+def load(run_dir: Path, study: str) -> RunState:
     p = path(run_dir)
-    return RunState.model_validate_json(p.read_text()) if p.exists() else RunState(campaign=campaign)
+    return RunState.model_validate_json(p.read_text()) if p.exists() else RunState(study=study)
 
 
 def save(run_dir: Path, state: RunState) -> None:
@@ -52,8 +52,8 @@ def complete(run_dir: Path, state: RunState, step: str, next_checkpoint: Optiona
     return state
 
 
-def resume(run_dir: Path, campaign: str) -> RunState:
-    state = load(run_dir, campaign)
+def resume(run_dir: Path, study: str) -> RunState:
+    state = load(run_dir, study)
     if state.pending_checkpoint:
         from .checkpoints import passed
         if state.pending_checkpoint not in {c.checkpoint for c in passed(run_dir)}:

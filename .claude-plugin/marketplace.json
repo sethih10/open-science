@@ -1,0 +1,8 @@
+{
+  "name": "fragplace-local",
+  "description": "FragPlace from this checkout: the plugin is the checkout itself, read in place",
+  "owner": {"name": "sethih10"},
+  "plugins": [
+    {"name": "fragplace", "source": "./"}
+  ]
+}

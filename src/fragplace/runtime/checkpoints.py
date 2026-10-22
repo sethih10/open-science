@@ -1,6 +1,6 @@
 """The five human checkpoints. The planner stops at each and waits; the hook enforces it.
 
-A checkpoint is passed when a HumanChoice for it exists in runs/<campaign>/checkpoints.json. The choice and its
+A checkpoint is passed when a HumanChoice for it exists in runs/<study>/checkpoints.json. The choice and its
 reason also go to the case bank. Names are defined once in registry.agents; registry.steps says which step each sits after.
 """
 from __future__ import annotations

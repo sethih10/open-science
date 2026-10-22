@@ -1,6 +1,6 @@
 Input prompt
-literature_lookup: published E_ads and the bond length d, with source,
-for the human to verify
+literature_lookup: published E_ads of AB, A and B, the reaction energy
+and the bond length d, with source, for the human to check
 (1) Structure retriever
 structure_retrieval and calculation_protocol: the three relaxed inputs, A
 and B by cleaving the named bond, the cell; settings locked in PROJECT.md
@@ -9,7 +9,8 @@ open: one set of gas references for
 AB, A and B
 (1*) MLIP selection, AL prospect
 mlip_selection: two or three candidates benchmarked on the system class;
-the chosen one relaxes, all form the committee of step 7
+the chosen one relaxes, all form the committee of step 7; compute_plan:
+minutes per heavy step, its lane and resources
 ❚❚ approve the plan
 (2) Adsorption sites with pymatgen
 site_enumeration: symmetry-inequivalent sites, fcc and hcp apart,
@@ -21,8 +22,8 @@ runs inside step 5
 open: the A–B distance threshold
 (3.2) Window [1.5 d, 5] Å
 pair_enumeration: every symmetry-distinct A–B pair in [1.5 d, 5] Å,
-nearest first by site-graph distance, counted; d from
-literature_lookup
+nearest first by site-graph distance, counted; d published and
+checked, else measured; adsorbate_placement puts B on each
 open: d from vacuum or from the
 adsorbed molecule; 5 Å or NEBscape's
 4.5 Å
@@ -31,8 +32,8 @@ pull_force_screen: one MLIP force call per pair; a pull towards the
 other fragment queues the pair last
 open: the force threshold
 (3.4) Agentic critique of the cleavage
-surface-chemist reads descriptor_card text, proposes a site type
-and orientation per fragment, reorders; never edits coordinates
+surface-chemist reads descriptor_card text, reorders, advises a
+site type per fragment; never edits coordinates
 (3.5) Site and
 orientation, pymatgen
 adsorbate_placement: A at every
@@ -52,12 +53,15 @@ A stays at its initial-state site for
 now
 in code: 3.2, 3.3, 3.4; 3.5 deferred; 3.6 is the alternative; 3.1 runs inside step 5
 (4) Initial configurations
-relaxation: relax every pair with the chosen MLIP and the locked
-settings, random displacement first; Burnside-counted
+relaxation: relax every pair the first gate passed with the chosen MLIP
+and the locked settings, random displacement first; Burnside-counted
 open: the displacement amplitude
 (5) Physics-based and anomaly filtering
 anomaly_filter: nine checks per fragment plus two final-state checks,
-before and after relaxation; verdict into the card; rejections logged
+before relaxation with the checks the team lists and after it with all;
+verdict into the card; rejections logged
+open: which checks run before
+relaxation
 (6) SOAP clustering
 soap_clustering: SOAP clusters of the survivors; the nearest and the
 lowest per cluster kept
@@ -79,32 +83,36 @@ open: the pass criterion against the
 OC20NEB product frame
 computational-chemist ·
 literature-reader
-runs the Formulate interview, writes
-PROJECT.md; fetches E_ads and d with their
-sources for the human to verify
+drafts the Formulate interview the
+orchestrator asks; fetches E_ads, the
+reaction energy and d with their sources,
+from databases and papers, for the human to
+check
 board: Critic, knowledge prompts
 computational-chemist
-proposes the settings lock and states the
-protocol's reason
+calls structure_retrieval and
+calculation_protocol, proposes the lock and
+states the protocol's reason
 mlip-specialist ·
+hpc-specialist ·
 scientific-critic
-chooses the potential from the benchmark and
-records why; reviews the plan before the
-human approves it; extension:
-active_learning: doubt → a few DFT labels →
-fine-tune → re-run
+the potential; each heavy step's lane and
+resources; a review of the plan; extension:
+active_learning
 literature-reader
-supplies d, the length of the bond to break,
-with its source
+looks for d, the length of the bond to
+break, with its source, for the human to
+check
 vision model
 a vision model to predict the sites, only
 after the geometry benchmark shows an image
 helps
 board: Vision model (?)
 surface-chemist
-proposes a site type per fragment from the
-chemistry of the cleavage, orders the list;
-never overrides a check
+orders the list from the chemistry of the
+cleavage, with a site type per fragment as
+advice; never adds a candidate or overrides
+a check
 board: Critic, knowledge
 surface-chemist
 an LLM critic reads the card and comments;

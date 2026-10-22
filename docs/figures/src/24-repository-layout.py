@@ -27,7 +27,7 @@ tree = [
  (0, "root", "open-science-hackathon/", "the repository is a Claude Code plugin"),
  (1, "root", "README.md", "one page: what it is, install, run the first case"),
  (1, "root", "CLAUDE.md", "agent instructions: reading order, rules, where things are"),
- (1, "root", "PROJECT.md", "locked settings and decisions of the current campaign"),
+ (1, "root", "PROJECT.md", "locked settings and decisions of the current study"),
  (1, "root", "pyproject.toml", "one package: the library, the server, the tests"),
  (1, "docs", "docs/", "design doc, agent context, build context, survey, figures"),
  (1, "root", ".claude-plugin/plugin.json", "declares skills, agents, hooks and the MCP server"),
@@ -48,7 +48,7 @@ tree = [
  (2, "lib", "site_enumeration.py · validity_gate.py · ...", "one module per tool, same name as the tool"),
  (1, "test", "tests/", "one test file per tool; Burnside on C4v; the gate on known failures"),
  (1, "data", "benchmark/", "OC20NEB subset, baselines, scoring, results"),
- (1, "data", "runs/<campaign>/", "PROJECT.md copy, trace.jsonl, cards/, structures/, report.md"),
+ (1, "data", "runs/<study>/", "PROJECT.md copy, trace.jsonl, cards/, structures/, report.md"),
  (1, "data", "lessons.md", "the lessons log; recurring entries become skill lines"),
 ]
 y = 0.835; dy = 0.0292
@@ -74,7 +74,7 @@ def col(x, head, items, kind):
         ax.text(x + 0.0775, yy - 0.015, it, ha="center", va="center", fontsize=7.0, zorder=3)
         yy -= 0.043
         if yy > 0.52: arrow(ax, (x + 0.0775, yy + 0.013), (x + 0.0775, yy + 0.002), lw=1.0, ms=7)
-col(X0, "A human", [("README.md", "root"), ("docs/ design document", "docs"), ("PROJECT.md", "root"), ("runs/<campaign>/report.md", "data"), ("lessons.md", "data")], "root")
+col(X0, "A human", [("README.md", "root"), ("docs/ design document", "docs"), ("PROJECT.md", "root"), ("runs/<study>/report.md", "data"), ("lessons.md", "data")], "root")
 col(X0 + 0.175, "An agent", [("CLAUDE.md", "root"), ("docs/agent-context.md", "docs"), ("docs/agent-build-context.md", "docs"), ("skills/*/SKILL.md", "skill"), ("mcp tool docstrings", "tool")], "root")
 
 # ---- right bottom: the one-way call rule

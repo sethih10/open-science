@@ -13,6 +13,7 @@ from ..schemas.records import Pair, Role, Site, SiteEnumeration, StructureRef, S
 SYMPREC_A = 0.05      # spglib's tolerance on a relaxed slab
 MATCH_A = 0.3         # an operation maps a site onto another when they lie this close in the plane; sites sit >= 0.8 Å apart
 LABELS = {"ontop": "top", "bridge": "bridge", "fcc": "fcc", "hcp": "hcp", "4fold": "4fold"}
+LAYER_GAP_A = 0.5     # the second layer: the subsurface atoms within this of the highest one, as tag_slab_layers draws the top layer
 
 
 @traced(step="2", tool="site_enumeration")
@@ -38,23 +39,32 @@ def site_enumeration(slab: StructureRef, cell_repeat: Tuple[int, int]) -> SiteEn
         - pymatgen.core.adsorption.AdsorbateSiteFinder as baseline
     Logs: symmetry group; every site; count and check.
 
-    ACAT labels the sites of the supplied cell; they are tiled over the repeat by its lattice translations, since
-    ACAT's cost grows steeply with the cell. Edges join each site to its first neighbour shell of sites, ACAT's
-    get_neighbor_site_list rule: top to bridge and bridge to hollow on a close-packed facet. spglib gives the
-    operations of the slab that keep the top surface on top; orbits of sites under them are the inequivalent
-    sites, and the site group of each is its stabiliser, so a bridge of an ABC-stacked (111) slab is Cs, not the
-    C2v of the top layer alone.
+    On a slab of one element ACAT labels the sites of the supplied cell. A slab of several elements, an ionic or
+    oxide surface such as NaCl(100), has no ACAT surface type, so its sites come from the Delaunay triangulation
+    of the top layer, named by the species they sit on: top Na, top Cl, bridge Na-Cl, hollow. Either way the sites
+    are tiled over the repeat by its lattice translations, since ACAT's cost grows steeply with the cell. Edges
+    join each site to its first neighbour shell of sites, ACAT's get_neighbor_site_list rule: top to bridge and
+    bridge to hollow on a close-packed facet. spglib gives the operations of the slab that keep the top surface
+    on top; orbits of sites under them are the inequivalent sites, and the site group of each is its stabiliser,
+    so a bridge of an ABC-stacked (111) slab is Cs, not the C2v of the top layer alone. A count that differs from
+    pymatgen's baseline is flagged in the trace.
     """
     settings = project.current_settings()
     supplied = artifacts.read(slab)
-    if artifacts.TAG_SURFACE not in set(supplied.get_tags()):
-        artifacts.tag_slab_layers(supplied)
+    tags = set(supplied.get_tags())
+    if artifacts.TAG_SURFACE not in tags or not tags <= {artifacts.TAG_SUBSURFACE, artifacts.TAG_SURFACE}:
+        artifacts.tag_slab_layers(supplied)          # a builder's layer numbers would read as fragment tags
     n1, n2 = (int(k) for k in cell_repeat)
     atoms = supplied.repeat((n1, n2, 1))
     ref = artifacts.write(atoms, f"slab-{n1}x{n2}", Role.slab, settings_hash=slab.settings_hash,
                           energy_eV=slab.energy_eV * n1 * n2 if slab.energy_eV is not None else None)
-    surface = acat_surface(settings.metal, settings.facet)
-    sites = _tile(_acat(supplied, surface).get_sites(), supplied, atoms, (n1, n2))
+    if len(set(supplied.get_chemical_symbols())) > 1:
+        surface = f"the top layer of {supplied.get_chemical_formula(mode='metal', empirical=True)}, by Delaunay triangulation"
+        found = _top_layer_sites(supplied)
+    else:
+        surface = acat_surface(settings.metal, settings.facet)
+        found = _acat(supplied, surface).get_sites()
+    sites = _tile(found, supplied, atoms, (n1, n2))
     edges = neighbour_shell_edges([s.position for s in sites], atoms.cell.array)
     ops, group = surface_operations(atoms)
     enum = SiteEnumeration(sites=sites, count=0, burnside_count=0, symmetry_group=group, edges=edges, slab=ref,
@@ -78,6 +88,9 @@ def site_enumeration(slab: StructureRef, cell_repeat: Tuple[int, int]) -> SiteEn
     log("site_enumeration", f"symmetry {group}, {len(ops)} surface-preserving operations; surface {surface}; "
                             f"{len(sites)} sites in the {n1}x{n2} cell, {enum.count} inequivalent, Burnside {enum.burnside_count}; "
                             f"pymatgen baseline {enum.baseline_count}")
+    if enum.baseline_count is not None and enum.baseline_count != enum.count:
+        log("site_enumeration", f"flag: {enum.count} inequivalent sites against {enum.baseline_count} from pymatgen's baseline; "
+                                f"the list below is the one used, and the difference is for the human to read")
     for rep in sorted(set(orbit.values())):
         s = sites[rep]
         log("site_enumeration", f"site {rep}: {s.label}, {s.point_group}, coordination {s.coordination}, "
@@ -166,6 +179,88 @@ def _acat(atoms, surface: str):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         return SlabAdsorptionSites(atoms.copy(), surface=surface)
+
+
+def _top_layer_sites(atoms) -> List[dict]:
+    """The sites of a slab of several elements, in the form of ACAT's get_sites: a top site on every atom of the top
+    layer, a bridge at the middle of every edge of the layer's Delaunay triangulation, and a hollow at the centre of
+    every Delaunay cell. Triangles on one circle make one cell, so the four ions of a square give one fourfold
+    hollow and its diagonal no bridge. Labels name the anchor species, metals first: top Na, bridge Na-Cl; a hollow
+    names the atom of the second layer beneath it when there is one, hollow over Cl."""
+    from ase.formula import non_metals
+    from scipy.spatial import Delaunay
+    cell = atoms.cell.array
+    plane = cell[:2, :2]
+    top = artifacts.surface_indices(atoms)
+    sub = [k for k in range(len(atoms)) if k not in set(top)]
+    second = [k for k in sub if atoms.positions[k, 2] >= atoms.positions[sub, 2].max() - LAYER_GAP_A] if sub else []
+    rank = {el: (el in non_metals, el) for el in set(atoms.get_chemical_symbols())}
+    base = (np.linalg.solve(plane.T, atoms.positions[top, :2].T).T % 1.0) @ plane      # the top layer wrapped into the cell
+    shifts = [i * plane[0] + j * plane[1] for i in range(-2, 3) for j in range(-2, 3)]
+    xy = np.concatenate([base + s for s in shifts])
+    owner = [k for _ in shifts for k in top]
+    tri = Delaunay(xy)
+    centres = np.array([_circumcentre(*xy[t]) for t in tri.simplices])
+    parent = list(range(len(tri.simplices)))
+
+    def find(t: int) -> int:
+        while parent[t] != t:
+            parent[t] = parent[parent[t]]
+            t = parent[t]
+        return t
+
+    for t, row in enumerate(tri.neighbors):
+        for u in row:
+            if u >= 0 and np.linalg.norm(centres[t] - centres[u]) < MATCH_A:     # one circle; a NaN centre never joins
+                rt, ru = find(t), find(int(u))
+                if rt != ru:
+                    parent[max(rt, ru)] = min(rt, ru)
+    cells: Dict[int, List[int]] = {}
+    edges: Dict[Tuple[int, int], List[int]] = {}
+    for t, (a, b, c) in enumerate(tri.simplices):
+        cells.setdefault(find(t), []).append(t)
+        for p, q in ((a, b), (b, c), (a, c)):
+            edges.setdefault((min(p, q), max(p, q)), []).append(find(t))
+
+    def inside(point) -> bool:
+        f = np.linalg.solve(plane.T, point)
+        return bool(np.all((f >= -1e-6) & (f < 1 - 1e-6)))
+
+    def height(ks) -> float:
+        return float(np.mean(atoms.positions[ks, 2]))
+
+    found = [{"site": f"top {atoms[k].symbol}", "position": np.array([*base[n], atoms.positions[k, 2]]), "indices": [k], "subsurf_index": None}
+             for n, k in enumerate(top)]
+    for (p, q), owners in edges.items():
+        mid = (xy[p] + xy[q]) / 2
+        if (len(owners) == 2 and owners[0] == owners[1]) or not inside(mid):      # the diagonal of a cell of four or more atoms
+            continue
+        ks = sorted((owner[p], owner[q]), key=lambda k: rank[atoms[k].symbol])
+        found.append({"site": "bridge " + "-".join(atoms[k].symbol for k in ks), "position": np.array([*mid, height(ks)]), "indices": ks,
+                      "subsurf_index": None})
+    for root, members in cells.items():
+        corners = sorted({int(v) for t in members for v in tri.simplices[t]})
+        centre = xy[corners].mean(axis=0)
+        if np.isnan(centres[root]).any() or not inside(centre):
+            continue
+        ks = [owner[v] for v in corners]
+        under = None
+        if second:
+            d = np.hypot(*geometry.mic(atoms.positions[second] - np.array([*centre, 0.0]), cell)[:, :2].T)
+            under = second[int(np.argmin(d))] if d.min() <= MATCH_A else None
+        found.append({"site": "hollow" + (f" over {atoms[under].symbol}" if under is not None else ""), "position": np.array([*centre, height(ks)]),
+                      "indices": ks, "subsurf_index": under})
+    return found
+
+
+def _circumcentre(a, b, c) -> np.ndarray:
+    """The centre of the circle through three points of the plane; NaN for three points on a line."""
+    d = 2.0 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]))
+    if abs(d) < 1e-9:
+        return np.full(2, np.nan)
+    sa, sb, sc = a @ a, b @ b, c @ c
+    return np.array([sa * (b[1] - c[1]) + sb * (c[1] - a[1]) + sc * (a[1] - b[1]),
+                     sa * (c[0] - b[0]) + sb * (a[0] - c[0]) + sc * (b[0] - a[0])]) / d
 
 
 def _tile(found: List[dict], supplied, atoms, repeat: Tuple[int, int]) -> List[Site]:

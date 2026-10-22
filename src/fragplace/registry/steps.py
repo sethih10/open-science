@@ -1,10 +1,11 @@
 """The steps as data: the board's numbers in execution order, the agents that act at each, the tools each may
 call, from registry.tools by board step, and the checkpoint the human passes before the next step runs.
 
-A definition, not a loop: agent.pipeline runs it, runtime.state persists the position in it, and the figures'
-data module checks against it. Step 3.5 is deferred: it stays on the board with its number, commented out here
-until the team decides how to implement it; fragment A stays at its initial-state site and adsorbate_placement
-runs only at step 4, for B. 3.6 is the alternative generator; 3.1 runs inside step 5.
+A definition, not a loop: study_status reads the next step from it for the orchestrator, study.rollout runs it as
+the test harness, runtime.state persists the position in it, and the figures' data module checks against it. Step
+3.5 is deferred: it stays on the board with its number, commented out here until the team decides how to implement
+it; fragment A stays at its initial-state site and adsorbate_placement runs at 3.2, for B, right after the pairs,
+because the screen of 3.3 needs placed structures. 3.6 is the alternative generator; 3.1 runs inside step 5.
 """
 from __future__ import annotations
 
@@ -34,7 +35,7 @@ class PipelineStep:
 PIPELINE: Tuple[PipelineStep, ...] = (
     PipelineStep("prompt", (PLANNER, "computational-chemist", "literature-reader")),
     PipelineStep("1", (PLANNER, "computational-chemist"), checkpoint="approve settings"),
-    PipelineStep("1*", (PLANNER, "mlip-specialist", "scientific-critic"), checkpoint="approve the plan"),
+    PipelineStep("1*", (PLANNER, "mlip-specialist", "hpc-specialist", "scientific-critic"), checkpoint="approve the plan"),
     PipelineStep("2", (PLANNER,)),
     # PipelineStep("3.5", (PLANNER,)),   deferred, see the module docstring; the board keeps the number
     PipelineStep("3.2", (PLANNER, "literature-reader")),

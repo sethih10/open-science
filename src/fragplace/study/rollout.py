@@ -22,12 +22,12 @@ from ..runtime import state as run_state
 Invoke = Callable[[str, str], object]  # invoke(tool_name, step_key): the caller binds the tool's inputs from the run's artifacts
 
 
-def run(run_dir: Path, campaign: str, invoke: Invoke, use_minima_hopping: bool = False) -> str:
+def run(run_dir: Path, study: str, invoke: Invoke, use_minima_hopping: bool = False) -> str:
     """The deterministic rollout. Resumes from state.json, calls each step's core tools in order through
     `invoke`, records the step, and stops with CheckpointPending where the human must choose. Returns "done"
     when the last step has run. The same gates hold for an LLM planner calling the tools itself: the hook reads
     the registry's checkpoint_gate, this function reads the step's checkpoint, and both come from the registry."""
-    st = run_state.resume(run_dir, campaign)          # raises CheckpointPending if a choice is still owed
+    st = run_state.resume(run_dir, study)          # raises CheckpointPending if a choice is still owed
     key = st.current_step
     while key not in (None, "done"):
         step = BY_KEY[key]

@@ -1,47 +1,42 @@
 # Try the agent
 
-One campaign, start to finish, with the agents in Claude Code: the example *OH → *O + *H on Pt(111) with EMT, a test potential, so the run is about seeing the agents work, not about Pt. You type into one Claude Code session; the solution-planner answers, hands work to the other agents, asks you what it needs, and stops five times for your approval.
+One study, start to finish, in the Claude Code chat: the example \*OH → \*O + \*H on Pt(111) with EMT, a test potential, so the run is about seeing the agents work, not about Pt. You talk to one agent, the orchestrator. It hands work to the six specialists, shows you the structures, and asks you everything in Claude Code's question box; you answer by clicking, and code records each answer under your name.
 
 | You need | Check |
 |---|---|
-| The repository with its `.venv`, once: `python3 -m venv .venv && .venv/bin/pip install -e ".[structures,agents,dev,figures]"` | `.venv/bin/fragplace registry` lists 19 tools |
-| A Claude Code login | `claude --version` |
-| A compute node; the tools must not run on the login node | `srun -p interactive -c 4 --mem=8G --time=2:00:00 --pty bash` |
+| The repository with its `.venv`, once: `python3 -m venv .venv && .venv/bin/pip install -e ".[structures,agents,dev,figures]"` | `.venv/bin/fragplace registry` lists 20 tools |
+| A Claude Code login, in the VS Code extension or the terminal | `claude --version` |
+| The plugin enabled for the repository and, on a cluster, `FRAGPLACE_SRUN`, both in `.claude/settings.local.json` as the README's *Once per machine* shows | `/mcp` in the chat lists `plugin:fragplace:fragplace` as connected |
 
-| Cost of one campaign, from our trial | Value |
+| Cost of one study | Value |
 |---|---|
-| Wall time on 4 CPUs | about 25 minutes of the agents working, plus yours at the five stops |
+| Wall time | about 25 minutes of agent work with EMT, plus yours at the five checkpoints; each heavy step waits for a compute node first |
 | Claude usage | about 8 US dollars, most of it the scientific-critic reading records |
 
 ## 1. Start
 
-On the compute node, from the repository:
+In the chat, type:
 
-```bash
-source .venv/bin/activate
-export FRAGPLACE_ROOT=$PWD/runs/_demo      # campaigns and their case bank go here, outside the repository's lessons.md
-fragplace init demo --example              # the three inputs relaxed with EMT, PROJECT.md with test values
-claude --plugin-dir .
+```text
+/fragplace:study demo
 ```
 
-Claude Code starts with the plugin. A failed server named `fragplace` may show at the start; it is the repository's `.mcp.json` read a second time, and the plugin's own copy, `plugin:fragplace:fragplace`, is the one that runs.
+The orchestrator reads its page, finds no study called demo and asks what to run on. Choose the example; it runs `fragplace init demo --example` itself, which builds the three inputs with EMT and a `PROJECT.md` of test values. With your own files it asks for their paths, their format and the bond to break, A's side first, and runs `fragplace init` with them.
 
-## 2. Run the campaign
+## 2. Answer as it goes
 
-Type `/fragplace:campaign demo`. Then answer as the table says. After each `!` command, type `done, continue`.
-
-| The agent does | You type |
+| The orchestrator | You |
 |---|---|
-| Reads the campaign and asks the five interview questions of `PROJECT.md` | The answers below, or your own |
-| Asks for any open decision still missing; the example has none | A value and a reason; the agent records it with `fragplace decide`; allow the command when Claude Code asks |
-| Sends the literature-reader to look for published values; from Triton it finds none and says why | Nothing |
-| Runs `structure_retrieval`; the computational-chemist picks the protocol; stops at **approve settings** with the settings | `! fragplace approve demo "approve settings" --who <you> --reason "dry run with EMT"` |
-| The mlip-specialist picks the potential; the scientific-critic reviews the plan; stops at **approve the plan** | `! fragplace approve demo "approve the plan" --who <you> --reason "<your answer to the critic>"` |
-| Sites, pairs, placement, the pull-force screen; the surface-chemist orders the candidates from their cards; relaxation, the gate, clustering, the doubt; stops at **review flagged cases** | `! fragplace approve demo "review flagged cases" --who <you> --reason "keep all"` |
-| Ranks the survivors with their cards; stops at **pick up to five final states** | `! fragplace approve demo "pick up to five final states" --who <you> --chosen <ids from its table> --reason "..."` |
-| Reference energies and the report; the scientific-critic reviews the report; stops at **interpret results** | `! fragplace approve demo "interpret results" --who <you> --reason "<what you conclude>"` |
+| Asks the five interview questions of `PROJECT.md`, each with answers the computational-chemist drafted | Pick one or write your own under Other; the answer lands in the Interview table of `PROJECT.md` |
+| Asks for any open decision still missing; the example has none | Pick a value from the options, each with its source, or write another |
+| Opens the inputs, then shows the settings the computational-chemist proposed and the published values the literature-reader found; the example runs no DFT, so the lock is protocol mlip: the cell, the force threshold and the gas references, with one line saying the potential computes every energy, and no question about a functional, cutoff or k-mesh | Approve settings; tick the values you checked against their source |
+| Shows the potential the mlip-specialist chose, the compute plan the hpc-specialist proposed from `compute_plan`'s estimate, with the lane, cores, memory and time of each heavy step and why, and the scientific-critic's review | Approve the plan, the compute plan with it; it cannot change after this box |
+| Runs sites, pairs, placement, the pull-force screen, the surface-chemist's ordering, the gate, relaxation, the gate again and clustering; after each step it shows the step's summary and opens its pictures in your editor | Look; ask anything, such as why the surface-chemist chose its order |
+| Shows the doubt flags | Approve, or choose Change something and say which candidates to drop |
+| Opens the ranked final states and asks which to keep | Tick up to five |
+| Writes the report, has the critic review it, shows the whole summary | Approve with your interpretation in the note |
 
-Interview answers to paste, from our trial:
+Interview answers to try, from our trial:
 
 ```text
 1. Whether the adsorbate stayed on its site, and whether slab and adsorbate were computed with the same settings.
@@ -51,40 +46,39 @@ Interview answers to paste, from our trial:
 5. H left on a bridge or top site, a saddle point, after relaxation.
 ```
 
-The agent never runs `fragplace approve` itself; the hooks block it if it tries, and only your `!` command passes a checkpoint. Ask it anything between the steps, such as why the surface-chemist chose its order; it answers from the cards and the trace, never from coordinates.
+The orchestrator cannot answer its own question box, edit a record or run `fragplace approve`; the hooks block each, and only your answer passes a checkpoint. Stop whenever you like with Stop here; the same command later resumes where the study stands.
 
 ## 3. Look at what it did
 
-| File, under `runs/_demo/runs/demo/` | What to look for |
+| File, under `runs/demo/` | What to look for |
 |---|---|
-| `report.md` | The final states with E(FS near), E(FS ∞) and the lateral interaction; every rejected pair with its reason; your choices; at the end, what each agent said |
-| `trace.jsonl` | Every tool call and every decision, each under its actor: a tool, an agent or you |
-| `cards/*.txt`, `cards/*.png` | The descriptor card of each candidate, the only view of geometry the agents had |
-| `PROJECT.md` | The locked settings, the decisions and who set them |
+| `summary.md` | One short block per step: what came out, the numbers, the files |
+| `geometries/` | A folder per step: `.xyz` files and pictures; `4-relaxed/` has the start and end of every candidate and a contact sheet |
+| `report.md` | The steps in brief, the final states with both energies, every survivor and rejection with its reason, the open decisions, your choices and interpretation, and what each agent said |
+| `trace.jsonl` | Every tool call, decision and answer, each under its actor: a tool, an agent or you |
+| `PROJECT.md` | The locked settings, the decisions with who set them, your interview answers |
 
 Who acted, counted from the trace:
 
 ```bash
-python3 -c "import json,collections; print(collections.Counter(json.loads(l)['actor'] for l in open('runs/_demo/runs/demo/trace.jsonl')))"
+python3 -c "import json,collections; print(collections.Counter(json.loads(l)['actor'] for l in open('runs/demo/trace.jsonl')))"
 ```
-
-In our trial the five agents of the core each appear, beside about five hundred tool entries and your approvals.
 
 ## 4. Check it without the agents
 
 | Check | Command | Cost |
 |---|---|---|
-| The tools and the rollout | `python -m pytest -q`, 144 tests in under a minute | none |
-| The same campaign as a script, the agents' choices replaced by fixed rules | `fragplace init scripted --example`, then `fragplace run scripted` and the `fragplace approve` each stop prints, five times | none |
-| The plugin loads and one tool answers through Claude Code | `claude -p "Call the fragplace tool campaign_status for campaign demo and reply with its next field." --plugin-dir . --allowedTools mcp__plugin_fragplace_fragplace ToolSearch` | about 0.25 US dollars |
+| The tools, the hooks and the question boxes | `python -m pytest -q` on a compute node | none |
+| The pipeline as the test harness, every agent's choice replaced by a fixed rule | `fragplace init scripted --example`, then `fragplace run scripted` and the `fragplace approve` each stop prints, five times | none |
 
 ## When something goes wrong
 
 | You see | Why | Do |
 |---|---|---|
-| `fragplace: command not found` after `!` | Claude Code was started without the `.venv` active | Quit, `source .venv/bin/activate`, start again with the same `FRAGPLACE_ROOT` |
-| No fragplace tools; `plugin:fragplace:fragplace` failed | The `.venv` is missing or the package is not installed in it | `ls .venv/bin/fragplace-server`; install as in the first table |
-| A tool answers `blocked` with a checkpoint | That checkpoint is yours and has not been passed | Run the `fragplace approve` command it shows |
-| A tool answers `open_decision` | A value marked open: team decision is missing | Give the agent the value and a reason |
-| Every step is very slow | The session runs on the login node | Start again on a compute node |
-| `You've hit your session limit` | Your Claude usage ran out | Resume after the reset with `claude --plugin-dir . --continue`; the campaign keeps its state on disk |
+| `/fragplace:study` is unknown | The plugin is not enabled for the repository | Add the keys of the README's *Once per machine* to `.claude/settings.local.json` and reopen the chat |
+| `plugin:fragplace:fragplace` failed in `/mcp` | The `.venv` is missing or the package is not installed in it | `ls .venv/bin/fragplace-server`; install as in the first table |
+| A failed server named `fragplace` | The repository's `.mcp.json` read a second time | Put `"disabledMcpjsonServers": ["fragplace"]` in `.claude/settings.local.json` |
+| A step waits a long time | The heavy tools wait for a compute node through `FRAGPLACE_SRUN` | `squeue -u $USER`; a busy partition delays each heavy step |
+| Every step is very slow and `FRAGPLACE_SRUN` is unset | The tools run on the login node | Set `FRAGPLACE_SRUN` and reopen the chat |
+| A tool answers `blocked` with a question box | A checkpoint is yours and has not been passed | The orchestrator asks it; answer |
+| `You've hit your session limit` | Your Claude usage ran out | After the reset, type `/fragplace:study demo` again; the study keeps its state on disk |

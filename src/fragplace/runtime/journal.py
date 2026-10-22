@@ -1,6 +1,6 @@
 """The decision trace and the run directory.
 
-runs/<campaign>/
+runs/<study>/
   PROJECT.md      a copy of the locked settings at the start of the run
   trace.jsonl     one TraceEvent per tool call, human choice and escalation
   cards/          descriptor cards, text and PNG
@@ -42,14 +42,14 @@ def content_hash(obj: Any) -> str:
 
 
 class Run:
-    """The run directory of one campaign."""
+    """The run directory of one study."""
 
-    def __init__(self, root: Path, campaign: str):
-        self.dir = Path(root) / "runs" / campaign
+    def __init__(self, root: Path, study: str):
+        self.dir = Path(root) / "runs" / study
         for sub in ("cards", "structures", "cache"):
             (self.dir / sub).mkdir(parents=True, exist_ok=True)
         self.trace_path = self.dir / "trace.jsonl"
-        self.campaign = campaign
+        self.study = study
         self.step: Optional[str] = None      # the pipeline step running now; a tool's own board step when None
 
     def event(self, step: str, tool: str, actor: str, inputs: Any, outputs_ref: str, message: str = "") -> TraceEvent:

@@ -119,7 +119,8 @@ def names(step): return " · ".join(n for n, _ in BY_KEY[step].agents if n != PL
 def roles(step): return "; ".join(r for n, r in BY_KEY[step].agents if n != PLANNER)
 side_box(centre["prompt"], names("prompt"), roles("prompt"), board=BY_KEY["prompt"].board_input)
 side_box(centre["1"], names("1"), roles("1"))
-side_box(centre["1*"], names("1*"), roles("1*") + "; extension: " + BY_KEY["1*"].ext)
+side_box(centre["1*"], names("1*"), "the potential; each heavy step's lane and resources; a review of the plan; "
+         "extension: active_learning")      # three roles in full do not fit the box
 side_box(centre["3.2"], names("3.2"), roles("3.2"))
 side_box(centre["3.4"], names("3.4"), roles("3.4"), board="Critic, knowledge")
 side_box(centre["3.3"], "vision model", BY_KEY["3.4"].ext, dashed=True, board="Vision model (?)")

@@ -56,7 +56,7 @@ for i, s in enumerate(STEPS):
     cell("lit", "lit", i, s.lit_source, s.lit)
     cell("ours", "ours", i, "Ours", s.ours)
     if s.deferred: cell("deferred", "open", i, "DEFERRED", s.deferred + (f" · open: {s.open}" if s.open else ""), hfs=7.2, bfs=6.4)
-    elif s.open: cell("open", "open", i, "Open", s.open, hfs=7.2, bfs=6.8)
+    elif s.open: cell("open", "open", i, "Open", s.open + (f" · extension: {s.ext}" if s.ext else ""), hfs=7.2, bfs=6.4 if s.ext else 6.8)
     elif s.ext: cell("ext", "open", i, "EXTENSION", s.ext, hfs=7.2, bfs=6.8)
     else: none("open", i)
 sx = COL["board"][0] + COL["board"][1] / 2

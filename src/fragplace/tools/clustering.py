@@ -91,7 +91,7 @@ def _descriptors(structures) -> np.ndarray:
     for atoms in structures:
         work = atoms.copy()
         work.pbc = True
-        centres = [geometry.lowest(atoms, artifacts.fragment_indices(atoms, f)) for f in ("A", "B")]
+        centres = [artifacts.binding_index(atoms, f) for f in ("A", "B")]      # the atoms the human's bond names, not the lowest
         x = soap.create(work, centers=centres).ravel()
         rows.append(x / (np.linalg.norm(x) or 1.0))
     return np.array(rows)
@@ -126,8 +126,9 @@ def ranking(kept: List[str], cards: List[DescriptorCard], flags: List[DoubtFlag]
     Logs: the order shown; the human's choice and reason, to lessons.md.
 
     Nearest is read from each card, measured on the relaxed structure: site-graph distance, then A–B distance,
-    then energy. The doubt shown is the escalating flag when one fires, the committee's otherwise. The choice and
-    its reason reach the case bank at the pick checkpoint, recorded by fragplace.runtime.checkpoints.
+    then energy. The doubt shown is the escalating flag when one fires, the committee's otherwise; a committee
+    that measured no spread on a candidate says not measured, never 0. The choice and its reason reach the case
+    bank at the pick checkpoint, recorded by fragplace.runtime.checkpoints.
     """
     shortlist = int(project.decision("ranking", "shortlist_size"))
     by_card = {c.candidate_id: c for c in cards}
@@ -135,6 +136,7 @@ def ranking(kept: List[str], cards: List[DescriptorCard], flags: List[DoubtFlag]
     if missing:
         raise ValueError(f"no card for {', '.join(missing)}")
     by_pair = {p.candidate_id: p for p in pairs}
+    unmeasured = {f.candidate_id for f in flags if f.trigger == "unmeasured"}
 
     def doubt(cid: str) -> Optional[DoubtFlag]:
         mine = [f for f in flags if f.candidate_id == cid]
@@ -150,7 +152,8 @@ def ranking(kept: List[str], cards: List[DescriptorCard], flags: List[DoubtFlag]
         c, f, p = by_card[cid], doubt(cid), by_pair.get(re.sub(r"o\d+$", "", cid))   # A002-B015o1 is an orientation of pair A002-B015
         reason = (f"site-graph {c.site_graph_distance}, A–B {c.AB_distance_A:.2f} Å, E {c.energy_eV:.4f} eV, {c.site_label}"
                   + (f"; enumerated {p.in_plane_distance_A:.2f} Å apart" if p else "")
-                  + (f"; doubt {f.trigger} {f.committee_spread_eV:.3f} eV" + (", escalated" if f.escalate else "") if f else ""))
+                  + (f"; doubt {f.trigger}, spread " + ("not measured" if cid in unmeasured else f"{f.committee_spread_eV:.3f} eV")
+                     + (", escalated" if f.escalate else "") if f else ""))
         ranked.append(RankedCandidate(candidate_id=cid, rank=rank, site_graph_distance=c.site_graph_distance if c.site_graph_distance is not None else -1,
                                       energy_eV=c.energy_eV if c.energy_eV is not None else float("nan"), doubt=f, reason=reason))
     log("ranking", f"order shown, the human picks up to {shortlist}: " + ", ".join(r.candidate_id for r in ranked))

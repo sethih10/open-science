@@ -16,6 +16,7 @@ class CHGNet(ASEAdapter):
         self._calc = CHGNetCalculator()
 
     def magnetic_moments(self, atoms):
+        self.check(atoms)
         atoms = atoms.copy()
         atoms.calc = self._calc
         atoms.get_potential_energy()

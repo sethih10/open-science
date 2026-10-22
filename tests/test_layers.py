@@ -1,5 +1,5 @@
 """Calls go one way: schemas and errors, then registry, then runtime, then tools and calculators and execution,
-then agent and mcp and cli on top. A module may import from its own layer or a lower one, never a higher one."""
+then study and mcp and cli on top. A module may import from its own layer or a lower one, never a higher one."""
 import re
 from pathlib import Path
 
@@ -7,7 +7,7 @@ import pytest
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "fragplace"
 LAYER = {"schemas": 0, "errors": 0, "registry": 1, "runtime": 2, "memory": 2, "calculators": 3, "execution": 3, "tools": 3,
-         "agent": 4, "mcp": 4, "eval": 4, "cli": 4}
+         "study": 4, "mcp": 4, "eval": 4, "cli": 4}
 IMPORT = re.compile(r"^from \.(\.?)(\w*)", re.M)
 
 
