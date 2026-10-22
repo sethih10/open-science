@@ -1,5 +1,20 @@
 # open-science-hackathon: the nearest non-recombining final state
 
+## How to use
+
+FragPlace is a Claude Code plugin: you run a study in a Claude Code chat, in VS Code or a terminal, inside this repository on a machine that reaches the cluster. The claude.ai chat cannot run it, since its tools are a local server.
+
+| Step | Do |
+|---|---|
+| 1. Once per machine | Build `.venv` and add the plugin keys to `.claude/settings.local.json`, as [Running a study](#running-a-study) shows; reopen the chat |
+| 2. Check | Type `/mcp` in the chat; `plugin:fragplace:fragplace` is connected |
+| 3. Your files | Put the relaxed structures in one folder as `.xyz` or `.extxyz`: the slab, the adsorbate AB in vacuum, AB on the slab as the initial state, and A and B in vacuum when you have them; energies in the files are optional |
+| 4. Start | Type `/fragplace:study <name>`, for example `/fragplace:study nacl-h2o`; `/fragplace:study demo` with the built-in example is a dry run |
+| 5. Answer | The orchestrator asks for the paths, the facet and the bond to break, A's side first, then every question in the question box; you click or write |
+| 6. Read | `runs/<name>/summary.md`, one block per step; `runs/<name>/geometries/`, the pictures; `runs/<name>/report.md` at the end |
+
+When no DFT runs, which is every study for now, nothing about DFT is asked: the chosen potential computes every energy, gas references included. A study stopped half way resumes with the same command. A walkthrough of one study is `docs/try-the-agent.md`.
+
 ## The problem
 
 Given a surface with the adsorbate AB\* and the desired product A\* + B\*, both fragments adsorbed, find the final state in which B\* sits as close to A\* as it can while the two stay fully dissociated and do not bond back. That is the whole scope, fixed by the team. Not catalysis, not kinetics, not yet the barrier: those are a later phase and no core task or measurable depends on them. The plan follows the shape of NEBscape, the closest prior work; CatTSunami is secondary. Everything a coding agent needs is in `AGENTS.md`; the theory and the design history are in `docs/`.
