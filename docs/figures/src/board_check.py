@@ -1,4 +1,4 @@
-"""Assert that the four board figures, README.md and AGENTS.md carry the same steps, names, tools and decisions as
+"""Assert that the four board figures and AGENTS.md carry the same steps, names, tools and decisions as
 _board.py. Run after rendering 29 to 32. Exit code 1 on any failure."""
 import hashlib, re, subprocess, sys
 from pathlib import Path
@@ -50,9 +50,9 @@ for n, t in texts.items():
     for m in re.finditer(r"\((\d\.\d|\d\*?)\)", t):
         need(m.group(1) in keys, f"figure {n}: step number {m.group(1)} is not a board key")
 
-# README tables current
+# AGENTS.md tables current
 r = subprocess.run([sys.executable, str(SRC / "board_tables.py"), "--check"], capture_output=True, text=True)
-need(r.returncode == 0, "README: " + r.stdout.strip())
+need(r.returncode == 0, "AGENTS.md: " + r.stdout.strip())
 
 # AGENTS.md section 2: owner and tools per step
 agent = (ROOT / "AGENTS.md").read_text()
@@ -79,4 +79,4 @@ for n, name in COPIES.items():
 
 if fails:
     print("\n".join(fails)); print(f"{len(fails)} problems"); sys.exit(1)
-print("all four figures, README tables and AGENTS.md section 2 agree with _board.py")
+print("all four figures and AGENTS.md agree with _board.py")

@@ -330,8 +330,12 @@ def _references(c, out):
     states = out.get("final_states") or []
     rows = [[f.get("candidate_id"), _num(f.get("E_near_eV"), 3), _num(f.get("E_inf_eV"), 3), _num(f.get("lateral_interaction_eV"), 3, sign=True),
              _num(f.get("AB_distance_A"), 2), f.get("site_graph_distance")] for f in states]
+    from ..tools.report import ads_against, references_used
+    used = references_used(c.run)
+    reaction = (" The reaction energy is E(FS near) − E(IS), with E(IS) from " + "; and in another call, ".join(used["initial_state"]) + "."
+                if used["initial_state"] else "")
     return [f"{_n(len(states), 'final state')} the human picked. E(FS ∞) puts each fragment alone on the slab; the lateral interaction is "
-            "E(FS near) − E(FS ∞)."] + _table(["Candidate", "E(FS near), eV", "E(FS ∞), eV", "Lateral, eV", "A–B, Å", "Shell"], rows, "states")
+            f"E(FS near) − E(FS ∞). E_ads(A*) and E_ads(B*) are against {ads_against(used)}.{reaction}"] + _table(["Candidate", "E(FS near), eV", "E(FS ∞), eV", "Lateral, eV", "A–B, Å", "Shell"], rows, "states")
 
 
 def _report(c, out):

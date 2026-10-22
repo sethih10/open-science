@@ -12,8 +12,8 @@ The theory, the design history and the reviews behind the project. Nothing here 
 | `design/chemistry-agents-review.md` | 39 LLM agents with chemistry or surface knowledge, by the channel it enters through, with numbers |
 | `design/agent-writing-style.md` | Prose and figure conventions used for everything here |
 | `figures/` | The figures and, under `src/`, the scripts for figures 13 to 32; 22 and 23 carry the later phase, 27 and 28 are final-state-only versions, 29 to 32 are the figures shown in the root README |
-| `figures/src/_board.py` | The single source of truth for the pipeline: one record per board step; figures 29 to 32 and the README tables are generated from it |
+| `figures/src/_board.py` | The single source of truth for the pipeline: one record per board step; figures 29 to 32 and the AGENTS.md tables are generated from it |
 | `design/scientific-agent-architectures.md` | 28 scientific-agent systems and their verbatim role names, 12 repositories' tool declarations, operational components, the roster mapping; opened 21 October 2026 |
-| `figures/src/board_tables.py`, `board_check.py` | Write the README tables from `_board.py`; assert that the four figures, the README and `AGENTS.md` section 2 agree with it |
+| `figures/src/board_tables.py`, `board_check.py` | Write the AGENTS.md tables from `_board.py`; assert that the four figures and `AGENTS.md` agree with it |
 
 The roster was renamed on 21 October 2026 after the architecture review; the earlier figures 19 to 28 and the design documents carry the old names final-state-planner, dft-settings-interviewer, geometry-critic and dft-job-steward.

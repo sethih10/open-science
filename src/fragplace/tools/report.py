@@ -93,7 +93,8 @@ def report(study: str, final_states: List[FinalState], rejected: List[GateResult
     text = path.read_text() if path.exists() else ""
     choices = checkpoints.passed(run.dir)
     survivors = _survivors(gated, relaxations, outputs, flags, final_states, choices, shells)
-    (run.dir / "report.md").write_text(_markdown(rep, settings, text, outputs, gated, before, shells, relaxations, survivors, choices))
+    (run.dir / "report.md").write_text(_markdown(rep, settings, text, outputs, gated, before, shells, relaxations, survivors, choices,
+                                                           references_used(run)))
     log("report", f"report.md and report.json written; trace {rep.trace_path}")
     return rep
 
@@ -112,6 +113,33 @@ def _outputs(run) -> Dict[str, List[Any]]:
             seen.add(ev.outputs_ref)
             out.setdefault(ev.tool, []).append(json.loads((run.dir / ev.outputs_ref).read_text()))
     return out
+
+
+def references_used(run) -> Dict[str, List[str]]:
+    """What the energies of the final states were taken against, read from the lines reference_energies wrote in
+    the trace: "gas", the gas references of E_ads(A*) and E_ads(B*) with their energies, and "initial_state", the
+    initial state of E(IS); each distinct line once, in trace order."""
+    used: Dict[str, List[str]] = {"gas": [], "initial_state": []}
+    for ev in run.events():
+        if ev.tool != "reference_energies" or ev.actor != "tool" or not ev.message:
+            continue
+        key, text = None, None
+        if "; gas references " in ev.message:
+            key, text = "gas", ev.message.split("; gas references ", 1)[1]
+        elif ev.message.startswith("E(IS) "):
+            key, text = "initial_state", ev.message.split(", ", 1)[-1]
+        if key and text not in used[key]:
+            used[key].append(text)
+    return used
+
+
+def ads_against(used: Dict[str, List[str]]) -> str:
+    """The reference of E_ads(A*) and E_ads(B*) in words, as reference_energies used it; more than one only when
+    calls differed, and then each is named."""
+    gas = used["gas"]
+    if not gas:
+        return "not computed: reference_energies wrote no gas reference in the trace"
+    return "; and in another call, ".join(gas)
 
 
 def _num(x: Optional[float], places: int, sign: bool = False, none: str = "not computed") -> str:
@@ -178,10 +206,11 @@ def _cell(settings, outputs) -> List[str]:
             f"| Surface atoms in the cell | {n} |", f"| Coverage of A, {a}\\*, ML | {cover} |", f"| Coverage of B, {b}\\*, ML | {cover} |"]
 
 
-def _open(settings, text: str, example: bool) -> List[str]:
+def _open(settings, text: str, example: bool, used: Dict[str, List[str]]) -> List[str]:
     """Every open decision of the registry with its value in the lock; D1 to D5 and the charge, with their status in
     PROJECT.md's Decisions table, open when it has no row for them; the DFT settings the lock leaves unset, or, in a
-    study that runs no DFT, that it holds none and which decisions were not asked."""
+    study that runs no DFT, that it holds none and which decisions were not asked. The lock's gas references are
+    followed by what E_ads was in fact computed against, so the two are never read as one."""
     def shown(value) -> str:
         return "not set" if value is None else value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
     status = {m.group(1): m.group(2).strip() for m in re.finditer(r"^\|\s*(D\d)\b[^|]*\|\s*([^|]*)\|", text, re.M)}
@@ -196,11 +225,13 @@ def _open(settings, text: str, example: bool) -> List[str]:
             "", "| Team decision | Status |", "|---|---|"] + [f"| {label} | {status.get(key) or OPEN} |" for key, label in TEAM_DECISIONS] + [
             "", ("Settings the lock leaves unset: " + (", ".join(unset) + "." if unset else "none.")) if dft else
             "No DFT runs in this study: the potential computes every energy, and the lock holds no DFT setting. Gas references, computed "
-            "with the potential: " + (", ".join(f"{g.species} {g.energy_eV:.4f} eV with {g.calculator}" for g in project.gas_references(settings)) or "none") + "."]
+            "with the potential: " + (", ".join(f"{g.species} {g.energy_eV:.4f} eV with {g.calculator}" for g in project.gas_references(settings)) or "none") + ".",
+            "", f"E_ads(A\\*) and E_ads(B\\*) in Final states are against {ads_against(used)}, as reference_energies used them; the gas "
+            "references above are the lock's and enter no E_ads unless they are these same structures."]
 
 
 def _markdown(rep: Report, settings, text: str, outputs, gated: Dict[str, GateResult], before: Dict[str, GateResult], shells: Dict[str, int],
-              relaxations, survivors: List[Dict[str, Any]], choices: List[HumanChoice]) -> str:
+              relaxations, survivors: List[Dict[str, Any]], choices: List[HumanChoice], used: Dict[str, List[str]]) -> str:
     example = bool(EXAMPLE.search(text))
     potentials = sorted({r["calculator"] for r in relaxations})
     lines = [f"# Report: {rep.study}", ""]
@@ -212,8 +243,11 @@ def _markdown(rep: Report, settings, text: str, outputs, gated: Dict[str, GateRe
               f"record, `{rep.settings_hash}`, is the lock in PROJECT.md. Decision trace `{rep.trace_path}`. Draft for the scientific critic and the human.", "",
               "## Final states", "",
               "Lateral interaction = E(FS near) − E(FS ∞), with E(FS ∞) = E(A\\*) + E(B\\*) − E(slab), each fragment alone on the slab. "
-              "E_ads of each fragment is against its own gas reference relaxed with the same potential; the reaction energy is "
-              "E(FS near) − E(IS), given when E(IS) is on the potential's scale.", "",
+              f"E_ads(A\\*) and E_ads(B\\*) are against {ads_against(used)}, as reference_energies used them, each relaxed with the same "
+              "potential. The reaction energy is "
+              "E(FS near) − E(IS), with E(IS) from "
+              + ("; and in another call, ".join(used["initial_state"]) if used["initial_state"] else "no initial state: none was relaxed")
+              + "; it is given only when the initial state and the final state hold the same atoms in the same cell.", "",
               "| Candidate | E(FS near), eV | E(FS ∞), eV | Lateral interaction, eV | E_ads(A\\*), eV | E_ads(B\\*), eV | Reaction energy, eV | "
               "A–B distance, Å | Site-graph distance |", "|---|---|---|---|---|---|---|---|---|"]
     lines += [f"| {f.candidate_id} | {_num(f.E_near_eV, 4)} | {_num(f.E_inf_eV, 4)} | {_num(f.lateral_interaction_eV, 4, sign=True)} | "
@@ -248,7 +282,7 @@ def _markdown(rep: Report, settings, text: str, outputs, gated: Dict[str, GateRe
     lines += ["", "## Doubt", "", "| Candidate | Trigger | Committee spread, eV | Calibrated error, eV | Escalated |", "|---|---|---|---|---|"]
     lines += [f"| {f.candidate_id} | {f.trigger} | {'not measured' if f.candidate_id in unmeasured else _num(f.committee_spread_eV, 4)} | "
               f"{_num(f.calibrated_error_eV, 4, none='uncalibrated')} | {'yes' if f.escalate else 'no'} |" for f in rep.doubt] or ["| none | | | | |"]
-    lines += ["", "## Open decisions", ""] + _open(settings, text, example)
+    lines += ["", "## Open decisions", ""] + _open(settings, text, example, used)
     lines += ["", "## The human's choices", "", "| Checkpoint | Who | Chosen | Reason |", "|---|---|---|---|"]
     lines += [f"| {c.checkpoint} | {c.who} | {', '.join(c.chosen) or 'approved'} | {c.reason} |" for c in choices] or ["| none yet | | | |"]
     lines += ["", "## Comparison with OC20NEB", ""]

@@ -43,3 +43,17 @@ Raw cases: what was seen, what was done, why. A human promotes a case to a skill
  "when": "2026-10-21T23:23:43.177772"
 }
 ```
+
+## NaCl(100) H2O: picked none of none ranked
+
+```json
+{
+ "system": "NaCl(100) H2O",
+ "card": "no candidate survived",
+ "correction": "picked none of none ranked",
+ "reason": "Approve: Pick nothing; the report records the rejections and the recombination rate",
+ "source_checkpoint": "pick up to five final states",
+ "promoted_to": null,
+ "when": "2026-10-22T21:53:51.153980"
+}
+```

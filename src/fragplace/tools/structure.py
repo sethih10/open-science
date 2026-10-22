@@ -179,6 +179,19 @@ def species_name(atoms, first: Optional[int] = None) -> str:
     return lead + (str(count[lead]) if count[lead] > 1 else "") + (Formula.from_dict(rest).format("hill") if rest else "")
 
 
+def initial_state_in_cell(slab_cell: StructureRef, slab: StructureRef, initial_state: StructureRef) -> StructureRef:
+    """The initial state in the selected cell, by code: the selected slab with the adsorbate of the supplied initial
+    state where it sits there, so E(IS) and every final state share one cell. The supplied initial state is the
+    supplied slab's atoms followed by AB's; the selected cell repeats the supplied one from the same origin, so AB's
+    positions hold in it. The slab's constraints are kept, and no energy, since the potential relaxes it next."""
+    host, is_atoms = artifacts.read(slab_cell), artifacts.read(initial_state)
+    n = len(artifacts.read(slab))
+    system = host + is_atoms[n:]
+    system.set_constraint(host.constraints)
+    system.info = {}
+    return artifacts.write(system, "initial-state-cell", Role.initial_state, settings_hash=initial_state.settings_hash)
+
+
 def composition(text: str, reduce: bool = False) -> Optional[Dict[str, int]]:
     """The element counts a formula names, reduced to the formula unit when asked; None when the text is no formula."""
     from ase.formula import Formula

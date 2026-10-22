@@ -30,7 +30,7 @@ from ..schemas.records import (Candidate, Case, DescriptorCard, DoubtFlag, Final
 from ..tools import get as tool
 from ..tools.placement import HEIGHT_RANGE_A, orientations
 from ..tools.relaxation import MAX_STEPS
-from ..tools.structure import composition
+from ..tools.structure import composition, initial_state_in_cell
 from ..tools.uncertainty import system_class_of
 from . import summary
 
@@ -414,8 +414,9 @@ class Study:
     # solution: the separated product of every picked state, then the report
     def references(self) -> None:
         """E(FS ∞) and the lateral interaction of every picked state, each fragment's adsorption energy when the tool
-        gives it, and E(FS near) - E(IS) with the initial state relaxed by the same potential. No pick, no state: a
-        study whose candidates were all rejected still gets its report."""
+        gives it, and E(FS near) - E(IS) with the initial state in the selected cell, relaxed by the same potential with
+        the locked settings: a final state minus an initial state of another cell is no reaction energy. No pick, no
+        state: a study whose candidates were all rejected still gets its report."""
         chosen = checkpoints.require(self.run.dir, "pick up to five final states").chosen
         slab = self.one("slab_relaxed", RelaxationResult).structure
         relaxed = {r.candidate_id: r for r in self.many("relaxed", RelaxationResult)}
@@ -426,18 +427,39 @@ class Study:
         e_is = None
         if chosen:
             s = self.settings()
-            start = Candidate(id="initial-state", structure=StructureRef.model_validate(inputs["initial_state"]), generator="reference")
+            start = Candidate(id="initial-state", structure=self.initial_state_used(), generator="reference")
             e_is = tool("relaxation")([start], self.calculator, s.force_threshold_eV_per_A, int(self.options.get("max_steps", MAX_STEPS)))[0].energy_eV
+            log("reference_energies", f"E(IS) {e_is:.4f} eV, {self.data['initial_state_used']['how']}")
         states = []
         for cid in chosen:
             r = relaxed[cid]
             with pool.using(approved_rule(self, "reference_energies").get("workers")):
                 e = tool("reference_energies")(slab, (r.structure, r.structure), self.calculator, gas)
+            same = e_is is not None and len(artifacts.read(r.structure)) == self.data["initial_state_used"]["atoms"]
+            if e_is is not None and not same:
+                log("reference_energies", f"{cid}: no reaction energy, the final state and the initial state hold different atom counts")
             states.append(FinalState(candidate_id=cid, E_near_eV=r.energy_eV, E_inf_eV=e["E_inf_eV"], lateral_interaction_eV=r.energy_eV - e["E_inf_eV"],
                                      AB_distance_A=cards[cid].AB_distance_A, site_graph_distance=cards[cid].site_graph_distance,
                                      E_ads_A_eV=e.get("E_ads_A_eV"), E_ads_B_eV=e.get("E_ads_B_eV"),
-                                     reaction_energy_eV=None if e_is is None else r.energy_eV - e_is))
+                                     reaction_energy_eV=r.energy_eV - e_is if same else None))
         self.put("final_states", states)
+
+    def initial_state_used(self) -> StructureRef:
+        """The initial state E(IS) is taken from: the supplied one when the selected cell is the supplied cell, else the
+        selected slab with the supplied adsorbate at its place, built by code. Recorded as initial_state_used with
+        its cell, atom count and how it was made."""
+        inputs, retrieval = self.data["inputs"], self.data["retrieval"]
+        repeat = tuple(retrieval["cell_repeat"])
+        supplied = StructureRef.model_validate(inputs["initial_state"])
+        if repeat == (1, 1):
+            ref, how = supplied, "the supplied initial state, since the selected cell is the supplied one, 1×1"
+        else:
+            ref = initial_state_in_cell(StructureRef.model_validate(retrieval["structures"][0]), StructureRef.model_validate(inputs["slab"]), supplied)
+            how = (f"the initial state in the selected cell, {repeat[0]}×{repeat[1]}: the selected slab with the adsorbate of the supplied "
+                   "initial state at its place, built by code")
+        atoms = len(artifacts.read(ref))
+        self.put("initial_state_used", {"structure": ref, "cell_repeat": list(repeat), "atoms": atoms, "how": f"{how}, {atoms} atoms"})
+        return ref
 
     def report(self) -> None:
         rejected = [g for g in self.many("gates_before", GateResult) + self.many("gates", GateResult) if not g.passed]

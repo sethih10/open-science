@@ -14,6 +14,9 @@ from ..runtime.journal import current_run, log, traced
 from ..schemas.records import Candidate, RelaxationResult, Role, StructureRef
 
 MAX_STEPS = 500      # the step cap of reference_energies, which takes none; the rollout passes the same to relaxation
+# What E_ads of each fragment is against, as reference_energies logs it and the report reads it back
+GAS_SUPPLIED = "the supplied A and B in vacuum"
+GAS_CLEAVED = "the cleaved fragments alone in vacuum"
 
 
 @traced(step="4", tool="relaxation")
@@ -120,10 +123,11 @@ def reference_energies(slab: StructureRef, fragments: Tuple[StructureRef, Struct
     out["E_inf_eV"] = out["E_A_eV"] + out["E_B_eV"] - out["E_slab_eV"]
     out["E_ads_A_eV"] = out["E_A_eV"] - out["E_slab_eV"] - energy["gas_A"]
     out["E_ads_B_eV"] = out["E_B_eV"] - out["E_slab_eV"] - energy["gas_B"]
+    formulas = [systems[f"gas_{name}"][1].get_chemical_formula() for name in ("A", "B")]
     log("reference_energies", "E(slab) {E_slab_eV:.4f}, E(A*) {E_A_eV:.4f}, E(B*) {E_B_eV:.4f}, E(FS inf) {E_inf_eV:.4f}, "
         "E_ads(A*) {E_ads_A_eV:.4f}, E_ads(B*) {E_ads_B_eV:.4f} eV".format(**out)
-        + f", {calculator}; gas references {'A and B in vacuum as supplied' if gas else 'the cleaved fragments alone'}, "
-          f"{energy['gas_A']:.4f} and {energy['gas_B']:.4f} eV")
+        + f", {calculator}; gas references {GAS_SUPPLIED if gas else GAS_CLEAVED}: {formulas[0]} "
+          f"{energy['gas_A']:.4f} eV and {formulas[1]} {energy['gas_B']:.4f} eV")
     return out
 
 

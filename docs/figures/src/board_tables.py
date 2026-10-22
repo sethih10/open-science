@@ -1,8 +1,7 @@
-"""Write the generated blocks of README.md and AGENTS.md from _board.py and fragplace.registry, or check them.
+"""Write the generated blocks of AGENTS.md from _board.py and fragplace.registry, or check them.
 
 Usage: python board_tables.py --write | --check
 Blocks sit between HTML-comment markers, <!-- name --> ... <!-- /name -->:
-  README.md:  board:evolution, board:who, registry:modules, registry:layout
   AGENTS.md:   board:pipeline, registry:tools, records:models, registry:layout
 The layout block is built from the files on disk, so a module without a description here, or a described module
 that is missing, fails the write; the tree is the repository as it is.
@@ -211,8 +210,7 @@ def layout_tree():
     width = max(len(left) for left, _ in lines) + 2
     return "```\n" + "\n".join(f"{left:{width}s}{desc}".rstrip() for left, desc in lines) + "\n```"
 
-TARGETS = {ROOT / "README.md": {"board:evolution": evolution_table, "board:who": who_table, "registry:modules": modules_table, "registry:layout": layout_tree},
-           ROOT / "AGENTS.md": {"board:pipeline": pipeline_table, "registry:tools": tools_section, "records:models": models_table, "registry:layout": layout_tree}}
+TARGETS = {ROOT / "AGENTS.md": {"board:pipeline": pipeline_table, "registry:tools": tools_section, "records:models": models_table, "registry:layout": layout_tree}}
 
 def render(text, blocks):
     for name, fn in blocks.items():
@@ -234,4 +232,4 @@ if __name__ == "__main__":
     if mode != "--write":
         if stale:
             print("stale generated blocks in " + ", ".join(stale) + "; run board_tables.py --write"); sys.exit(1)
-        print("README.md and AGENTS.md generated blocks are current")
+        print("AGENTS.md generated blocks are current")

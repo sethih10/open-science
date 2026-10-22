@@ -6,7 +6,7 @@ One study, start to finish, in the Claude Code chat: the example \*OH → \*O + 
 |---|---|
 | The repository with its `.venv`, once: `python3 -m venv .venv && .venv/bin/pip install -e ".[structures,agents,dev,figures]"` | `.venv/bin/fragplace registry` lists 20 tools |
 | A Claude Code login, in the VS Code extension or the terminal | `claude --version` |
-| The plugin enabled for the repository and, on a cluster, `FRAGPLACE_SRUN`, both in `.claude/settings.local.json` as the README's *Once per machine* shows | `/mcp` in the chat lists `plugin:fragplace:fragplace` as connected |
+| The plugin enabled for the repository and, on a cluster, `FRAGPLACE_SRUN`, both in `.claude/settings.local.json` as the README's *How to use* shows | `/mcp` in the chat lists `plugin:fragplace:fragplace` as connected |
 
 | Cost of one study | Value |
 |---|---|
@@ -75,7 +75,7 @@ python3 -c "import json,collections; print(collections.Counter(json.loads(l)['ac
 
 | You see | Why | Do |
 |---|---|---|
-| `/fragplace:study` is unknown | The plugin is not enabled for the repository | Add the keys of the README's *Once per machine* to `.claude/settings.local.json` and reopen the chat |
+| `/fragplace:study` is unknown | The plugin is not enabled for the repository | Add the keys of the README's *How to use* to `.claude/settings.local.json` and reopen the chat |
 | `plugin:fragplace:fragplace` failed in `/mcp` | The `.venv` is missing or the package is not installed in it | `ls .venv/bin/fragplace-server`; install as in the first table |
 | A failed server named `fragplace` | The repository's `.mcp.json` read a second time | Put `"disabledMcpjsonServers": ["fragplace"]` in `.claude/settings.local.json` |
 | A step waits a long time | The heavy tools wait for a compute node through `FRAGPLACE_SRUN` | `squeue -u $USER`; a busy partition delays each heavy step |
