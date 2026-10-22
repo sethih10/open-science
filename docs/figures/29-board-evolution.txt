@@ -3,7 +3,7 @@ refined by the literature, with the source
 what we added or decided
 open: team decision
 extension layer, later
-deferred: on the board, commented out of the code
+deferred: commented out of the code
 Owner line:
 TOOL
 deterministic code
