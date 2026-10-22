@@ -1,7 +1,9 @@
 """UMA through fairchem. Weights are gated on Hugging Face under the FAIR Chemistry License; set HF_TOKEN."""
 from __future__ import annotations
 
-from . import ASEAdapter, register
+from typing import Optional
+
+from . import ASEAdapter, device, register
 
 
 @register("uma-s-1p2p1")
@@ -9,10 +11,10 @@ from . import ASEAdapter, register
 class UMA(ASEAdapter):
     name = "uma"
 
-    def __init__(self, model: str = "uma-s-1p2p1", task: str = "oc20", device: str = "cuda", **_):
+    def __init__(self, name: str = "uma-s-1p2p1", task: str = "oc20", device_name: Optional[str] = None, **_):
         try:
             from fairchem.core import FAIRChemCalculator, pretrained_mlip
         except ImportError as e:  # pragma: no cover
             raise ImportError("pip install fairchem-core; UMA weights need a Hugging Face token") from e
-        self.model = model
-        self._calc = FAIRChemCalculator(pretrained_mlip.get_predict_unit(model, device=device), task_name=task)
+        self.name = self.model = name
+        self._calc = FAIRChemCalculator(pretrained_mlip.get_predict_unit(name, device=device_name or device()), task_name=task)

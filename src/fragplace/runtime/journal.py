@@ -16,6 +16,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -49,6 +50,7 @@ class Run:
             (self.dir / sub).mkdir(parents=True, exist_ok=True)
         self.trace_path = self.dir / "trace.jsonl"
         self.campaign = campaign
+        self.step: Optional[str] = None      # the pipeline step running now; a tool's own board step when None
 
     def event(self, step: str, tool: str, actor: str, inputs: Any, outputs_ref: str, message: str = "") -> TraceEvent:
         ev = TraceEvent(step=step, tool=tool, actor=actor, inputs_hash=content_hash(inputs), outputs_ref=outputs_ref, message=message)
@@ -67,6 +69,15 @@ class Run:
         return [TraceEvent.model_validate_json(line) for line in self.trace_path.read_text().splitlines() if line.strip()]
 
 
+REPOSITORY = Path(__file__).resolve().parents[3]
+
+
+def default_root() -> Path:
+    """The directory that holds runs/: FRAGPLACE_ROOT, else the repository. The MCP server and the hooks both read it,
+    so the gate a hook checks is the one the server keeps."""
+    return Path(os.environ.get("FRAGPLACE_ROOT") or REPOSITORY)
+
+
 _CURRENT: Optional[Run] = None
 
 
@@ -79,6 +90,15 @@ def current_run() -> Optional[Run]:
     return _CURRENT
 
 
+def log(tool: str, message: str) -> None:
+    """One line in the trace beside a tool's call: what it measured or chose, and why; under the pipeline step running
+    now, else the tool's first board step. A no-op outside a run."""
+    run = current_run()
+    if run:
+        from ..registry.tools import BY_NAME
+        run.event(run.step or BY_NAME[tool].board_steps[0], tool, "tool", {}, "", message=message)
+
+
 def traced(step: str, tool: str, actor: str = "tool") -> Callable:
     """Decorate a tool function so every call lands in the trace."""
 
@@ -87,15 +107,16 @@ def traced(step: str, tool: str, actor: str = "tool") -> Callable:
         def wrapper(*args, **kwargs):
             run = current_run()
             inputs = {"args": args, "kwargs": kwargs}
+            key = run.step if run and run.step else step
             try:
                 out = fn(*args, **kwargs)
             except Exception as e:  # noqa: BLE001 - the trace must record every failure
                 if run:
-                    run.event(step, tool, actor, inputs, "", message=f"error: {type(e).__name__}: {e}")
+                    run.event(key, tool, actor, inputs, "", message=f"error: {type(e).__name__}: {e}")
                 raise
             if run:
                 ref = run.store(f"{tool}-{content_hash(inputs)}", out)
-                run.event(step, tool, actor, inputs, ref)
+                run.event(key, tool, actor, inputs, ref)
             return out
         return wrapper
     return deco

@@ -54,7 +54,7 @@ Each step is one or two tools, defined once in `src/fragplace/registry/tools.py`
 | Set up | (1\*) MLIP selection, AL prospect | `active_learning` | flags, labels, base_model | fine_tuned | extension |
 | Set up | (2) Adsorption sites with pymatgen | `site_enumeration` | slab, cell_repeat | sites | core |
 | Step 3: adsorbate placement, the stated problem | (3.1) Least distance before pull-back | `anomaly_filter` | candidate, start, slab, settings, prior_E_ads_eV, frequencies_cm | gate | core |
-| Step 3: adsorbate placement, the stated problem | (3.2) Window [1.5 d, 5] Å | `pair_enumeration` | sites, d_bond_A, window | pairs, count | core |
+| Step 3: adsorbate placement, the stated problem | (3.2) Window [1.5 d, 5] Å | `pair_enumeration` | sites, d_bond_A, window, site_A | pairs, count | core |
 | Step 3: adsorbate placement, the stated problem | (3.2) Window [1.5 d, 5] Å | `literature_lookup` | system, quantity, sources | values | core |
 | Step 3: adsorbate placement, the stated problem | (3.3) Pull force with the MLIP | `pull_force_screen` | candidates, calculator | screens | core |
 | Step 3: adsorbate placement, the stated problem | (3.4) Agentic critique of the cleavage | `descriptor_card` | candidate, gate, sites | card | core |
@@ -195,16 +195,60 @@ Decisions D2 compute and codes, D3 benchmark and pass criterion, D4 headline cla
 
 ## Running the first case
 
-Nothing computes yet: every tool is a typed stub that raises NotImplementedError, and the critical path of the build order fills them in turn. What runs today:
+The campaign runs two ways over the same tools: with the agents, the solution-planner in a Claude Code session steering six specialist agents and asking the human whatever is missing; or as a script, the fixed rollout of `agent/pipeline.py` with no LLM. The example campaign is \*OH → \*O + \*H on Pt(111) with ASE's EMT, a test potential. Its `PROJECT.md` carries the test suite's value for every open decision and says so at the top, so nothing it reports is a result about Pt. Every core tool computes; `dft_single_points` and `active_learning` wait for D2.
+
+### With the agents, in Claude Code
 
 ```bash
-pip install -e ".[dev,figures]"
-fragplace registry        # every tool with its steps and status
-fragplace check           # figures, README, AGENTS.md and the registry agree; tests pass
-fragplace init pt111-oh   # runs/pt111-oh/ with a copy of PROJECT.md
+pip install -e ".[structures,agents,dev,figures]"        # into .venv/ at the repository root; the plugin runs its server and hooks from there
+claude --plugin-dir /path/to/open-science-hackathon       # Claude Code with this repository loaded as the plugin
 ```
 
-The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decision. Before the first calculation the interview in `PROJECT.md` is answered and the human locks it at the approve-settings checkpoint, and D2 and D3 are decided.
+```text
+/fragplace:campaign pt111-oh
+```
+
+The session becomes the solution-planner: it calls the tools through the plugin's MCP server, hands questions to the computational-chemist, literature-reader, mlip-specialist, surface-chemist and scientific-critic as subagents, and asks the human for the inputs, the five interview answers and every open decision still missing. At each of the five checkpoints it stops and shows the evidence and the `fragplace approve` command; only the human runs it, in a shell or with `!` in the prompt, and the hooks block the model if it tries. A value the human gives for an open decision goes into `PROJECT.md` with `fragplace decide`, under the human's name. Every agent's decision and review reaches the trace and the end of `report.md` under its name.
+
+A walkthrough of one campaign, with what the agent asks and what to type back, is `docs/try-the-agent.md`. The plugin runs its server and hooks from the `.venv` inside the repository, so it is loaded from the checkout with `--plugin-dir`; an install that copies the plugin elsewhere would leave the `.venv` behind and is not tested.
+
+| Agent | Acts at | What it decided in the example run |
+|---|---|---|
+| solution-planner | every step, in the main session | the order of calls; the questions to the human; where to stop |
+| computational-chemist | prompt, 1 | the protocol and its reason, from the interview answers |
+| literature-reader | prompt | that no published value was reachable, and why |
+| mlip-specialist | 1\*, 7 | the potential; to escalate every state a one-model committee cannot measure |
+| surface-chemist | 3.4 | the relaxation order of the fifteen pairs, from their cards |
+| scientific-critic | 1\*, solution | what the plan and the report left unsupported, before the human saw them |
+
+### As a script
+
+```bash
+fragplace init pt111-oh --example        # the three inputs relaxed with EMT; PROJECT.md with test values
+fragplace run pt111-oh                   # runs to the next checkpoint and prints what to look at
+fragplace approve pt111-oh "approve settings" --reason "..." --who <name>
+fragplace run pt111-oh                   # again after each checkpoint, five in all
+fragplace approve pt111-oh "pick up to five final states" --chosen <id> --reason "..." --who <name>
+fragplace check                          # figures, README, AGENTS.md and the registry agree; tests pass
+```
+
+The script takes every choice an agent would make from a fixed rule: the pull-force queue stands for the surface-chemist's order, the smallest benchmark error for the mlip-specialist's choice, and nothing reviews the plan or the report.
+
+| Command | What it does |
+|---|---|
+| `fragplace init <campaign> --example [--calculator <name>]` | Builds the three inputs of the first case with the named potential and a `PROJECT.md` ready to lock |
+| `fragplace init <campaign> --slab F --adsorbate F --initial-state F --bond i,j` | Copies three supplied relaxed structures, with their energies, into `runs/<campaign>/inputs/`; the bond is two atom indices of the adsorbate |
+| `fragplace decisions [<campaign>]` | Lists every open decision of the registry and its value in `PROJECT.md` |
+| `fragplace decide <campaign> <key> <value> --who ... --reason ...` | Sets one open decision before the lock, with who gave it and why |
+| `fragplace run <campaign>` | Runs `agent/pipeline.py` from where the campaign stopped to the next checkpoint |
+| `fragplace approve <campaign> "<checkpoint>" --reason ...` | Records the human's choice; locks `PROJECT.md` at approve settings; writes the pick and the flag review to `lessons.md` |
+| `fragplace status <campaign>` | The step, the pending checkpoint and its evidence: settings, potential, flags, ranked cards or the report |
+
+### Both ways
+
+A campaign from real inputs needs, in `runs/<campaign>/PROJECT.md`, the protocol and its reason and every key `fragplace decisions <campaign>` lists as missing; `calculation_protocol` refuses the lock until all are set, so no tool meets an open decision after it. The potentials `mlip_selection.candidates` may name are `emt`, `mace-mp-small`, `mace-mp-medium` and `mace-mp-large` with `pip install mace-torch`, `uma-s-1p2p1` with `fairchem-core` and `HF_TOKEN`, and `chgnet`. Each run writes `runs/<campaign>/` under `FRAGPLACE_ROOT`, the repository by default: the trace, the cards as text, JSON and a PNG, every structure, the checkpoints and `report.md`. In the EMT example the gate rejects H left on bridge and top sites, saddles of that potential with one or two imaginary modes: the symmetry trap, caught by check 5 and listed in the report.
+
+Every entry point sets the thread counts of OpenMP, torch and OpenBLAS to the CPUs the process may use, the cgroup quota where one is set, unless `OMP_NUM_THREADS` or `OPENBLAS_NUM_THREADS` is already set: a shared login node that grants two CPUs while showing forty cores otherwise runs the optimisers a hundred times slower. On a cluster, run the campaign on a compute node, `srun -p interactive -c 4 --pty bash` and then either way above; MACE-MP small takes about 1.5 s per force call on the 146 atoms of the example with two CPUs, so a GPU node is the lane for a real potential. The first case is \*OH → \*O + \*H on Pt(111), decision D1, open: team decision; before the first real calculation D2 and D3 are decided.
 
 ## Repository layout
 
@@ -216,9 +260,10 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 ├── README.md, CLAUDE.md, AGENTS.md        the entry points; CLAUDE.md points a coding agent to AGENTS.md
 ├── PROJECT.md, lessons.md                 the settings template; the case bank
 ├── pyproject.toml                         package fragplace, commands fragplace and fragplace-server, one extra per lane
-├── .claude-plugin/plugin.json             declares skills/, agents/, hooks/hooks.json and .mcp.json
-├── .mcp.json                              the MCP server fragplace-server; its tools are called as mcp__fragplace__<tool>
-├── hooks/hooks.json                       PreToolUse: block coordinate edits; require the checkpoint before a gated tool
+├── .claude-plugin/plugin.json             declares skills/, hooks/hooks.json and .mcp.json; Claude Code finds agents/ and commands/ by their names
+├── .mcp.json                              the MCP server fragplace-server from the plugin's .venv; its tools are called as mcp__plugin_fragplace_fragplace__<tool>
+├── commands/campaign.md                   /fragplace:campaign <name>: the main session as the solution-planner, the other agents as its subagents
+├── hooks/hooks.json                       PreToolUse: block coordinate and record edits; block the model passing a checkpoint; require the checkpoint before a gated tool
 ├── agents/                                the seven agents of section 6, one page each, allowed tools in the frontmatter
 │   ├── solution-planner.md                the next tool call and when to stop
 │   ├── literature-reader.md               which published values and sources to put before the human: E_ads with functional and site
@@ -259,29 +304,33 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   │   ├── checkpoints.py                 the five checkpoints of registry/agents.py: require, record
 │   │   ├── state.py                       the position in the pipeline, persisted in state.json
 │   │   ├── policy.py                      the two hook commands of hooks/hooks.json
-│   │   └── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
+│   │   ├── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
+│   │   └── geometry.py                    the geometry the tools share: minimum images, bonds, heights, the nearest site, the site graph, symmetry operations
 │   ├── memory/                            what a campaign learns
 │   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
 │   ├── calculators/                       one ASE adapter base and a Committee; potentials imported lazily
 │   │   ├── emt.py                         ASE EMT, the test potential: Pt-group metals and H, C, N, O
 │   │   ├── uma.py                         UMA through fairchem; needs HF_TOKEN
-│   │   ├── mace.py                        MACE, single model or committee
+│   │   ├── mace.py                        MACE: MACE-MP by name, or a model or committee from files
 │   │   └── chgnet.py                      CHGNet
 │   ├── execution/                         Job and Backend
-│   │   ├── local.py                       the laptop and GPU lanes
+│   │   ├── local.py                       the laptop and GPU lanes; the CPU budget every entry point sets the thread counts to
 │   │   ├── slurm.py                       the HPC lane, custodian inside the job script
 │   │   └── tracker.py                     job attempts, diagnoses, the retry cap of three
 │   ├── agent/                             who runs next, as code
 │   │   ├── pipeline.py                    the deterministic rollout over registry/steps.py; stops at every checkpoint, resumes from state.json
+│   │   ├── interface.py                   the tools as the agents call them, by campaign name, each answering with a summary; what the MCP server publishes
+│   │   ├── campaign.py                    the invoke of pipeline.py: binds each tool's inputs from the run's artifacts; records the human's choice at a checkpoint
+│   │   ├── example.py                     the example campaign, OH on Pt(111) with a named potential and test values; init from three supplied structures
 │   │   └── prompts.py                     loads agents/<name>.md, the one copy Claude Code also reads
 │   ├── mcp/                               the MCP side
-│   │   └── server.py                      one MCP tool per registry entry; the fragplace-server command
+│   │   └── server.py                      one MCP tool per registry entry and the two campaign operations; the fragplace-server command
 │   ├── eval/                              the agent-level benchmark
 │   │   └── harness.py                     the campaign with and without each skill and agent, on the OC20NEB subset
 │   ├── cli/                               the command line
-│   │   └── main.py                        fragplace registry | check | init
-│   └── errors.py                          SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
-├── tests/                                 registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs
+│   │   └── main.py                        fragplace registry | check | init | run | approve | decide | status | decisions
+│   └── errors.py                          SettingsNotLocked, SettingsMismatch, Rejected, Escalate, CheckpointPending, OpenDecision
+├── tests/                                 registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs; one golden example per tool; the example campaign end to end, scripted and as an agent drives it
 ├── ci/github-workflow.yml                 ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
 ├── runs/<campaign>/                       PROJECT.md copy, trace.jsonl, checkpoints.json, state.json, cards/, structures/, cache/, report.md
 ├── figures/                               the README figures, PNG and SVG

@@ -1,13 +1,28 @@
 """The three relaxed inputs, the cleaved fragments, the cell and the settings lock. Tools: structure_retrieval, calculation_protocol. Defined in fragplace.registry."""
 from __future__ import annotations
 
-from typing import Any, List, Tuple
-from ..schemas.records import Settings, StructureRef
-from ..runtime.journal import traced
+from typing import Any, Dict, List, Tuple
+
+import numpy as np
+
+from ..errors import FragPlaceError, OpenDecision, SettingsMismatch
+from ..runtime import artifacts, geometry, project
+from ..runtime.journal import current_run, log, traced
+from ..schemas.records import Role, Settings, StructureRef
+
+# The protocol table: only the values AGENTS.md section 3 states. A protocol fills what the inputs leave unset and
+# never overrides them; a value neither gives stays unset and is reported, never filled from memory.
+PROTOCOLS: Dict[str, Dict[str, Any]] = {
+    "oc20": {"functional": "RPBE", "pseudopotential_family": "PAW", "cutoff_eV": 350.0},
+    "aiida_common_workflows": {},
+    "sssp": {},
+}
+MUST_MATCH = {"oc20": ("functional", "pseudopotential_family")}   # OC20NEB as ground truth: the lock matches OC20
+MAX_SLAB_DRIFT_A = 1.0     # the initial state's slab atoms sit within this of the clean slab's, or the files disagree
 
 
 @traced(step="1", tool="structure_retrieval")
-def structure_retrieval(slab: StructureRef, adsorbate_vacuum: StructureRef, initial_state: StructureRef, bond_to_break: Tuple[int, int]) -> Any:
+def structure_retrieval(slab: StructureRef, adsorbate_vacuum: StructureRef, initial_state: StructureRef, bond_to_break: Tuple[int, int]) -> Dict[str, Any]:
     """Take the three supplied relaxed structures with their energies, cleave the named bond to make A and B, and select the surface cell so periodic images stay apart.
 
     Board steps: 1. Status: core. Lane: laptop. Allowed roles: computational-chemist, solution-planner.
@@ -27,16 +42,105 @@ def structure_retrieval(slab: StructureRef, adsorbate_vacuum: StructureRef, init
         - images at least min_image_distance_A apart
     Thresholds:
         min_image_distance_A: 10
+        image_measure: open: team decision: own_image, each atom to its own image, or pair_to_image, the pair to its nearest image
     Wraps:
         - ase.io
         - pymatgen.core
     Logs: input hashes; the cell and why.
+
+    The initial state is the slab's atoms in the slab's order followed by AB's in AB's order; bond_to_break indexes
+    AB. A is the side that keeps the atom nearest the surface, the binding atom; B's binding atom is its end of the
+    broken bond. Both fragments are written where they sit in the initial state, in the selected cell, with the
+    binding atom's index in info["binding_atom"]. structures holds the repeated slab and the slab with A alone at
+    its initial-state site, the base B is placed on while step 3.5 is deferred.
     """
-    raise NotImplementedError("structure_retrieval: see AGENTS.md section 3 and fragplace.registry")
+    hashes = {r.settings_hash for r in (slab, adsorbate_vacuum, initial_state)}
+    methods = {r.calculator for r in (slab, adsorbate_vacuum, initial_state)}
+    if len(hashes) > 1 or len(methods) > 1:
+        raise SettingsMismatch(f"check 8: the three inputs were relaxed with different settings, hashes {sorted(map(str, hashes))}, "
+                               f"methods {sorted(map(str, methods))}")
+    recorded = [f"settings hash {h}" for h in hashes if h] + [f"method {m}" for m in methods if m]
+    settings = project.current_settings(require_lock=False)
+    s_atoms, ab, is_atoms = artifacts.read(slab), artifacts.read(adsorbate_vacuum), artifacts.read(initial_state)
+    n = len(s_atoms)
+    if (len(is_atoms) != n + len(ab) or list(is_atoms.numbers[:n]) != list(s_atoms.numbers)
+            or list(is_atoms.numbers[n:]) != list(ab.numbers)):
+        raise ValueError("the initial state must be the slab's atoms in the slab's order followed by the adsorbate's in its order")
+    if not np.allclose(is_atoms.cell.array, s_atoms.cell.array, atol=1e-3):
+        raise ValueError("the initial state and the slab have different cells")
+    drift = float(np.linalg.norm(geometry.mic(is_atoms.positions[:n] - s_atoms.positions, s_atoms.cell.array), axis=1).max())
+    if drift > MAX_SLAB_DRIFT_A:
+        raise ValueError(f"the initial state's slab atoms sit up to {drift:.2f} Å from the clean slab's: not the same slab")
+
+    i, j = (int(k) for k in bond_to_break)
+    ads = list(range(n, len(is_atoms)))
+    if not (0 <= i < len(ab) and 0 <= j < len(ab)) or i == j:
+        raise ValueError(f"bond_to_break {bond_to_break} does not name two atoms of {ab.get_chemical_formula()}")
+    graph = geometry.bonds(ab, range(len(ab)))            # the molecule's bonds, read in vacuum where nothing stretches them
+    if (min(i, j), max(i, j)) not in graph:
+        raise ValueError(f"atoms {i} and {j} of the adsorbate are not bonded in the relaxed adsorbate in vacuum")
+    kept = [(n + p, n + q) for p, q in graph if {p, q} != {i, j}]
+    parts = geometry.components(ads, kept)
+    side = {k: p for p in parts for k in p}
+    if side[n + i] is side[n + j]:
+        raise ValueError(f"breaking {bond_to_break} leaves the adsorbate in one piece; the bond is in a ring")
+    binding = geometry.lowest(is_atoms, ads)
+    a_idx, b_idx = (side[n + i], side[n + j]) if binding in side[n + i] else (side[n + j], side[n + i])
+    b_binding = n + j if n + j in b_idx else n + i
+    a_binding = geometry.lowest(is_atoms, a_idx)
+
+    n1, n2, why = _cell_repeat(s_atoms, is_atoms, a_idx, b_idx, settings)
+    rep = s_atoms.repeat((n1, n2, 1))
+    energy = slab.energy_eV * n1 * n2 if slab.energy_eV is not None else None
+    sh = slab.settings_hash
+
+    def fragment(indices, tag, binding_atom, name, role):
+        frag = is_atoms[list(indices)]
+        frag.set_cell(rep.cell)
+        frag.set_pbc(rep.pbc)
+        frag.set_tags([tag] * len(frag))
+        frag.set_constraint()
+        frag.info = {"binding_atom": list(indices).index(binding_atom)}
+        return frag, artifacts.write(frag, name, role, settings_hash=sh)
+
+    frag_a, ref_a = fragment(a_idx, artifacts.TAG_A, a_binding, "fragment-A", Role.fragment_A)
+    _, ref_b = fragment(b_idx, artifacts.TAG_B, b_binding, "fragment-B", Role.fragment_B)
+    base = rep + frag_a
+    base.set_constraint(rep.constraints)
+    base.info = {}
+    refs = [artifacts.write(rep, "slab-cell", Role.slab, energy_eV=energy, settings_hash=sh),
+            artifacts.write(base, "A-at-initial-site", Role.candidate, settings_hash=sh)]
+    log("structure_retrieval", "inputs " + ", ".join(f"{r.role.value} {artifacts.structure_hash(a)}" for r, a in
+                                                       ((slab, s_atoms), (adsorbate_vacuum, ab), (initial_state, is_atoms))))
+    log("structure_retrieval", "check 8 on the inputs: " + (", ".join(recorded) + ", the same for all three" if recorded
+                               else "not checked, the inputs record neither a settings hash nor a method"))
+    log("structure_retrieval", f"A = {frag_a.get_chemical_formula()}, B = {is_atoms[list(b_idx)].get_chemical_formula()}; "
+                               f"cell {n1}x{n2}: {why}")
+    return {"fragment_A": ref_a, "fragment_B": ref_b, "cell_repeat": (n1, n2), "structures": refs}
+
+
+def _cell_repeat(slab, initial, a_idx, b_idx, settings: Settings) -> Tuple[int, int, str]:
+    """The smallest repeat of the supplied cell whose images stay min_image_distance_A apart under the team's measure."""
+    measure = project.decision("structure_retrieval", "image_measure", settings)
+    need = settings.min_image_distance_A
+    if measure == "pair_to_image":
+        upper = float(project.decision("pair_enumeration", "upper_bound_A", settings))
+        extent = sum(max((geometry.distance(initial, p, q) for p in idx for q in idx), default=0.0) for idx in (a_idx, b_idx))
+        need = need + upper + extent
+    elif measure != "own_image":
+        raise OpenDecision(f"structure_retrieval.image_measure is {measure!r}; it must be own_image or pair_to_image")
+    cell = slab.cell.array
+    options = sorted(((n1, n2) for n1 in range(1, 13) for n2 in range(1, 13)), key=lambda m: (m[0] * m[1], abs(m[0] - m[1]), m))
+    for n1, n2 in options:
+        length = geometry.shortest_translation(np.array([n1 * cell[0], n2 * cell[1], cell[2]]))
+        if length >= need:
+            return n1, n2, (f"shortest in-plane translation {length:.2f} Å >= {need:.2f} Å, measure {measure}, "
+                            f"min_image_distance_A {settings.min_image_distance_A}")
+    raise ValueError(f"no repeat up to 12x12 of the supplied cell reaches {need:.1f} Å")
 
 
 @traced(step="1", tool="calculation_protocol")
-def calculation_protocol(settings_from_inputs: Settings, physics_choices: Any, protocol: Any, protocol_reason: str) -> Any:
+def calculation_protocol(settings_from_inputs: Settings, physics_choices: Dict[str, Any], protocol: str, protocol_reason: str) -> Settings:
     """Lock the numerical and physical settings in PROJECT.md from the inputs' settings, the human's physics choices and a verified protocol; never from the model's memory.
 
     Board steps: 1. Status: core. Lane: laptop. Allowed roles: computational-chemist, solution-planner.
@@ -59,5 +163,55 @@ def calculation_protocol(settings_from_inputs: Settings, physics_choices: Any, p
         - SSSP
         - pymatgen.io.vasp.sets.MPRelaxSet
     Logs: protocol and reason; every setting and its origin.
+
+    The inputs' own settings win: the protocol fills only what they leave unset, and a physics choice that
+    contradicts them stops the lock, since new physics needs new inputs. Every open threshold of the registry must
+    be set before the lock, so no tool meets an open decision after it. Writes the run's PROJECT.md, unlocked.
     """
-    raise NotImplementedError("calculation_protocol: see AGENTS.md section 3 and fragplace.registry")
+    if protocol not in PROTOCOLS:
+        raise ValueError(f"protocol {protocol!r}; known: {', '.join(PROTOCOLS)}")
+    if not (protocol_reason or "").strip():
+        raise ValueError("the computational chemist states why this protocol, in one sentence")
+    s = settings_from_inputs.model_copy(deep=True)
+    origin: Dict[str, str] = {}
+    choices = {"spin": "spin_polarised", "U": "hubbard_u", **{k: k for k in ("functional", "dispersion", "spin_polarised", "initial_moments", "hubbard_u")}}
+    for key, value in (physics_choices or {}).items():
+        field = choices.get(key)
+        if field is None:
+            raise ValueError(f"physics choice {key!r}; known: functional, dispersion, spin, initial_moments, U")
+        held = getattr(s, field)
+        if held not in (None, {}, False) and held != value:
+            raise SettingsMismatch(f"check 8: the inputs were computed with {field} = {held!r}, the choice is {value!r}; new physics needs new inputs")
+        setattr(s, field, value)
+        origin[field] = "human"
+    for field, value in PROTOCOLS[protocol].items():
+        held = getattr(s, field)
+        if held is None:
+            setattr(s, field, value)
+            origin[field] = f"protocol {protocol}"
+        elif held != value:
+            if field in MUST_MATCH.get(protocol, ()):
+                raise SettingsMismatch(f"check 8: protocol {protocol} needs {field} = {value!r} to match the benchmark; the inputs have {held!r}")
+            origin[field] = f"inputs; protocol {protocol} says {value!r}"
+    s.convergence_target_meV = float(project.decision("calculation_protocol", "convergence_target_meV", s))
+    wanted = list(project.decision("calculation_protocol", "gas_references", s))
+    absent = [sp for sp in wanted if sp not in {g.species for g in s.gas_references}]
+    if absent:
+        raise OpenDecision(f"gas reference energies missing in PROJECT.md for {', '.join(absent)}")
+    missing = project.missing_decisions(s)
+    if missing:
+        raise OpenDecision("set before the lock, under decisions in PROJECT.md: " + ", ".join(missing))
+    s.protocol, s.protocol_reason = protocol, protocol_reason
+    s.locked, s.approved_by, s.approved_at = False, None, None
+
+    run = current_run()
+    if run:
+        path = run.dir / "PROJECT.md"
+        if path.exists() and project.read(path).locked:
+            raise FragPlaceError(f"{path} is locked; a new value means a new campaign")
+        project.write(path, s)
+    log("calculation_protocol", f"protocol {protocol}: {protocol_reason}")
+    unset: List[str] = [f for f in ("cutoff_eV", "kmesh", "smearing", "sigma_eV", "layers", "pseudopotential_family") if getattr(s, f) is None]
+    log("calculation_protocol", "origins: " + "; ".join(f"{k} {v}" for k, v in sorted(origin.items())) +
+        ("; unset, needed only by DFT single points: " + ", ".join(unset) if unset else ""))
+    return s

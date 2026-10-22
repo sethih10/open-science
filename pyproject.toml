@@ -11,8 +11,8 @@ requires-python = ">=3.10"
 dependencies = ["pydantic>=2", "numpy"]
 
 [project.optional-dependencies]
-structures = ["ase", "pymatgen", "spglib", "acat"]
-mlip = ["fairchem-core", "mace-torch", "chgnet", "dscribe", "scikit-learn", "uncertainty-toolbox"]
+structures = ["ase", "pymatgen", "spglib", "acat", "dscribe", "scikit-learn", "pyyaml"]
+mlip = ["fairchem-core", "mace-torch", "chgnet", "uncertainty-toolbox"]
 literature = ["paper-qa", "mp-api"]
 dft = ["custodian", "atomate2"]
 agents = ["mcp[cli]>=1.2,<2"]

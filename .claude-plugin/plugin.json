@@ -1,10 +1,11 @@
 {
   "name": "fragplace",
   "version": "0.1.0",
-  "description": "FragPlace: the nearest non-recombining final state of a dissociated adsorbate. LLM agents plan, propose and draft; deterministic tools do every calculation; hooks keep the agents away from coordinates and at the checkpoints.",
-  "author": {"name": "sethih10"},
+  "description": "FragPlace: the nearest non-recombining final state of a dissociated adsorbate. LLM agents plan, propose and draft; deterministic tools do every calculation; hooks keep the agents away from coordinates and at the checkpoints. Start a campaign with /fragplace:campaign <name>.",
+  "author": {
+    "name": "sethih10"
+  },
   "skills": "./skills",
-  "agents": "./agents",
   "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json"
 }

@@ -56,6 +56,7 @@ def write(atoms, name: str, role: Role, energy_eV: Optional[float] = None, setti
     path = base / f"{name}.extxyz"
     out = atoms.copy()
     out.calc = None
+    out.info = {k: v for k, v in out.info.items() if isinstance(v, (str, bool, int, float, np.integer, np.floating))}  # extxyz keeps scalars only
     ase_write(path, out, format="extxyz")
     rel = str(path.relative_to(run.dir)) if run and path.is_relative_to(run.dir) else str(path)
     return StructureRef(path=rel, format="extxyz", role=role, energy_eV=energy_eV, settings_hash=settings_hash, calculator=calculator)
@@ -64,6 +65,24 @@ def write(atoms, name: str, role: Role, energy_eV: Optional[float] = None, setti
 def fragment_indices(atoms, fragment: str) -> List[int]:
     tag = FRAGMENT_TAGS[fragment]
     return [i for i, t in enumerate(atoms.get_tags()) if t == tag]
+
+
+def fragment_atoms(ref: StructureRef, fragment: str):
+    """The atoms of one fragment from a file: those tagged as the fragment when the file holds more, such as a whole
+    candidate; every atom otherwise. Positions stay where they are, in the file's cell."""
+    atoms = read(ref)
+    idx = fragment_indices(atoms, fragment)
+    frag = atoms[idx] if idx and len(idx) < len(atoms) else atoms.copy()
+    frag.set_constraint()
+    frag.set_tags([FRAGMENT_TAGS[fragment]] * len(frag))
+    return frag
+
+
+def binding_atom(atoms) -> int:
+    """The binding atom of a fragment file: info["binding_atom"] as structure_retrieval writes it, else the lowest atom."""
+    if "binding_atom" in atoms.info:
+        return int(atoms.info["binding_atom"])
+    return int(np.argmin(atoms.positions[:, 2]))
 
 
 def adsorbate_indices(atoms) -> List[int]:

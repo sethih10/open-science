@@ -2,12 +2,16 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [{"type": "command", "command": "python -m fragplace.runtime.policy block-coordinate-edits"}]
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.runtime.policy block-coordinate-edits"}]
       },
       {
-        "matcher": "mcp__fragplace__.*",
-        "hooks": [{"type": "command", "command": "python -m fragplace.runtime.policy require-checkpoint"}]
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.runtime.policy block-self-approval"}]
+      },
+      {
+        "matcher": "mcp__plugin_fragplace_fragplace__.*",
+        "hooks": [{"type": "command", "command": "\"${FRAGPLACE_PYTHON:-${CLAUDE_PLUGIN_ROOT}/.venv/bin/python}\" -m fragplace.runtime.policy require-checkpoint"}]
       }
     ]
   }

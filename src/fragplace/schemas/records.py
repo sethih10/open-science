@@ -186,7 +186,7 @@ class DoubtFlag(BaseModel):
     candidate_id: str
     committee_spread_eV: float
     calibrated_error_eV: Optional[float] = None
-    trigger: str                     # "disagreement" | "magnetic_metal" | "unseen_chemistry" | "out_of_range"
+    trigger: str                     # "disagreement" | "unmeasured" | "magnetic_metal" | "unseen_chemistry" | "out_of_range"
     escalate: bool
 
 
@@ -212,11 +212,13 @@ class DescriptorCard(BaseModel):
     site_graph_distance: Optional[int] = None
     energy_eV: Optional[float] = None
     image_path: Optional[str] = None
+    fragment_lines: List[str] = Field(default_factory=list, description="one line per fragment: site, group, height, neighbours; the fields above describe B in a pair")
 
     def text(self) -> str:
         lines = [f"candidate {self.candidate_id}: {self.composition} on {self.facet}, {self.layers} layers, {self.vacuum_A:.1f} Å vacuum",
                  f"site {self.site_label}, {self.point_group}, coordination {self.coordination}; height {self.height_A:.2f} Å",
                  "nearest neighbours " + ", ".join(f"{d:.2f}" for d in self.nn_distances_A) + " Å"]
+        lines += self.fragment_lines
         if self.AB_distance_A is not None:
             lines.append(f"A–B distance {self.AB_distance_A:.2f} Å; site-graph distance {self.site_graph_distance}")
         if self.energy_eV is not None:
@@ -226,7 +228,8 @@ class DescriptorCard(BaseModel):
         if self.magnetic_moment is not None:
             lines.append(f"total moment {self.magnetic_moment:.2f} μB")
         for v in self.verdicts:
-            lines.append(f"check {v.check_id} {v.name}: {'pass' if v.passed else 'FAIL'} {v.reason}".rstrip())
+            status = "FAIL" if not v.passed else ("not checked" if "not checked" in v.reason else "pass")
+            lines.append(f"check {v.check_id} {v.name}: {status} {v.reason}".rstrip())
         return "\n".join(lines)
 
 

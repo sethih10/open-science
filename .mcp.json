@@ -1,5 +1,5 @@
 {
   "mcpServers": {
-    "fragplace": {"command": "fragplace-server", "args": [], "cwd": "${CLAUDE_PLUGIN_ROOT}"}
+    "fragplace": {"command": "${CLAUDE_PLUGIN_ROOT}/.venv/bin/fragplace-server", "args": []}
   }
 }

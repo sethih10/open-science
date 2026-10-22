@@ -86,7 +86,7 @@ REGISTRY: List[ToolSpec] = [
         inputs={"slab": "StructureRef", "adsorbate_vacuum": "StructureRef", "initial_state": "StructureRef", "bond_to_break": "tuple[int, int], atom indices in AB"},
         outputs={"fragment_A": "StructureRef", "fragment_B": "StructureRef", "cell_repeat": "tuple[int, int]", "structures": "list[StructureRef]"},
         checks=("the three inputs share one settings set, check 8", "images at least min_image_distance_A apart"),
-        thresholds={"min_image_distance_A": "10"},
+        thresholds={"min_image_distance_A": "10", "image_measure": OPEN + ": own_image, each atom to its own image, or pair_to_image, the pair to its nearest image"},
         wraps=("ase.io", "pymatgen.core"), logs=("input hashes", "the cell and why"),
         requires=("module:ase", "module:pymatgen"), allowed_roles=("computational-chemist", PLANNER)),
     ToolSpec(
@@ -132,7 +132,8 @@ REGISTRY: List[ToolSpec] = [
     ToolSpec(
         name="pair_enumeration", board_steps=("3.2",),
         purpose="Every symmetry-distinct (A site, B site) pair inside the window [1.5 d, 5] Å, ordered by site-graph distance with in-plane distance as tiebreaker, nearest first, counted.",
-        inputs={"sites": "SiteEnumeration", "d_bond_A": "float, from literature_lookup or the adsorbate structure", "window": "tuple[float, float] in units of d and Å"},
+        inputs={"sites": "SiteEnumeration", "d_bond_A": "float, from literature_lookup or the adsorbate structure", "window": "tuple[float, float] in units of d and Å",
+                "site_A": "int | None, the site fragment A holds; every symmetry-distinct A site when None"},
         outputs={"pairs": "list[Pair], nearest first", "count": "int"},
         checks=("no pair outside the window", "symmetry duplicates removed and counted"),
         thresholds={"d_definition": OPEN + ": vacuum or adsorbed bond length", "upper_bound_A": OPEN + ": 5 or NEBscape's 4.5"},
@@ -172,7 +173,8 @@ REGISTRY: List[ToolSpec] = [
         inputs={"candidate": "Candidate", "start": "Candidate", "slab": "StructureRef", "settings": "Settings", "prior_E_ads_eV": "float | None", "frequencies_cm": "list[float] | None"},
         outputs={"gate": "GateResult"},
         checks=("1 desorbed per fragment", "2 migrated", "3 dissociated within a fragment", "4 reconstructed", "5 not a minimum", "6 magnetism collapsed", "7 outside expected range", "8 settings mismatch", "9 intercalated", "10 A–B bond re-formed", "11 periodic image"),
-        thresholds={"desorbed_A": "3", "AB_bond_reformed_A": OPEN, "migrated": OPEN, "dissociated": OPEN, "reconstructed": OPEN, "imaginary_noise_cm": OPEN, "expected_range_width_eV": OPEN, "magnetism_collapsed": OPEN, "intercalated": OPEN},
+        thresholds={"desorbed_A": "3", "AB_bond_reformed_A": OPEN, "migrated": OPEN, "dissociated": OPEN, "reconstructed": OPEN, "imaginary_noise_cm": OPEN, "expected_range_width_eV": OPEN, "magnetism_collapsed": OPEN, "intercalated": OPEN,
+                    "frequencies_source": OPEN + ": mlip or dft"},
         wraps=("fairchem.data.oc.utils.DetectTrajAnomaly", "ase.vibrations.Vibrations", "acat.adsorbate_coverage.SlabAdsorbateCoverage", "CatBench anomaly classes as names"),
         logs=("every verdict with its measured value", "every rejection with its reason"),
         requires=("module:fairchem.data", "module:ase", "module:acat"), checkpoint_gate="approve the plan"),
@@ -257,3 +259,26 @@ def for_step(key: str) -> List[ToolSpec]:
 
 def for_role(role: str) -> List[ToolSpec]:
     return [t for t in REGISTRY if role in t.allowed_roles]
+
+
+# The names agents call: Claude Code gives a plugin's MCP tools the prefix mcp__plugin_<plugin>_<server>__.
+MCP_PREFIX = "mcp__plugin_fragplace_fragplace__"
+# Two operations on a campaign that are not pipeline tools, open to every agent of the roster.
+OPERATIONS: Dict[str, str] = {
+    "campaign_status": "where the campaign stands: what is done, what comes next, the checkpoint due with its evidence, the open decisions",
+    "note": "an agent's decision or review with its reason, into the trace and the report under the agent's name",
+}
+
+
+def mcp_name(name: str) -> str:
+    return MCP_PREFIX + name
+
+
+def open_decisions() -> List[str]:
+    """Every threshold marked open, keyed <tool>.<name> as PROJECT.md holds it under decisions."""
+    return [f"{t.name}.{k}" for t in REGISTRY for k, v in t.thresholds.items() if v.startswith(OPEN)]
+
+
+def fixed_threshold(tool: str, name: str) -> float:
+    """A threshold the registry fixes, such as desorbed_A: 3."""
+    return float(BY_NAME[tool].thresholds[name])

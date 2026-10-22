@@ -10,7 +10,7 @@ from . import ASEAdapter, register
 class EMT(ASEAdapter):
     name = "emt"
 
-    def __init__(self, **_):
+    def __init__(self, name: str = "emt", **_):
         try:
             from ase.calculators.emt import EMT as _EMT
         except ImportError as e:  # pragma: no cover

@@ -8,7 +8,7 @@ from . import ASEAdapter, register
 class CHGNet(ASEAdapter):
     name = "chgnet"
 
-    def __init__(self, **_):
+    def __init__(self, name: str = "chgnet", **_):
         try:
             from chgnet.model import CHGNetCalculator
         except ImportError as e:  # pragma: no cover

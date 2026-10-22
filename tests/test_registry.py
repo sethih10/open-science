@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from fragplace.registry.tools import BY_NAME, CHECKPOINTS, LANES, REGISTRY, ToolSpec, for_role
+from fragplace.registry.tools import BY_NAME, CHECKPOINTS, LANES, OPERATIONS, REGISTRY, ToolSpec, for_role, mcp_name
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "docs" / "figures" / "src"))
@@ -75,8 +75,8 @@ def test_agent_file_lists_exactly_the_tools_the_registry_allows(name: str):
     text = (ROOT / "agents" / f"{name}.md").read_text()
     m = re.search(r"^tools:\s*(.*)$", text, re.M)
     assert m, f"agents/{name}.md has no tools line"
-    listed = {t.strip() for t in m.group(1).split(",") if t.strip().startswith("mcp__fragplace__")}
-    allowed = {f"mcp__fragplace__{t.name}" for t in for_role(name)}
+    listed = {t.strip() for t in m.group(1).split(",") if t.strip().startswith("mcp__")}
+    allowed = {mcp_name(t.name) for t in for_role(name)} | {mcp_name(op) for op in OPERATIONS}
     assert listed == allowed, f"{name}: listed {sorted(listed)} but the registry allows {sorted(allowed)}"
     assert re.search(r"^name:\s*" + re.escape(name) + r"\s*$", text, re.M)
 

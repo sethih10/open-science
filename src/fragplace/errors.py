@@ -9,6 +9,10 @@ class SettingsNotLocked(FragPlaceError):
     """A tool that reads PROJECT.md was called before the human approved the settings."""
 
 
+class SettingsMismatch(FragPlaceError):
+    """Check 8: two structures, or a structure and PROJECT.md, were computed with different settings."""
+
+
 class Rejected(FragPlaceError):
     """A candidate failed the gate; carries the GateResult."""
 

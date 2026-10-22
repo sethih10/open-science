@@ -29,7 +29,7 @@ def dft_single_points(structures: List[StructureRef], settings: Settings, backen
         - ase.calculators
         - atomate2 through the AtomisticSkills MCP server
         - custodian.vasp.handlers
-        - fragplace.compute.tracker
+        - fragplace.execution.tracker
     Logs: force calls, failures, every resubmission.
     """
-    raise NotImplementedError("dft_single_points: see AGENTS.md section 3 and fragplace.registry")
+    raise NotImplementedError("dft_single_points is an extension: it needs a DFT code and compute, decision D2; see AGENTS.md section 3")

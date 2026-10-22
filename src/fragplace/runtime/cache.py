@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from .journal import _jsonable, content_hash
+from .journal import _jsonable, content_hash, current_run
 
 
 class Cache:
@@ -26,3 +26,9 @@ class Cache:
 
     def put(self, key: str, value: Any) -> None:
         (self.dir / f"{key}.json").write_text(json.dumps(_jsonable(value), default=str))
+
+
+def for_run() -> Optional[Cache]:
+    """The cache of the current run; None outside a run, where nothing is cached."""
+    run = current_run()
+    return Cache(run.dir / "cache") if run else None

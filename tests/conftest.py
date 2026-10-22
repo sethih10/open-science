@@ -1,7 +1,11 @@
 """The test system every tool test shares: OH on Pt(111) with ASE's EMT potential, the nearest-first pipeline's
 first case, built in a temporary run directory with a locked PROJECT.md whose decisions carry test values for
 every threshold marked open. Tests that need ASE skip when it is not installed."""
-from pathlib import Path
+from fragplace.execution.local import limit_threads
+
+limit_threads()      # as fragplace.cli.main does, before numpy loads
+
+from pathlib import Path  # noqa: E402
 
 import pytest
 
@@ -10,10 +14,11 @@ from fragplace.runtime.journal import Run, set_run
 from fragplace.schemas.records import GasReference, Settings
 
 DECISIONS = {
+    "structure_retrieval.image_measure": "own_image", "anomaly_filter.frequencies_source": "mlip",
     "calculation_protocol.convergence_target_meV": 25, "calculation_protocol.gas_references": ["H2", "H2O"],
     "mlip_selection.candidates": ["emt"], "mlip_selection.label_count": 3,
     "adsorbate_placement.displacement_amplitude_A": 0.1, "adsorbate_placement.fragment_A_fixed_at_old_site": True,
-    "pair_enumeration.d_definition": "adsorbed", "pair_enumeration.upper_bound_A": 5.0,
+    "pair_enumeration.d_definition": "vacuum", "pair_enumeration.upper_bound_A": 5.0,
     "pull_force_screen.threshold_eV_per_A": 0.5,
     "anomaly_filter.AB_bond_reformed_A": 1.3, "anomaly_filter.migrated": 1.0, "anomaly_filter.dissociated": 1.25,
     "anomaly_filter.reconstructed": 0.5, "anomaly_filter.imaginary_noise_cm": 50.0, "anomaly_filter.expected_range_width_eV": 2.0,
@@ -57,6 +62,11 @@ def ase():
 def pt111(ase, run: Run):
     """Pt(111), 3x3, four layers, bottom two fixed, EMT; tags 1 on the top layer, 0 below; a dict of the three
     inputs as atoms and as refs: slab, OH in vacuum, OH at the fcc site; plus O and H indices in the adsorbate."""
+    return make_inputs(run)
+
+
+def make_inputs(run: Run) -> dict:
+    """The three inputs of the pt111 fixture, written into the run."""
     from ase import Atoms
     from ase.build import add_adsorbate, fcc111
     from ase.constraints import FixAtoms

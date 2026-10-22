@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Optional, Tuple
 
 _FACTORIES: Dict[str, Callable[..., "ASEAdapter"]] = {}
+_LOADED: Dict[str, "ASEAdapter"] = {}     # a potential loads its weights once per process
 
 
 class ASEAdapter:
@@ -33,9 +34,9 @@ class ASEAdapter:
         fmax_reached = float(np.sqrt((forces ** 2).sum(axis=1)).max()) if len(forces) else 0.0
         return atoms, converged, int(opt.get_number_of_steps()), fmax_reached
 
-    def spread(self, atoms) -> float:
-        """Committee standard deviation of the energy in eV; 0 for a single model."""
-        return 0.0
+    def spread(self, atoms) -> Optional[float]:
+        """Committee standard deviation of the energy in eV; None for a single model, which measures no spread."""
+        return None
 
     def magnetic_moments(self, atoms):
         return None
@@ -56,7 +57,19 @@ def get(name: str, **kw) -> ASEAdapter:
     _load()
     if name not in _FACTORIES:
         raise KeyError(f"unknown calculator {name}; known: {sorted(_FACTORIES)}")
-    return _FACTORIES[name](**kw)
+    key = f"{name} {sorted(kw.items())!r}"
+    if key not in _LOADED:
+        _LOADED[key] = _FACTORIES[name](name=name, **kw)
+    return _LOADED[key]
+
+
+def device() -> str:
+    """cuda when torch sees a GPU, else cpu."""
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
 
 
 def available() -> List[str]:
@@ -76,8 +89,8 @@ class Committee:
     def energies(self, atoms) -> List[float]:
         return [m.energy_forces(atoms)[0] for m in self.members]
 
-    def spread(self, atoms) -> float:
+    def spread(self, atoms) -> Optional[float]:
         import numpy as np
         if len(self.members) == 1:
-            return float(self.members[0].spread(atoms))
+            return self.members[0].spread(atoms)
         return float(np.std(self.energies(atoms)))

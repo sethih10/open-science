@@ -87,7 +87,7 @@ Take the three supplied relaxed structures with their energies, cleave the named
 | Inputs | slab: StructureRef; adsorbate_vacuum: StructureRef; initial_state: StructureRef; bond_to_break: tuple[int, int], atom indices in AB |
 | Outputs | fragment_A: StructureRef; fragment_B: StructureRef; cell_repeat: tuple[int, int]; structures: list[StructureRef] |
 | Checks | the three inputs share one settings set, check 8; images at least min_image_distance_A apart |
-| Thresholds | min_image_distance_A: 10 |
+| Thresholds | min_image_distance_A: 10; image_measure: open: team decision: own_image, each atom to its own image, or pair_to_image, the pair to its nearest image |
 | Wraps | ase.io; pymatgen.core |
 | Logs | input hashes; the cell and why |
 | Module | `src/fragplace/tools/structure.py`, function `structure_retrieval(slab, adsorbate_vacuum, initial_state, bond_to_break)` |
@@ -153,13 +153,13 @@ Every symmetry-distinct (A site, B site) pair inside the window [1.5 d, 5] Å, o
 
 | Field | Content |
 |---|---|
-| Inputs | sites: SiteEnumeration; d_bond_A: float, from literature_lookup or the adsorbate structure; window: tuple[float, float] in units of d and Å |
+| Inputs | sites: SiteEnumeration; d_bond_A: float, from literature_lookup or the adsorbate structure; window: tuple[float, float] in units of d and Å; site_A: int \| None, the site fragment A holds; every symmetry-distinct A site when None |
 | Outputs | pairs: list[Pair], nearest first; count: int |
 | Checks | no pair outside the window; symmetry duplicates removed and counted |
 | Thresholds | d_definition: open: team decision: vacuum or adsorbed bond length; upper_bound_A: open: team decision: 5 or NEBscape's 4.5 |
 | Wraps | acat.adsorption_sites.SlabAdsorptionSites.get_neighbor_site_list; acat.build.adlayer.SystematicPatternGenerator |
 | Logs | every pair with both distances; the count |
-| Module | `src/fragplace/tools/sites.py`, function `pair_enumeration(sites, d_bond_A, window)` |
+| Module | `src/fragplace/tools/sites.py`, function `pair_enumeration(sites, d_bond_A, window, site_A)` |
 
 ### 3.8 `pull_force_screen`, board step 3.3, core
 
@@ -210,7 +210,7 @@ The nine checks of the gate per fragment, before and after relaxation, plus the 
 | Inputs | candidate: Candidate; start: Candidate; slab: StructureRef; settings: Settings; prior_E_ads_eV: float \| None; frequencies_cm: list[float] \| None |
 | Outputs | gate: GateResult |
 | Checks | 1 desorbed per fragment; 2 migrated; 3 dissociated within a fragment; 4 reconstructed; 5 not a minimum; 6 magnetism collapsed; 7 outside expected range; 8 settings mismatch; 9 intercalated; 10 A–B bond re-formed; 11 periodic image |
-| Thresholds | desorbed_A: 3; AB_bond_reformed_A: open: team decision; migrated: open: team decision; dissociated: open: team decision; reconstructed: open: team decision; imaginary_noise_cm: open: team decision; expected_range_width_eV: open: team decision; magnetism_collapsed: open: team decision; intercalated: open: team decision |
+| Thresholds | desorbed_A: 3; AB_bond_reformed_A: open: team decision; migrated: open: team decision; dissociated: open: team decision; reconstructed: open: team decision; imaginary_noise_cm: open: team decision; expected_range_width_eV: open: team decision; magnetism_collapsed: open: team decision; intercalated: open: team decision; frequencies_source: open: team decision: mlip or dft |
 | Wraps | fairchem.data.oc.utils.DetectTrajAnomaly; ase.vibrations.Vibrations; acat.adsorbate_coverage.SlabAdsorbateCoverage; CatBench anomaly classes as names |
 | Logs | every verdict with its measured value; every rejection with its reason |
 | Module | `src/fragplace/tools/filtering.py`, function `anomaly_filter(candidate, start, slab, settings, prior_E_ads_eV, frequencies_cm)` |
@@ -390,7 +390,7 @@ The records are the Pydantic classes of `src/fragplace/schemas/records.py`; a to
 | `Case` | system: str, card: str, correction: str, reason: str, source_checkpoint: str, promoted_to: Optional[str], when: datetime.datetime |
 | `CheckVerdict` | check_id: int, name: str, passed: bool, measured: Optional[float], threshold: Optional[str], reason: str, fragment: Optional[str] |
 | `Cluster` | id: int, members: List[str], nearest: str, lowest: str |
-| `DescriptorCard` | candidate_id: str, composition: str, cell: str, facet: str, layers: int, vacuum_A: float, fixed_layers: int, site_label: str, point_group: str, coordination: int, height_A: float, nn_distances_A: List[float], tilt_deg: Optional[float], displacement_from_start: str, magnetic_moment: Optional[float], verdicts: List[fragplace.schemas.records.CheckVerdict], AB_distance_A: Optional[float], site_graph_distance: Optional[int], energy_eV: Optional[float], image_path: Optional[str] |
+| `DescriptorCard` | candidate_id: str, composition: str, cell: str, facet: str, layers: int, vacuum_A: float, fixed_layers: int, site_label: str, point_group: str, coordination: int, height_A: float, nn_distances_A: List[float], tilt_deg: Optional[float], displacement_from_start: str, magnetic_moment: Optional[float], verdicts: List[fragplace.schemas.records.CheckVerdict], AB_distance_A: Optional[float], site_graph_distance: Optional[int], energy_eV: Optional[float], image_path: Optional[str], fragment_lines: List[str] |
 | `DoubtFlag` | candidate_id: str, committee_spread_eV: float, calibrated_error_eV: Optional[float], trigger: str, escalate: bool |
 | `FinalState` | candidate_id: str, E_near_eV: float, E_inf_eV: float, lateral_interaction_eV: float, AB_distance_A: float, site_graph_distance: int, recombined: bool |
 | `ForceScreen` | candidate_id: str, force_on_B_along_AB_eV_per_A: float, flagged: bool, threshold_eV_per_A: Optional[float], queue_position: int |
@@ -514,12 +514,12 @@ Seven agents, each named as the literature names the role and each deciding one 
 | solution-planner         | The next tool call and when to stop; holds the checkpoint list                          | Core            | The board's title; Adsorb-Agent's Solution Planner               | every core tool but the three below |
 | literature-reader        | Which published values and sources to put before the human: E_ads with functional and site, and d | Core | ChemAgents' Literature Reader; FutureHouse's Crow             | `literature_lookup` |
 | computational-chemist    | Which protocol and settings to propose for the lock, and why                            | Core, before the run | El Agente Q's computational chemist agent                   | `structure_retrieval`, `calculation_protocol` |
-| surface-chemist          | Which site types and orderings to try per fragment, from the chemistry of the cleavage; never a coordinate, never an override | Core, step 3.4 | A discipline agent in the Virtual Lab's style; Adsorb-Agent's Critic in function | `descriptor_card`, read only |
+| surface-chemist          | Which site types and orderings to try per fragment, from the chemistry of the cleavage; never a coordinate, never an override | Core, step 3.4 | A discipline agent in the Virtual Lab's style; Adsorb-Agent's Critic in function | `descriptor_card`, read only; `note` for its ordering |
 | mlip-specialist          | Which potential to use, and whether to trust, repair or escalate on the calibrated doubt | Core, steps 1\* and 7 | The Virtual Lab's Machine Learning Specialist; AdsMind's Analyzer in function | `mlip_selection`, `uncertainty_estimation`, `active_learning` |
-| scientific-critic        | Whether the plan and the report hold up, judged in its own context                      | Core, the approve-the-plan and interpret-results checkpoints | The Virtual Lab's Scientific Critic; Agent Laboratory's reviewers | `descriptor_card`, `report`, read only |
+| scientific-critic        | Whether the plan and the report hold up, judged in its own context                      | Core, the approve-the-plan and interpret-results checkpoints | The Virtual Lab's Scientific Critic; Agent Laboratory's reviewers | `descriptor_card`, `report`, read only; `note` for its findings |
 | dft-recovery-agent       | How to retry a failed DFT step, one change at a time, capped at three                   | Only with HPC   | AutoDFT's Recovery Agent; DREAMS' Convergence Agent               | `dft_single_points` |
 
-The planner is not called principal investigator, although the Virtual Lab uses that name for its lead agent, because here the human approves, picks and interprets and is the investigator; the Virtual Lab's human only sets the agenda. The surface-chemist and the scientific-critic work in their own contexts so the planner's reasoning cannot anchor them. Each agent is one page under `agents/`, with the tools it may call in its frontmatter, and `tests/test_registry.py` holds that list equal to the registry's `allowed_roles`.
+The planner is not called principal investigator, although the Virtual Lab uses that name for its lead agent, because here the human approves, picks and interprets and is the investigator; the Virtual Lab's human only sets the agenda. The surface-chemist and the scientific-critic work in their own contexts so the planner's reasoning cannot anchor them; the planner writes only their task, the campaign and the question. Each agent is one page under `agents/`, with the tools it may call in its frontmatter, and `tests/test_registry.py` holds that list equal to the registry's `allowed_roles` plus the two operations every agent may call, `campaign_status` and `note`. In Claude Code the solution-planner is the main session, started by `/fragplace:campaign`, since only the main session can ask the human; the others run as its subagents.
 
 | Skill, ours              | Procedure                                                       | Followed by                  | Status        |
 |--------------------------|-----------------------------------------------------------------|------------------------------|---------------|
@@ -533,7 +533,7 @@ Reused from AtomisticSkills: `ml-committee-uncertainty`, `ml-mlip-benchmark`, `m
 
 ## 7. Repository layout
 
-One Python package, `fragplace` under `src/`, that a Claude Code plugin wraps. The plugin side is the layout Claude Code documents and its `hookify` plugin uses: `.claude-plugin/plugin.json`, `agents/`, `skills/<name>/SKILL.md`, `hooks/hooks.json`, `.mcp.json`. The package side is ChemGraph's (github.com/argonne-lcf/ChemGraph, `src/chemgraph/`), folder for folder and with the same file names where the role is the same: `registry/{tools,agents}.py`, `runtime/{journal,policy}.py`, `execution/`, `memory/`, `eval/`, `mcp/`, `cli/`; the `src/` layout is also paper-qa's, aviary's and AtomisticSkills'; the tools grouped by category are ChemCrow's `chemcrow/tools/` and Biomni's `biomni/tool/`. `schemas/` keeps that name because `models/` means LLM endpoints in ChemGraph and Biomni. Who runs next is code: `registry/steps.py` holds the steps in execution order with their tools, agents and checkpoint, and `agent/pipeline.py` a deterministic rollout over them in the style of paper-qa's `run_fake_agent` and Adsorb-Agent's `singlerun_adsorb_aigent`; the checkpoints are raised and persisted the way ChemGraph's approvals are, without a graph library. Three rules: each file has one kind and lives in that kind's folder; calls go one way, agents to skills to tools to the runtime, never up or sideways; one reading order for a human and one for an agent. The tree below is generated by `docs/figures/src/board_tables.py` from the files on disk, the registry and the roster: a module without a one-line description, or a described module that is missing, fails the write, so the tree is the repository as it is, not a plan. The name: the board calls the pieces of the broken bond the binding fragments, and the agent places them.
+One Python package, `fragplace` under `src/`, that a Claude Code plugin wraps. The plugin side is the layout Claude Code documents and its `hookify` plugin uses: `.claude-plugin/plugin.json`, `agents/`, `skills/<name>/SKILL.md`, `commands/`, `hooks/hooks.json`, `.mcp.json`. The package side is ChemGraph's (github.com/argonne-lcf/ChemGraph, `src/chemgraph/`), folder for folder and with the same file names where the role is the same: `registry/{tools,agents}.py`, `runtime/{journal,policy}.py`, `execution/`, `memory/`, `eval/`, `mcp/`, `cli/`; the `src/` layout is also paper-qa's, aviary's and AtomisticSkills'; the tools grouped by category are ChemCrow's `chemcrow/tools/` and Biomni's `biomni/tool/`. `schemas/` keeps that name because `models/` means LLM endpoints in ChemGraph and Biomni. Who runs next is code: `registry/steps.py` holds the steps in execution order with their tools, agents and checkpoint, and `agent/pipeline.py` a deterministic rollout over them in the style of paper-qa's `run_fake_agent` and Adsorb-Agent's `singlerun_adsorb_aigent`; the checkpoints are raised and persisted the way ChemGraph's approvals are, without a graph library. Three rules: each file has one kind and lives in that kind's folder; calls go one way, agents to skills to tools to the runtime, never up or sideways; one reading order for a human and one for an agent. The tree below is generated by `docs/figures/src/board_tables.py` from the files on disk, the registry and the roster: a module without a one-line description, or a described module that is missing, fails the write, so the tree is the repository as it is, not a plan. The name: the board calls the pieces of the broken bond the binding fragments, and the agent places them.
 
 <!-- registry:layout -->
 ```
@@ -541,9 +541,10 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 ├── README.md, CLAUDE.md, AGENTS.md        the entry points; CLAUDE.md points a coding agent to AGENTS.md
 ├── PROJECT.md, lessons.md                 the settings template; the case bank
 ├── pyproject.toml                         package fragplace, commands fragplace and fragplace-server, one extra per lane
-├── .claude-plugin/plugin.json             declares skills/, agents/, hooks/hooks.json and .mcp.json
-├── .mcp.json                              the MCP server fragplace-server; its tools are called as mcp__fragplace__<tool>
-├── hooks/hooks.json                       PreToolUse: block coordinate edits; require the checkpoint before a gated tool
+├── .claude-plugin/plugin.json             declares skills/, hooks/hooks.json and .mcp.json; Claude Code finds agents/ and commands/ by their names
+├── .mcp.json                              the MCP server fragplace-server from the plugin's .venv; its tools are called as mcp__plugin_fragplace_fragplace__<tool>
+├── commands/campaign.md                   /fragplace:campaign <name>: the main session as the solution-planner, the other agents as its subagents
+├── hooks/hooks.json                       PreToolUse: block coordinate and record edits; block the model passing a checkpoint; require the checkpoint before a gated tool
 ├── agents/                                the seven agents of section 6, one page each, allowed tools in the frontmatter
 │   ├── solution-planner.md                the next tool call and when to stop
 │   ├── literature-reader.md               which published values and sources to put before the human: E_ads with functional and site
@@ -584,29 +585,33 @@ open-science-hackathon/                    the FragPlace plugin, laid out as Cla
 │   │   ├── checkpoints.py                 the five checkpoints of registry/agents.py: require, record
 │   │   ├── state.py                       the position in the pipeline, persisted in state.json
 │   │   ├── policy.py                      the two hook commands of hooks/hooks.json
-│   │   └── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
+│   │   ├── artifacts.py                   structures on disk as StructureRef; tags 0 subsurface, 1 surface, 2 fragment A, 3 fragment B; the structure hash
+│   │   └── geometry.py                    the geometry the tools share: minimum images, bonds, heights, the nearest site, the site graph, symmetry operations
 │   ├── memory/                            what a campaign learns
 │   │   └── casebank.py                    lessons.md as records; retrieve by system and failure
 │   ├── calculators/                       one ASE adapter base and a Committee; potentials imported lazily
 │   │   ├── emt.py                         ASE EMT, the test potential: Pt-group metals and H, C, N, O
 │   │   ├── uma.py                         UMA through fairchem; needs HF_TOKEN
-│   │   ├── mace.py                        MACE, single model or committee
+│   │   ├── mace.py                        MACE: MACE-MP by name, or a model or committee from files
 │   │   └── chgnet.py                      CHGNet
 │   ├── execution/                         Job and Backend
-│   │   ├── local.py                       the laptop and GPU lanes
+│   │   ├── local.py                       the laptop and GPU lanes; the CPU budget every entry point sets the thread counts to
 │   │   ├── slurm.py                       the HPC lane, custodian inside the job script
 │   │   └── tracker.py                     job attempts, diagnoses, the retry cap of three
 │   ├── agent/                             who runs next, as code
 │   │   ├── pipeline.py                    the deterministic rollout over registry/steps.py; stops at every checkpoint, resumes from state.json
+│   │   ├── interface.py                   the tools as the agents call them, by campaign name, each answering with a summary; what the MCP server publishes
+│   │   ├── campaign.py                    the invoke of pipeline.py: binds each tool's inputs from the run's artifacts; records the human's choice at a checkpoint
+│   │   ├── example.py                     the example campaign, OH on Pt(111) with a named potential and test values; init from three supplied structures
 │   │   └── prompts.py                     loads agents/<name>.md, the one copy Claude Code also reads
 │   ├── mcp/                               the MCP side
-│   │   └── server.py                      one MCP tool per registry entry; the fragplace-server command
+│   │   └── server.py                      one MCP tool per registry entry and the two campaign operations; the fragplace-server command
 │   ├── eval/                              the agent-level benchmark
 │   │   └── harness.py                     the campaign with and without each skill and agent, on the OC20NEB subset
 │   ├── cli/                               the command line
-│   │   └── main.py                        fragplace registry | check | init
-│   └── errors.py                          SettingsNotLocked, Rejected, Escalate, CheckpointPending, OpenDecision
-├── tests/                                 registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs
+│   │   └── main.py                        fragplace registry | check | init | run | approve | decide | status | decisions
+│   └── errors.py                          SettingsNotLocked, SettingsMismatch, Rejected, Escalate, CheckpointPending, OpenDecision
+├── tests/                                 registry, tool modules, agent files and the figures' data module agree; records; operations; hooks; state and jobs; one golden example per tool; the example campaign end to end, scripted and as an agent drives it
 ├── ci/github-workflow.yml                 ruff, pytest, the figures rendered, the generated blocks checked; move to .github/workflows/ with a token that has the workflow scope
 ├── runs/<campaign>/                       PROJECT.md copy, trace.jsonl, checkpoints.json, state.json, cards/, structures/, cache/, report.md
 ├── figures/                               the README figures, PNG and SVG
@@ -684,16 +689,16 @@ Two numbers are measured on an OC20NEB subset, starting with \*OH → \*O + \*H 
 
 ## 10. Build order
 
-Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Task IDs D, T, P, M and R are the build plan's. Every tool exists as a typed stub that raises NotImplementedError; a task is done when its stub is filled and its test passes.
+Build the eight numbered tasks first; they are the shortest route to one validated nearest final state. Task IDs D, T, P, M and R are the build plan's. A task is done when its tool computes and its golden example in `tests/test_tools.py` passes; every core tool now does, each open threshold read from `PROJECT.md` through `fragplace.runtime.project.decision`, and `agent/campaign.py` binds the tools into the rollout that `fragplace run` drives. The LLM layer runs in Claude Code: `agent/interface.py` gives the agents the tools by campaign name, `commands/campaign.md` makes the main session the solution-planner with the other agents as its subagents, and the hooks keep checkpoints and records the human's; a live session on the example ran from the inputs to the report with five agents deciding at their steps. The extensions `dft_single_points` and `active_learning` stay stubs until D2. The decisions themselves stay open: the example campaign runs on test values and says so.
 
 Critical path:
 
 - [ ] 1 · D1 System and product: AB\*, surface, A\* + B\*; first case \*OH → \*O + \*H on Pt(111). Human decision.
-- [ ] 2 · T1 `structure_retrieval` and `calculation_protocol`. Needs D1, D3.
-- [ ] 3 · T2 `site_enumeration`. Needs T1.
-- [ ] 4 · T4 `anomaly_filter`. Needs T3.
-- [ ] 5 · T6 `mlip_selection`. Needs D2.
-- [ ] 6 · P1 `pair_enumeration`, `pull_force_screen`, `relaxation`, `soap_clustering`, with `minima_hopping` as the baseline. Needs T2, T4, T6, D5.
+- [x] 2 · T1 `structure_retrieval` and `calculation_protocol`. Needs D1, D3.
+- [x] 3 · T2 `site_enumeration`. Needs T1.
+- [x] 4 · T4 `anomaly_filter`. Needs T3.
+- [x] 5 · T6 `mlip_selection`. Needs D2.
+- [x] 6 · P1 `pair_enumeration`, `pull_force_screen`, `relaxation`, `soap_clustering`, with `minima_hopping` as the baseline. Needs T2, T4, T6, D5.
 - [ ] 7 · M2 \*OH → \*O + \*H final state against the OC20NEB product frame. Needs P1, P5, D3.
 - [ ] 8 · R1 Release: the skills, the MCP server beside AtomisticSkills, benchmark data and traces on Zenodo. Needs M1, M2.
 
